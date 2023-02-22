@@ -5,3 +5,8 @@ interface UTXO {
     tx_output_n: number;
     value: number;
 }
+interface Inscription {
+    offset: number;
+    id: string;
+}
+export { UTXO, Inscription };
