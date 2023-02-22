@@ -1,13 +1,15 @@
 import { convertPrivateKey } from "./bitcoin/utils";
 import {  
-    createTxFromTaprootAddress,
+    createTx,
     broadcastTx, 
+    selectUTXOs,
 } from "./bitcoin/tx";
 import { UTXO } from "./bitcoin/types";
 
 export {
     convertPrivateKey,
-    createTxFromTaprootAddress,
+    createTx,
     broadcastTx, 
     UTXO,
+    selectUTXOs
 }
