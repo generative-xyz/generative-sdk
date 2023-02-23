@@ -11,7 +11,7 @@ const config = [
             format: "cjs",
             sourcemap: true,
         },
-        external: ["axios", "os", "url"],
+        external: ["axios", "os", "url", "ecpair", "@bitcoinerlab/secp256k1"],
         plugins: [resolve(), typescript()]
     }, {
         input: "build/compiled/index.d.ts",

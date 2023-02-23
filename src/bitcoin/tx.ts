@@ -1,160 +1,71 @@
-'use strict';
+const {
+    networks,
+    payments,
+    Psbt
+} = require("../../bitcoinjs-lib");
+import axios, { AxiosResponse } from "axios";
+import { Inscription, UTXO } from "./types";
+import { BlockStreamURL, MinSatInscription } from "./constants";
+import {
+    toXOnly,
+    tweakSigner,
+    ECPair,
+    estimateTxFee,
+    estimateNumInOutputs
+} from "./utils";
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
-var axios = require('axios');
-var ecpair = require('ecpair');
-var ecc = require('@bitcoinerlab/secp256k1');
-
-function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
-
-function _interopNamespace(e) {
-    if (e && e.__esModule) return e;
-    var n = Object.create(null);
-    if (e) {
-        Object.keys(e).forEach(function (k) {
-            if (k !== 'default') {
-                var d = Object.getOwnPropertyDescriptor(e, k);
-                Object.defineProperty(n, k, d.get ? d : {
-                    enumerable: true,
-                    get: function () { return e[k]; }
-                });
-            }
-        });
-    }
-    n["default"] = e;
-    return Object.freeze(n);
-}
-
-var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
-var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
-
-const BlockStreamURL = "https://blockstream.info/api";
-const MinSatInscription = 10; // can reduce it to 1 sat
-
-const { initEccLib, crypto, payments: payments$1, } = require("../bitcoinjs-lib");
-initEccLib(ecc__namespace);
-const ECPair = ecpair.ECPairFactory(ecc__namespace);
-const wif = require("wif");
 /**
-* convertPrivateKey converts buffer private key to WIF private key string
-* @param bytes buffer private key
-* @returns the WIF private key string
-*/
-const convertPrivateKey = (bytes) => {
-    return wif.encode(128, bytes, true);
-};
-/**
-* estimateTxFee estimates the transaction fee
-* @param numIns number of inputs in the transaction
-* @param numOuts number of outputs in the transaction
-* @param feeRatePerByte fee rate per byte (in satoshi)
-* @returns returns the estimated transaction fee in satoshi
-*/
-const estimateTxFee = (numIns, numOuts, feeRatePerByte) => {
-    const fee = (68 * numIns + 43 * numOuts) * feeRatePerByte;
-    return fee;
-};
-/**
-* estimateNumInOutputs estimates number of inputs and outputs by parameters:
-* @param inscriptionID id of inscription to send (if any)
-* @param sendAmount satoshi amount need to send
-* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
-* @returns returns the estimated number of inputs and outputs in the transaction
-*/
-const estimateNumInOutputs = (inscriptionID, sendAmount, isUseInscriptionPayFee) => {
-    let numOuts = 0;
-    let numIns = 0;
-    if (inscriptionID !== "") {
-        numOuts++;
-        numIns++;
-        if (!isUseInscriptionPayFee) {
-            numOuts++; // for change BTC output
-        }
-    }
-    if (sendAmount > 0) {
-        numOuts++;
-    }
-    if (sendAmount > 0 || !isUseInscriptionPayFee) {
-        numIns++;
-    }
-    return { numIns, numOuts };
-};
-function toXOnly(pubkey) {
-    return pubkey.subarray(1, 33);
-}
-function tweakSigner(signer, opts = {}) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    let privateKey = signer.privateKey;
-    if (!privateKey) {
-        throw new Error("Private key is required for tweaking signer!");
-    }
-    if (signer.publicKey[0] === 3) {
-        privateKey = ecc__namespace.privateNegate(privateKey);
-    }
-    const tweakedPrivateKey = ecc__namespace.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
-    if (!tweakedPrivateKey) {
-        throw new Error("Invalid tweaked private key!");
-    }
-    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
-        network: opts.network,
-    });
-}
-function tapTweakHash(pubKey, h) {
-    return crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
-}
-const generateTaprootAddress = (privateKey) => {
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    const internalPubkey = toXOnly(keyPair.publicKey);
-    const { address, output } = payments$1.p2tr({
-        internalPubkey,
-    });
-    return address ? address : "";
-};
-
-const { networks, payments, Psbt } = require("../../bitcoinjs-lib");
-/**
-* selectUTXOs selects the most reasonable UTXOs to create the transaction.
+* selectUTXOs selects the most reasonable UTXOs to create the transaction. 
 * if sending inscription, the first selected UTXO is always the UTXO contain inscription.
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
 * @param sendInscriptionID id of inscription to send
-* @param sendAmount satoshi amount need to send
+* @param sendAmount satoshi amount need to send 
 * @param feeRatePerByte fee rate per byte (in satoshi)
-* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee 
 * @returns the list of selected UTXOs
 * @returns the actual flag using inscription coin to pay fee
 * @returns the value of inscription outputs, and the change amount (if any)
 * @returns the network fee
 */
-const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFee) => {
-    const resultUTXOs = [];
-    let normalUTXOs = [];
-    let inscriptionUTXO = null;
-    let inscriptionInfo = null;
+const selectUTXOs = (
+    utxos: UTXO[],
+    inscriptions: { [key: string]: Inscription[] },
+    sendInscriptionID: string,
+    sendAmount: number,
+    feeRatePerByte: number,
+    isUseInscriptionPayFee: boolean,
+): { selectedUTXOs: UTXO[], isUseInscriptionPayFee: boolean, valueOutInscription: number, changeAmount: number, fee: number } => {
+    const resultUTXOs: UTXO[] = [];
+    let normalUTXOs: UTXO[] = [];
+    let inscriptionUTXO: any = null;
+    let inscriptionInfo: any = null;
     let valueOutInscription = 0;
     let changeAmount = 0;
+
     // estimate fee
     const { numIns, numOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
-    const estFee = estimateTxFee(numIns, numOuts, feeRatePerByte);
+    const estFee: number = estimateTxFee(numIns, numOuts, feeRatePerByte);
+
     // when BTC amount need to send is greater than 0, 
     // we should use normal BTC to pay fee
     if (isUseInscriptionPayFee && sendAmount > 0) {
         isUseInscriptionPayFee = false;
     }
+
     // filter normal UTXO and inscription UTXO to send
     utxos.forEach(utxo => {
         // txIDKey = tx_hash:tx_output_n
         let txIDKey = utxo.tx_hash.concat(":");
         txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
+
         // try to get inscriptionInfos
         const inscriptionInfos = inscriptions[txIDKey];
+
         if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
             // normal UTXO
             normalUTXOs.push(utxo);
-        }
-        else {
+        } else {
             // inscription UTXO
             if (sendInscriptionID !== "") {
                 const inscription = inscriptionInfos.find(ins => ins.id === sendInscriptionID);
@@ -169,6 +80,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
             }
         }
     });
+
     if (sendInscriptionID !== "") {
         if (inscriptionUTXO === null || inscriptionInfo == null) {
             throw new Error("Can not find inscription UTXO for sendInscriptionID");
@@ -178,43 +90,49 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
             // otherwise, MUST use normal UTXOs to pay fee
             if (inscriptionInfo.offset !== 0) {
                 isUseInscriptionPayFee = false;
-            }
-            else {
+            } else {
                 // if value is not enough to pay fee, MUST use normal UTXOs to pay fee
                 if (inscriptionUTXO.value < estFee + MinSatInscription) {
                     isUseInscriptionPayFee = false;
                 }
             }
         }
+
         // push inscription UTXO to create tx
         resultUTXOs.push(inscriptionUTXO);
     }
+
     // select normal UTXOs
     let totalSendAmount = sendAmount;
     if (!isUseInscriptionPayFee) {
         totalSendAmount += estFee;
     }
+
     let totalInputAmount = 0;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
             throw new Error("Insuffient BTC balance to send");
         }
-        normalUTXOs = normalUTXOs.sort((a, b) => {
-            if (a.value > b.value) {
-                return -1;
+
+        normalUTXOs = normalUTXOs.sort(
+            (a: UTXO, b: UTXO): number => {
+                if (a.value > b.value) {
+                    return -1;
+                }
+                if (a.value < b.value) {
+                    return 1;
+                }
+                return 0;
             }
-            if (a.value < b.value) {
-                return 1;
-            }
-            return 0;
-        });
+        );
+
         console.log("normalUTXOs: ", normalUTXOs);
+
         if (normalUTXOs[normalUTXOs.length - 1].value >= totalSendAmount) {
             // select the smallest utxo
             resultUTXOs.push(normalUTXOs[normalUTXOs.length - 1]);
             totalInputAmount = normalUTXOs[normalUTXOs.length - 1].value;
-        }
-        else if (normalUTXOs[0].value < totalSendAmount) {
+        } else if (normalUTXOs[0].value < totalSendAmount) {
             // select multiple UTXOs
             for (let i = 0; i < normalUTXOs.length; i++) {
                 const utxo = normalUTXOs[i];
@@ -227,8 +145,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
             if (totalInputAmount < totalSendAmount) {
                 throw new Error("Insuffient BTC balance to send");
             }
-        }
-        else {
+        } else {
             // select the nearest UTXO
             let selectedUTXO = normalUTXOs[0];
             for (let i = 1; i < normalUTXOs.length; i++) {
@@ -237,13 +154,16 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
                     totalInputAmount = selectedUTXO.value;
                     break;
                 }
+
                 selectedUTXO = normalUTXOs[i];
             }
         }
     }
+
     // re-estimate fee with exact number of inputs and outputs
-    const { numOuts: reNumOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
-    let fee = estimateTxFee(resultUTXOs.length, reNumOuts, feeRatePerByte);
+    const { numOuts: reNumOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee)
+    let fee: number = estimateTxFee(resultUTXOs.length, reNumOuts, feeRatePerByte);
+
     // calculate output amount
     if (isUseInscriptionPayFee) {
         if (inscriptionUTXO.value < fee + MinSatInscription) {
@@ -251,40 +171,54 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         }
         valueOutInscription = inscriptionUTXO.value - fee;
         changeAmount = totalInputAmount - sendAmount;
-    }
-    else {
+    } else {
         if (totalInputAmount < sendAmount + fee) {
             fee = totalInputAmount - sendAmount;
         }
-        valueOutInscription = (inscriptionUTXO === null || inscriptionUTXO === void 0 ? void 0 : inscriptionUTXO.value) || 0;
+        valueOutInscription = inscriptionUTXO?.value || 0;
         changeAmount = totalInputAmount - sendAmount - fee;
     }
+
     return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount, fee: fee };
-};
+}
+
+
 /**
-* createTx creates the Bitcoin transaction (including sending inscriptions).
-* NOTE: Currently, the function only supports sending from Taproot address.
+* createTx creates the Bitcoin transaction (including sending inscriptions). 
+* NOTE: Currently, the function only supports sending from Taproot address. 
 * @param senderPrivateKey buffer private key of the sender
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
 * @param sendInscriptionID id of inscription to send
 * @param receiverInsAddress the address of the inscription receiver
-* @param sendAmount satoshi amount need to send
+* @param sendAmount satoshi amount need to send 
 * @param feeRatePerByte fee rate per byte (in satoshi)
-* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee 
 * @returns the transaction id
 * @returns the hex signed transaction
 * @returns the network fee
 */
-const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true) => {
-    const network = networks.bitcoin; // mainnet
+const createTx = (
+    senderPrivateKey: Buffer,
+    utxos: UTXO[],
+    inscriptions: { [key: string]: Inscription[] },
+    sendInscriptionID = "",
+    receiverInsAddress: string,
+    sendAmount: number,
+    feeRatePerByte: number,
+    isUseInscriptionPayFeeParam = true,  // default is true
+): { txID: string, txHex: string, fee: number } => {
+    const network = networks.bitcoin;  // mainnet
+
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     console.log("selectedUTXOs: ", selectedUTXOs);
+
     // init key pair from senderPrivateKey
     const keypair = ECPair.fromPrivateKey(senderPrivateKey);
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network });
+
     // Generate an address from the tweaked public key
     const p2pktr = payments.p2tr({
         pubkey: toXOnly(tweakedSigner.publicKey),
@@ -294,16 +228,18 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     if (senderAddress === "") {
         throw new Error("Can not get sender address from private key");
     }
+
     const psbt = new Psbt({ network });
     // add inputs
     selectedUTXOs.forEach((input) => {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
-            witnessUtxo: { value: input.value, script: p2pktr.output },
+            witnessUtxo: { value: input.value, script: p2pktr.output! },
             tapInternalKey: toXOnly(keypair.publicKey)
         });
     });
+
     // add outputs
     if (sendInscriptionID !== "") {
         // add output inscription
@@ -319,6 +255,7 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
             value: sendAmount,
         });
     }
+
     // add change output
     if (changeAmount > 0) {
         psbt.addOutput({
@@ -326,28 +263,30 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
             value: changeAmount,
         });
     }
+
     // sign tx
     selectedUTXOs.forEach((utxo, index) => {
         psbt.signInput(index, tweakedSigner);
     });
     psbt.finalizeAllInputs();
+
     // get tx hex
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
     return { txID: tx.getId(), txHex, fee };
-};
-const broadcastTx = async (txHex) => {
-    const blockstream = new axios__default["default"].Axios({
+}
+
+const broadcastTx = async (txHex: string): Promise<string> => {
+    const blockstream = new axios.Axios({
         baseURL: BlockStreamURL
     });
-    const response = await blockstream.post("/tx", txHex);
+    const response: AxiosResponse<string> = await blockstream.post("/tx", txHex);
     return response.data;
-};
+}
 
-exports.broadcastTx = broadcastTx;
-exports.convertPrivateKey = convertPrivateKey;
-exports.createTx = createTx;
-exports.generateTaprootAddress = generateTaprootAddress;
-exports.selectUTXOs = selectUTXOs;
-//# sourceMappingURL=index.js.map
+export {
+    selectUTXOs,
+    createTx,
+    broadcastTx,
+}
