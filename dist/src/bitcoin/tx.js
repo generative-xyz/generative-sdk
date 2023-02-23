@@ -29,6 +29,7 @@ const utils_1 = require("./utils");
 * @returns the list of selected UTXOs
 * @returns the actual flag using inscription coin to pay fee
 * @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
 */
 const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFee) => {
     let resultUTXOs = [];
@@ -40,7 +41,6 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
     // estimate fee
     let { numIns, numOuts } = (0, utils_1.estimateNumInOutputs)(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
     let estFee = (0, utils_1.estimateTxFee)(numIns, numOuts, feeRatePerByte);
-    console.log("Estimate fee: ", estFee, numIns, numOuts);
     // when BTC amount need to send is greater than 0, 
     // we should use normal BTC to pay fee
     if (isUseInscriptionPayFee && sendAmount > 0) {
@@ -145,8 +145,8 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         }
     }
     // re-estimate fee with exact number of inputs and outputs
-    let fee = (0, utils_1.estimateTxFee)(resultUTXOs.length, numOuts, feeRatePerByte);
-    console.log("Real fee ", fee);
+    let { numOuts: reNumOuts } = (0, utils_1.estimateNumInOutputs)(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
+    let fee = (0, utils_1.estimateTxFee)(resultUTXOs.length, reNumOuts, feeRatePerByte);
     // calculate output amount
     if (isUseInscriptionPayFee) {
         if (inscriptionUTXO.value < fee + constants_1.MinSatInscription) {
@@ -162,7 +162,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         valueOutInscription = (inscriptionUTXO === null || inscriptionUTXO === void 0 ? void 0 : inscriptionUTXO.value) || 0;
         changeAmount = totalInputAmount - sendAmount - fee;
     }
-    return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount };
+    return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount, fee: fee };
 };
 exports.selectUTXOs = selectUTXOs;
 /**
@@ -176,12 +176,14 @@ exports.selectUTXOs = selectUTXOs;
 * @param sendAmount satoshi amount need to send
 * @param feeRatePerByte fee rate per byte (in satoshi)
 * @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
-* @returns returns the hex signed transaction
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
 */
 const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true) => {
     let network = bitcoinjs_lib_1.networks.bitcoin; // mainnet
     // select UTXOs
-    let { selectedUTXOs, valueOutInscription, changeAmount } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+    let { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     console.log("selectedUTXOs: ", selectedUTXOs);
     // init key pair from senderPrivateKey
     let keypair = utils_1.ECPair.fromPrivateKey(senderPrivateKey);
@@ -237,15 +239,15 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     let tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     let txHex = tx.toHex();
-    console.log(`Transaction Hex: ${txHex}`);
-    return txHex;
+    console.log("Transaction Hex:", txHex);
+    return { txID: tx.getId(), txHex, fee };
 };
 exports.createTx = createTx;
-const broadcastTx = (hexTx) => __awaiter(void 0, void 0, void 0, function* () {
+const broadcastTx = (txHex) => __awaiter(void 0, void 0, void 0, function* () {
     const blockstream = new axios_1.default.Axios({
         baseURL: constants_1.BlockStreamURL
     });
-    const response = yield blockstream.post("/tx", hexTx);
+    const response = yield blockstream.post("/tx", txHex);
     return response.data;
 });
 exports.broadcastTx = broadcastTx;

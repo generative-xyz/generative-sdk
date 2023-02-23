@@ -12,6 +12,7 @@ import { Inscription, UTXO } from "./types";
 * @returns the list of selected UTXOs
 * @returns the actual flag using inscription coin to pay fee
 * @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
 */
 declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
@@ -20,6 +21,7 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
     isUseInscriptionPayFee: boolean;
     valueOutInscription: number;
     changeAmount: number;
+    fee: number;
 };
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
@@ -32,10 +34,16 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
 * @param sendAmount satoshi amount need to send
 * @param feeRatePerByte fee rate per byte (in satoshi)
 * @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
-* @returns returns the hex signed transaction
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
 */
 declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: number, feeRatePerByte: number, isUseInscriptionPayFeeParam?: boolean) => string;
-declare const broadcastTx: (hexTx: string) => Promise<string>;
+}, sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: number, feeRatePerByte: number, isUseInscriptionPayFeeParam?: boolean) => {
+    txID: string;
+    txHex: string;
+    fee: number;
+};
+declare const broadcastTx: (txHex: string) => Promise<string>;
 export { selectUTXOs, createTx, broadcastTx, };
