@@ -1,16 +1,4 @@
-/// <reference types="node" />
-interface UTXO {
-    tx_hash: string;
-    block_height: number;
-    tx_input_n: number;
-    tx_output_n: number;
-    value: number;
-}
-interface Inscription {
-    offset: number;
-    id: string;
-}
-
+import { Inscription, UTXO } from "./types";
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
 * if sending inscription, the first selected UTXO is always the UTXO contain inscription.
@@ -57,13 +45,4 @@ declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: 
     fee: number;
 };
 declare const broadcastTx: (txHex: string) => Promise<string>;
-
-/**
-* convertPrivateKey converts buffer private key to WIF private key string
-* @param bytes buffer private key
-* @returns the WIF private key string
-*/
-declare const convertPrivateKey: (bytes: Buffer) => string;
-declare const generateTaprootAddress: (privateKey: Buffer) => string;
-
-export { UTXO, broadcastTx, convertPrivateKey, createTx, generateTaprootAddress, selectUTXOs };
+export { selectUTXOs, createTx, broadcastTx, };
