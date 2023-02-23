@@ -225,7 +225,6 @@ const createTx = (
         network
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
-    console.log("senderAddress ", senderAddress);
     if (senderAddress === "") {
         throw new Error("Can not get sender address from private key");
     }
@@ -275,7 +274,6 @@ const createTx = (
     let tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     let txHex = tx.toHex();
-    console.log("Transaction Hex:", txHex);
     return { txID: tx.getId(), txHex, fee };
 }
 

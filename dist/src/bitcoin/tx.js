@@ -195,7 +195,6 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
         network
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
-    console.log("senderAddress ", senderAddress);
     if (senderAddress === "") {
         throw new Error("Can not get sender address from private key");
     }
