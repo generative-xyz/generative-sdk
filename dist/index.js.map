@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sources":["../build/compiled/test/index.js"],"sourcesContent":["const hehe = () => {\n    console.log('SANG TEST');\n};\nexport { hehe };\n//# sourceMappingURL=index.js.map"],"names":[],"mappings":";;;;AAAK,MAAC,IAAI,GAAG,MAAM;AACnB,IAAI,OAAO,CAAC,GAAG,CAAC,WAAW,CAAC,CAAC;AAC7B;;;;"}

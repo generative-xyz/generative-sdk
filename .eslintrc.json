@@ -1,28 +1,30 @@
 {
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
     "env": {
-        "browser": true,
-        "commonjs": true,
-        "es2021": true,
         "es6": true,
-        "node": true
+        "node": true,
+        "mocha": true
     },
     "extends": [
-        "standard-with-typescript",
-        "prettier/@typescript-eslint",
-        "plugin:prettier/recommended"
+        "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
     ],
-    "globals": {
-        "Atomics": "readonly",
-        "SharedArrayBuffer": "readonly"
-    },
-    "parser": "@typescript-eslint/parser",
     "parserOptions": {
-        "ecmaVersion": 11,
+        "ecmaVersion": 2018,
         "sourceType": "module"
     },
-    "plugins": [
-        "@typescript-eslint"
-    ],
-    "rules": {},
-    "overrides": []
+    "rules": {
+        "no-console": "off",
+        "linebreak-style": "off",
+        "quotes": [
+            "error",
+            "double",
+            { "allowTemplateLiterals": true }
+        ],
+        "keyword-spacing": ["error", { "before": true }],
+        "space-before-blocks": ["error"]
+    }
 }
