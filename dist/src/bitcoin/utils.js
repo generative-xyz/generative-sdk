@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ECPair = exports.tapTweakHash = exports.tweakSigner = exports.toXOnly = exports.estimateNumInOutputs = exports.estimateTxFee = exports.convertPrivateKey = void 0;
+exports.generateAddress = exports.ECPair = exports.tapTweakHash = exports.tweakSigner = exports.toXOnly = exports.estimateNumInOutputs = exports.estimateTxFee = exports.convertPrivateKey = void 0;
 var wif = require('wif');
 const bitcoinjs_lib_1 = require("bitcoinjs-lib");
 const ecpair_1 = require("ecpair");
@@ -86,3 +86,13 @@ function tapTweakHash(pubKey, h) {
     return bitcoinjs_lib_1.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
 }
 exports.tapTweakHash = tapTweakHash;
+const generateAddress = (privateKey) => {
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const internalPubkey = toXOnly(keyPair.publicKey);
+    const { address, output } = bitcoinjs_lib_1.payments.p2tr({
+        internalPubkey,
+    });
+    console.log("address, output", address, output);
+    console.log("internalPubkey ", keyPair.publicKey);
+};
+exports.generateAddress = generateAddress;

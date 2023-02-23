@@ -30,4 +30,5 @@ declare const estimateNumInOutputs: (inscriptionID: string, sendAmount: number, 
 declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
-export { convertPrivateKey, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, };
+declare const generateAddress: (privateKey: Buffer) => void;
+export { convertPrivateKey, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, generateAddress, };

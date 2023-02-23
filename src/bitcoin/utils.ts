@@ -3,6 +3,7 @@ import {
     initEccLib,
     Signer,
     crypto,
+    payments,
 } from "bitcoinjs-lib";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
@@ -15,7 +16,7 @@ const ECPair: ECPairAPI = ECPairFactory(ecc);
 * @param bytes buffer private key
 * @returns the WIF private key string
 */
-const convertPrivateKey = (bytes: Buffer) : string => {
+const convertPrivateKey = (bytes: Buffer): string => {
     return wif.encode(128, bytes, true);
 }
 
@@ -77,6 +78,7 @@ function tweakSigner(signer: Signer, opts: any = {}): Signer {
         privateKey,
         tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash),
     );
+
     if (!tweakedPrivateKey) {
         throw new Error('Invalid tweaked private key!');
     }
@@ -93,6 +95,17 @@ function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer {
     );
 }
 
+const generateTaprootAddress = (privateKey: Buffer): string => {
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const internalPubkey = toXOnly(keyPair.publicKey);
+
+    const { address, output } = payments.p2tr({
+        internalPubkey,
+    });
+
+    return address ? address : "";
+}
+
 export {
     convertPrivateKey,
     estimateTxFee,
@@ -101,4 +114,5 @@ export {
     tweakSigner,
     tapTweakHash,
     ECPair,
+    generateTaprootAddress,
 }

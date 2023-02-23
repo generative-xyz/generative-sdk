@@ -1,4 +1,4 @@
-import { convertPrivateKey } from "./bitcoin/utils";
+import { convertPrivateKey, generateTaprootAddress } from "./bitcoin/utils";
 import {  
     createTx,
     broadcastTx, 
@@ -11,5 +11,6 @@ export {
     createTx,
     broadcastTx, 
     UTXO,
-    selectUTXOs
+    selectUTXOs,
+    generateTaprootAddress,
 }
