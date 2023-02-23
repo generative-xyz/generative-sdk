@@ -6,12 +6,12 @@ import {
 import axios, { AxiosResponse } from "axios";
 import { Inscription, UTXO } from "./types";
 import { BlockStreamURL, MinSatInscription } from "./constants";
-import { 
+import {
     toXOnly,
     tweakSigner,
     ECPair,
-    estimateTxFee, 
-    estimateNumInOutputs 
+    estimateTxFee,
+    estimateNumInOutputs
 } from "./utils";
 
 /**
@@ -26,6 +26,7 @@ import {
 * @returns the list of selected UTXOs
 * @returns the actual flag using inscription coin to pay fee
 * @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
 */
 const selectUTXOs = (
     utxos: UTXO[],
@@ -34,7 +35,7 @@ const selectUTXOs = (
     sendAmount: number,
     feeRatePerByte: number,
     isUseInscriptionPayFee: boolean,
-): { selectedUTXOs: UTXO[], isUseInscriptionPayFee: boolean, valueOutInscription: number, changeAmount: number } => {
+): { selectedUTXOs: UTXO[], isUseInscriptionPayFee: boolean, valueOutInscription: number, changeAmount: number, fee: number } => {
     let resultUTXOs: UTXO[] = [];
     let normalUTXOs: UTXO[] = [];
     let inscriptionUTXO: any = null;
@@ -45,7 +46,6 @@ const selectUTXOs = (
     // estimate fee
     let { numIns, numOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
     let estFee: number = estimateTxFee(numIns, numOuts, feeRatePerByte);
-    console.log("Estimate fee: ", estFee, numIns, numOuts);
 
     // when BTC amount need to send is greater than 0, 
     // we should use normal BTC to pay fee
@@ -80,7 +80,6 @@ const selectUTXOs = (
             }
         }
     });
-
 
     if (sendInscriptionID !== "") {
         if (inscriptionUTXO === null || inscriptionInfo == null) {
@@ -162,9 +161,8 @@ const selectUTXOs = (
     }
 
     // re-estimate fee with exact number of inputs and outputs
-    let fee: number = estimateTxFee(resultUTXOs.length, numOuts, feeRatePerByte)
-    console.log("Real fee ", fee);
-
+    let { numOuts: reNumOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee)
+    let fee: number = estimateTxFee(resultUTXOs.length, reNumOuts, feeRatePerByte);
 
     // calculate output amount
     if (isUseInscriptionPayFee) {
@@ -181,7 +179,7 @@ const selectUTXOs = (
         changeAmount = totalInputAmount - sendAmount - fee;
     }
 
-    return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount };
+    return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount, fee: fee };
 }
 
 
@@ -196,7 +194,9 @@ const selectUTXOs = (
 * @param sendAmount satoshi amount need to send 
 * @param feeRatePerByte fee rate per byte (in satoshi)
 * @param isUseInscriptionPayFee flag defines using inscription coin to pay fee 
-* @returns returns the hex signed transaction
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
 */
 const createTx = (
     senderPrivateKey: Buffer,
@@ -207,11 +207,11 @@ const createTx = (
     sendAmount: number,
     feeRatePerByte: number,
     isUseInscriptionPayFeeParam: boolean = true,  // default is true
-): string => {
+): { txID: string, txHex: string, fee: number } => {
     let network = networks.bitcoin;  // mainnet
 
     // select UTXOs
-    let { selectedUTXOs, valueOutInscription, changeAmount } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+    let { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     console.log("selectedUTXOs: ", selectedUTXOs);
 
     // init key pair from senderPrivateKey
@@ -224,7 +224,7 @@ const createTx = (
         pubkey: toXOnly(tweakedSigner.publicKey),
         network
     });
-    const senderAddress = p2pktr.address ? p2pktr.address: "";
+    const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
         throw new Error("Can not get sender address from private key");
     }
@@ -274,15 +274,15 @@ const createTx = (
     let tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     let txHex = tx.toHex();
-    console.log(`Transaction Hex: ${txHex}`);
-    return txHex;
+    console.log("Transaction Hex:", txHex);
+    return { txID: tx.getId(), txHex, fee };
 }
 
-const broadcastTx = async (hexTx: string): Promise<string> => {
+const broadcastTx = async (txHex: string): Promise<string> => {
     const blockstream = new axios.Axios({
         baseURL: BlockStreamURL
     });
-    const response: AxiosResponse<string> = await blockstream.post("/tx", hexTx);
+    const response: AxiosResponse<string> = await blockstream.post("/tx", txHex);
     return response.data;
 }
 
