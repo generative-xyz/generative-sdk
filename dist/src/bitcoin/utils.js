@@ -1,12 +1,16 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ECPair = exports.tapTweakHash = exports.tweakSigner = exports.toXOnly = exports.estimateNumInOutputs = exports.estimateTxFee = exports.convertPrivateKey = void 0;
 var wif = require('wif');
 const bitcoinjs_lib_1 = require("bitcoinjs-lib");
 const ecpair_1 = require("ecpair");
-const tinysecp = require('tiny-secp256k1');
-(0, bitcoinjs_lib_1.initEccLib)(tinysecp);
-const ECPair = (0, ecpair_1.ECPairFactory)(tinysecp);
+// const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
+const secp256k1_1 = __importDefault(require("@bitcoinerlab/secp256k1"));
+(0, bitcoinjs_lib_1.initEccLib)(secp256k1_1.default);
+const ECPair = (0, ecpair_1.ECPairFactory)(secp256k1_1.default);
 exports.ECPair = ECPair;
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -67,9 +71,9 @@ function tweakSigner(signer, opts = {}) {
         throw new Error('Private key is required for tweaking signer!');
     }
     if (signer.publicKey[0] === 3) {
-        privateKey = tinysecp.privateNegate(privateKey);
+        privateKey = secp256k1_1.default.privateNegate(privateKey);
     }
-    const tweakedPrivateKey = tinysecp.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
+    const tweakedPrivateKey = secp256k1_1.default.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
     if (!tweakedPrivateKey) {
         throw new Error('Invalid tweaked private key!');
     }

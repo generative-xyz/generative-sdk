@@ -4,10 +4,11 @@ import {
     Signer,
     crypto,
 } from "bitcoinjs-lib";
-import { ECPairFactory, ECPairAPI, TinySecp256k1Interface } from "ecpair";
-const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
-initEccLib(tinysecp as any);
-const ECPair: ECPairAPI = ECPairFactory(tinysecp);
+import { ECPairFactory, ECPairAPI } from "ecpair";
+// const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
+import ecc from '@bitcoinerlab/secp256k1';
+initEccLib(ecc as any);
+const ECPair: ECPairAPI = ECPairFactory(ecc);
 
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -69,10 +70,10 @@ function tweakSigner(signer: Signer, opts: any = {}): Signer {
         throw new Error('Private key is required for tweaking signer!');
     }
     if (signer.publicKey[0] === 3) {
-        privateKey = tinysecp.privateNegate(privateKey);
+        privateKey = ecc.privateNegate(privateKey);
     }
 
-    const tweakedPrivateKey = tinysecp.privateAdd(
+    const tweakedPrivateKey = ecc.privateAdd(
         privateKey,
         tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash),
     );
