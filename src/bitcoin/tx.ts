@@ -1,8 +1,8 @@
-const {
+import {
     networks,
     payments,
     Psbt
-} = require("../../bitcoinjs-lib");
+} from "bitcoinjs-lib";
 import axios, { AxiosResponse } from "axios";
 import { Inscription, UTXO } from "./types";
 import { BlockStreamURL, MinSatInscription } from "./constants";
