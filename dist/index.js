@@ -14,10 +14,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.selectUTXOs = exports.broadcastTx = exports.createTx = exports.convertPrivateKey = void 0;
 const secp256k1_1 = __importDefault(require("@bitcoinerlab/secp256k1"));
-var wif = require('wif');
+const wif = require('wif');
 const bitcoinjs_lib_1 = require("bitcoinjs-lib");
 const axios_1 = __importDefault(require("axios"));
-const utils_1 = require("./src/bitcoin/utils");
+const ecpair_1 = require("ecpair");
+(0, bitcoinjs_lib_1.initEccLib)(secp256k1_1.default);
+const ECPair = (0, ecpair_1.ECPairFactory)(secp256k1_1.default);
 const BlockStreamURL = "https://blockstream.info/api";
 const MinSatInscription = 10;
 /**
@@ -82,7 +84,7 @@ function tweakSigner(signer, opts = {}) {
     if (!tweakedPrivateKey) {
         throw new Error('Invalid tweaked private key!');
     }
-    return utils_1.ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
+    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
         network: opts.network,
     });
 }
@@ -258,7 +260,7 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     let { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     console.log("selectedUTXOs: ", selectedUTXOs);
     // init key pair from senderPrivateKey
-    let keypair = utils_1.ECPair.fromPrivateKey(senderPrivateKey);
+    let keypair = ECPair.fromPrivateKey(senderPrivateKey);
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network });
     // Generate an address from the tweaked public key

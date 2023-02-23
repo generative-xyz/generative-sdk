@@ -1,7 +1,5 @@
 import ecc from "@bitcoinerlab/secp256k1";
-
-var wif = require('wif');
-
+const wif = require('wif');
 import {
     networks,
     payments,
@@ -11,7 +9,10 @@ import {
     crypto
 } from "bitcoinjs-lib";
 import axios, { AxiosResponse } from "axios";
-import {ECPair} from "./src/bitcoin/utils";
+import { ECPairFactory, ECPairAPI } from "ecpair";
+
+initEccLib(ecc as any);
+const ECPair: ECPairAPI = ECPairFactory(ecc);
 
 const BlockStreamURL = "https://blockstream.info/api";
 const MinSatInscription = 10;
