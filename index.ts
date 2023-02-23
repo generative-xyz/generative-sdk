@@ -6,10 +6,10 @@ import {
     Psbt,
     initEccLib,
     Signer,
-    crypto
+    crypto,
 } from "bitcoinjs-lib";
+import { ECPairFactory, ECPairAPI } from 'ecpair';
 import axios, { AxiosResponse } from "axios";
-import { ECPairFactory, ECPairAPI } from "ecpair";
 
 initEccLib(ecc as any);
 const ECPair: ECPairAPI = ECPairFactory(ecc);
