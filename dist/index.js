@@ -2,6 +2,7 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+var bitcoinjsLib = require('bitcoinjs-lib');
 var axios = require('axios');
 var ecpair = require('ecpair');
 var ecc = require('@bitcoinerlab/secp256k1');
@@ -32,8 +33,7 @@ var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
 const BlockStreamURL = "https://blockstream.info/api";
 const MinSatInscription = 10; // can reduce it to 1 sat
 
-const { initEccLib, crypto, payments: payments$1, } = require("../bitcoinjs-lib");
-initEccLib(ecc__namespace);
+bitcoinjsLib.initEccLib(ecc__namespace);
 const ECPair = ecpair.ECPairFactory(ecc__namespace);
 const wif = require("wif");
 /**
@@ -102,18 +102,17 @@ function tweakSigner(signer, opts = {}) {
     });
 }
 function tapTweakHash(pubKey, h) {
-    return crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
+    return bitcoinjsLib.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
 }
 const generateTaprootAddress = (privateKey) => {
     const keyPair = ECPair.fromPrivateKey(privateKey);
     const internalPubkey = toXOnly(keyPair.publicKey);
-    const { address, output } = payments$1.p2tr({
+    const { address, output } = bitcoinjsLib.payments.p2tr({
         internalPubkey,
     });
     return address ? address : "";
 };
 
-const { networks, payments, Psbt } = require("../../bitcoinjs-lib");
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
 * if sending inscription, the first selected UTXO is always the UTXO contain inscription.
@@ -277,7 +276,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
 * @returns the network fee
 */
 const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true) => {
-    const network = networks.bitcoin; // mainnet
+    const network = bitcoinjsLib.networks.bitcoin; // mainnet
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     console.log("selectedUTXOs: ", selectedUTXOs);
@@ -286,7 +285,7 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network });
     // Generate an address from the tweaked public key
-    const p2pktr = payments.p2tr({
+    const p2pktr = bitcoinjsLib.payments.p2tr({
         pubkey: toXOnly(tweakedSigner.publicKey),
         network
     });
@@ -294,7 +293,7 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     if (senderAddress === "") {
         throw new Error("Can not get sender address from private key");
     }
-    const psbt = new Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network });
     // add inputs
     selectedUTXOs.forEach((input) => {
         psbt.addInput({
