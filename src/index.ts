@@ -1,15 +1,8 @@
-import { convertPrivateKey } from "./bitcoin/utils";
-import {  
-    createTx,
-    broadcastTx, 
-    selectUTXOs,
-} from "./bitcoin/tx";
-import { UTXO } from "./bitcoin/types";
-
+export * from "./lib/bitcoin/utils";
 export {
-    convertPrivateKey,
     createTx,
-    broadcastTx, 
-    UTXO,
-    selectUTXOs
-}
+    broadcastTx,
+    selectUTXOs,
+} from "./lib/bitcoin/tx";
+
+export { UTXO } from "./lib/bitcoin/types";
