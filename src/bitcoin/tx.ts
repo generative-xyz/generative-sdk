@@ -161,7 +161,7 @@ const selectUTXOs = (
     }
 
     // re-estimate fee with exact number of inputs and outputs
-    const { numOuts: reNumOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee)
+    const { numOuts: reNumOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
     let fee: number = estimateTxFee(resultUTXOs.length, reNumOuts, feeRatePerByte);
 
     // calculate output amount
@@ -180,7 +180,7 @@ const selectUTXOs = (
     }
 
     return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount, fee: fee };
-}
+};
 
 
 /**
@@ -235,7 +235,7 @@ const createTx = (
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
-            witnessUtxo: { value: input.value, script: p2pktr.output! },
+            witnessUtxo: { value: input.value, script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keypair.publicKey)
         });
     });
@@ -275,7 +275,7 @@ const createTx = (
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
     return { txID: tx.getId(), txHex, fee };
-}
+};
 
 const broadcastTx = async (txHex: string): Promise<string> => {
     const blockstream = new axios.Axios({
@@ -283,10 +283,10 @@ const broadcastTx = async (txHex: string): Promise<string> => {
     });
     const response: AxiosResponse<string> = await blockstream.post("/tx", txHex);
     return response.data;
-}
+};
 
 export {
     selectUTXOs,
     createTx,
     broadcastTx,
-}
+};
