@@ -344,22 +344,9 @@ const broadcastTx = async (txHex) => {
     return response.data;
 };
 
-var index = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    selectUTXOs: selectUTXOs,
-    createTx: createTx,
-    broadcastTx: broadcastTx,
-    convertPrivateKey: convertPrivateKey,
-    estimateTxFee: estimateTxFee,
-    estimateNumInOutputs: estimateNumInOutputs,
-    toXOnly: toXOnly,
-    tweakSigner: tweakSigner,
-    tapTweakHash: tapTweakHash,
-    ECPair: ECPair,
-    generateTaprootAddress: generateTaprootAddress,
-    BlockStreamURL: BlockStreamURL,
-    MinSatInscription: MinSatInscription
-});
-
-exports.bitcoin = index;
+exports.broadcastTx = broadcastTx;
+exports.convertPrivateKey = convertPrivateKey;
+exports.createTx = createTx;
+exports.generateTaprootAddress = generateTaprootAddress;
+exports.selectUTXOs = selectUTXOs;
 //# sourceMappingURL=index.js.map
