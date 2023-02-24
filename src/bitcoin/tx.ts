@@ -89,6 +89,10 @@ const selectUTXOs = (
             if (sendInscriptionID !== "") {
                 const inscription = inscriptionInfos.find(ins => ins.id === sendInscriptionID);
                 if (inscription !== undefined) {
+                    // don't support send tx with tx_output_n != 0
+                    if (utxo.tx_output_n !== 0) {
+                        throw new Error(`InscriptionID ${{ sendInscriptionID }} is not supported to send because tx_output_n is not 0.`);
+                    }
                     // don't support send tx with outcoin that includes more than one inscription
                     if (inscriptionInfos.length > 1) {
                         throw new Error(`InscriptionID ${{ sendInscriptionID }} is not supported to send.`);
@@ -100,8 +104,6 @@ const selectUTXOs = (
                     if (maxAmountInsTransfer <= 0) {
                         throw new Error("Value in the inscription is not enough to pay fee");
                     }
-
-                    console.log("maxAmountInsTransfer ", maxAmountInsTransfer);
                 }
             }
         }
