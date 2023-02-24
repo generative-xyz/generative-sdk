@@ -13,8 +13,14 @@
       "es2017"
     ],
     "esModuleInterop": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@src/*": ["./*"],
+      "@root/*": ["../*"],
+    }
   },
   "include": [
     "src"
-  ]
+  ],
+  "exclude": ["node_modules", "build", "dist"]
 }
