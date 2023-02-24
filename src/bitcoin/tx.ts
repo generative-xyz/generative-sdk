@@ -93,6 +93,7 @@ const selectUTXOs = (
                     inscriptionUTXO = utxo;
                     inscriptionInfo = inscription;
                     maxAmountInsTransfer = inscriptionUTXO.value - inscriptionInfo.offset - 1 ;
+                    console.log("maxAmountInsTransfer ", maxAmountInsTransfer);
                 }
             }
         }
@@ -103,17 +104,6 @@ const selectUTXOs = (
             throw new Error("Can not find inscription UTXO for sendInscriptionID");
         }
         if (isUseInscriptionPayFee) {
-            // // if offset is 0: SHOULD use inscription to pay fee
-            // // otherwise, MUST use normal UTXOs to pay fee
-            // if (inscriptionInfo.offset !== 0) {
-            //     isUseInscriptionPayFee = false;
-            // } else {
-            //     // if value is not enough to pay fee, MUST use normal UTXOs to pay fee
-            //     if (inscriptionUTXO.value < estFee + MinSatInscription) {
-            //         isUseInscriptionPayFee = false;
-            //     }
-            // }
-
             if (maxAmountInsTransfer < estFee ) {
                 throw new Error("Value in the inscription is not enough to pay fee");
             }
@@ -188,7 +178,6 @@ const selectUTXOs = (
     // calculate output amount
     if (isUseInscriptionPayFee) {
         if (maxAmountInsTransfer < fee ) {
-            // fee = inscriptionUTXO.value - MinSatInscription;
             fee = maxAmountInsTransfer;
         }
         valueOutInscription = inscriptionUTXO.value - fee;

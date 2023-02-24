@@ -94,7 +94,7 @@ let senderAddress = "bc1prvw0jnlq7zhvy3jxuley9qjxm8kpz2wgwrd2e7nce455am6glpxqavd
 
 let inscriptions: { [key: string]: Inscription[] } = {
   "fecd11d6da5404af3574db4d4fd87aa2d4e2a4d4c3d7d6a767474eeea34e55f3:0": [{ id: "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0", offset: 4607 }],
-  "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09:0": [{ id: "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1", offset: 1200 }]
+  "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09:0": [{ id: "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1", offset: 568 }]
 };
 
 let sendInscriptionID = "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0";
@@ -124,6 +124,8 @@ describe("Selecting UTXOs Tests", () => {
     const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
       UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
 
+    console.log("selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee ", selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee);
+
     let actualTxIDKey = selectedUTXOs[0].tx_hash.concat(":");
     actualTxIDKey = actualTxIDKey.concat(selectedUTXOs[0].tx_output_n.toString());
 
@@ -138,25 +140,60 @@ describe("Selecting UTXOs Tests", () => {
     assert.equal(valueOutInscription > 4607, true);
     assert.equal(changeAmount, 0);
   });
-  it("inscriptionId is not empty - should return 1 selected UTXO value is not enough to pay fee (inscription) - isUseInscriptionPayFeeParam = true", () => {
-    let sendInscriptionID = "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1";
+
+  it("inscriptionId is empty && sendAmount > 0 - should return 1 selected normal UTXO - isUseInscriptionPayFeeParam = true", () => {
+    let sendInscriptionID = "";
+    let sendAmount = 100;
 
     const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
       UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
 
-    let actualTxIDKey = selectedUTXOs[0].tx_hash.concat(":");
-    actualTxIDKey = actualTxIDKey.concat(selectedUTXOs[0].tx_output_n.toString());
-
-    let actualInscriptionInfos = inscriptions[actualTxIDKey];
-    let actualInscriptionID = actualInscriptionInfos[0].id;
+    console.log("selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee ", selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee);
 
     assert.equal(selectedUTXOs.length, 1);
-    assert.equal(actualInscriptionID, sendInscriptionID);
-    assert.equal(isUseInscriptionPayFee, true);
+    assert.equal(selectedUTXOs[0].value , 1000);
+    assert.equal(isUseInscriptionPayFee, false);
+    assert.equal(valueOutInscription, 0);
+    assert.equal(changeAmount, 1000 - fee - 100);
+  });
 
-    assert.equal(valueOutInscription, 5274 - fee);
-    assert.equal(valueOutInscription > 4607, true);
-    assert.equal(changeAmount, 0);
+  it("inscriptionId is not empty - should return 1 selected UTXO value is not enough to pay fee (inscription) - isUseInscriptionPayFeeParam = true", () => {
+    let sendInscriptionID = "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1";
+    let error;
+    try {
+    const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
+      UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+    } catch (e) {
+      error = e;
+    }
+    assert.equal(error?.toString(), "Error: Value in the inscription is not enough to pay fee");
+  });
+
+  it("inscriptionId is not empty & sendAmount > 0  - should return 1 selected UTXO value is not enough to pay fee (inscription) - isUseInscriptionPayFeeParam = true", () => {
+    let sendInscriptionID = "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0";
+    let sendAmount = 100;
+    let error;
+    try {
+    const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
+      UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+    } catch (e) {
+      error = e;
+    }
+    assert.equal(error?.toString(), "Error: Don't support send BTC while sending inscription");
+  });
+
+  it("inscriptionId is empty && sendAmount = 0 - should return 1 selected UTXO value is not enough to pay fee (inscription) - isUseInscriptionPayFeeParam = true", () => {
+    let sendInscriptionID = "";
+    let sendAmount = 0;
+
+    let error;
+    try {
+    const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
+      UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+    } catch (e) {
+      error = e;
+    }
+    assert.equal(error?.toString(), "Error: Payment info is empty");
   });
 
   // it("should return 1 selected UTXO - isUseInscriptionPayFeeParam = true", () => {
