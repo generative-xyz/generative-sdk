@@ -9,18 +9,14 @@
     "strict": true,
     "module": "esnext",
     "noEmitOnError": true,
-    "lib": [
-      "es2017"
-    ],
+    "lib": ["es2017"],
     "esModuleInterop": true,
     "baseUrl": "./src",
     "paths": {
       "@src/*": ["./*"],
-      "@root/*": ["../*"],
+      "@root/*": ["../*"]
     }
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "exclude": ["node_modules", "build", "dist", "test"]
 }
