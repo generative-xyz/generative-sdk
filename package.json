@@ -12,7 +12,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "compile": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "lint:js": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:js:fix": "eslint . --fix --ext .js,.jsx,.ts,.tsx",
     "lint:json": "prettier --check \"./**/*.json\"",
@@ -24,7 +23,8 @@
     "watch": "tsc --watch",
     "prepare": "husky install",
     "commit-msg": "commitlint --edit \"$1\"",
-    "pre-commit": "lint-staged && yarn build"
+    "pre-commit": "lint-staged && yarn build",
+    "test": "ts-mocha -p tsconfig.json test/bitcoin.spec.ts"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^17.4.4",
@@ -35,10 +35,12 @@
     "@types/wif": "^2.0.2",
     "@typescript-eslint/eslint-plugin": "^5.53.0",
     "@typescript-eslint/parser": "^5.53.0",
+    "chai": "^4.3.7",
     "commitlint": "^17.4.4",
     "eslint": "^8.11.0",
     "husky": "^8.0.3",
     "lint-staged": "^13.1.2",
+    "mocha": "^10.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.8.4",
     "rimraf": "^3.0.2",
@@ -55,6 +57,7 @@
     "browserify": "^17.0.0",
     "ecpair": "^2.1.0",
     "form-data": "^4.0.0",
+    "ts-mocha": "^10.0.0",
     "wif": "^2.0.6"
   },
   "lint-staged": {
