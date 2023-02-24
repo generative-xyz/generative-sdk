@@ -184,7 +184,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
                     inscriptionInfo = inscription;
                     maxAmountInsTransfer = inscriptionUTXO.value - inscriptionInfo.offset - MinSatInscription;
                     if (maxAmountInsTransfer <= 0) {
-                        throw new Error("Value in the inscription is not enough to pay fee");
+                        throw new Error("Your balance is insufficient for covering the network fees.");
                     }
                 }
             }
@@ -196,7 +196,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         }
         if (isUseInscriptionPayFee) {
             if (maxAmountInsTransfer < estFee) {
-                throw new Error("Value in the inscription is not enough to pay fee");
+                throw new Error("Your balance is insufficient for covering the network fees.");
             }
         }
         // push inscription UTXO to create tx
@@ -210,7 +210,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
     let totalInputAmount = 0;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Insuffient BTC balance to send");
+            throw new Error("Your balance is insufficient.");
         }
         normalUTXOs = normalUTXOs.sort((a, b) => {
             if (a.value > b.value) {
@@ -238,7 +238,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
                 }
             }
             if (totalInputAmount < totalSendAmount) {
-                throw new Error("Insuffient BTC balance to send");
+                throw new Error("Your balance is insufficient.");
             }
         }
         else {
