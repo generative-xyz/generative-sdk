@@ -1,3 +1,4 @@
+const wif = require("wif");
 import {
     initEccLib,
     crypto,
@@ -6,11 +7,8 @@ import {
 } from "bitcoinjs-lib";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
-
 initEccLib(ecc);
 const ECPair: ECPairAPI = ECPairFactory(ecc);
-const wif = require("wif");
-
 
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -19,7 +17,7 @@ const wif = require("wif");
 */
 const convertPrivateKey = (bytes: Buffer): string => {
     return wif.encode(128, bytes, true);
-}
+};
 
 /**
 * estimateTxFee estimates the transaction fee
@@ -31,7 +29,7 @@ const convertPrivateKey = (bytes: Buffer): string => {
 const estimateTxFee = (numIns: number, numOuts: number, feeRatePerByte: number): number => {
     const fee = (68 * numIns + 43 * numOuts) * feeRatePerByte;
     return fee;
-}
+};
 
 /**
 * estimateNumInOutputs estimates number of inputs and outputs by parameters: 
@@ -58,13 +56,13 @@ const estimateNumInOutputs = (inscriptionID: string, sendAmount: number, isUseIn
         numIns++;
     }
     return { numIns, numOuts };
-}
+};
 
 function toXOnly(pubkey: Buffer): Buffer {
-    return pubkey.subarray(1, 33)
+    return pubkey.subarray(1, 33);
 }
 
-function tweakSigner(signer: any, opts: any = {}): any {
+function tweakSigner(signer: Signer, opts: any = {}): Signer {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     let privateKey: Uint8Array | undefined = signer.privateKey!;
@@ -100,12 +98,12 @@ const generateTaprootAddress = (privateKey: Buffer): string => {
     const keyPair = ECPair.fromPrivateKey(privateKey);
     const internalPubkey = toXOnly(keyPair.publicKey);
 
-    const { address, output } = payments.p2tr({
+    const { address } = payments.p2tr({
         internalPubkey,
     });
 
     return address ? address : "";
-}
+};
 
 export {
     convertPrivateKey,
@@ -116,4 +114,4 @@ export {
     tapTweakHash,
     ECPair,
     generateTaprootAddress,
-}
+};

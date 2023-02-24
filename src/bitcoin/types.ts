@@ -20,4 +20,4 @@ interface Inscription {
 export {
     UTXO,
     Inscription
-}
+};

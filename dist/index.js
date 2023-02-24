@@ -33,9 +33,9 @@ var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
 const BlockStreamURL = "https://blockstream.info/api";
 const MinSatInscription = 10; // can reduce it to 1 sat
 
+const wif = require("wif");
 bitcoinjsLib.initEccLib(ecc__namespace);
 const ECPair = ecpair.ECPairFactory(ecc__namespace);
-const wif = require("wif");
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
 * @param bytes buffer private key
@@ -107,7 +107,7 @@ function tapTweakHash(pubKey, h) {
 const generateTaprootAddress = (privateKey) => {
     const keyPair = ECPair.fromPrivateKey(privateKey);
     const internalPubkey = toXOnly(keyPair.publicKey);
-    const { address, output } = bitcoinjsLib.payments.p2tr({
+    const { address } = bitcoinjsLib.payments.p2tr({
         internalPubkey,
     });
     return address ? address : "";

@@ -15,4 +15,4 @@ export {
     UTXO,
     selectUTXOs,
     generateTaprootAddress,
-}
+};
