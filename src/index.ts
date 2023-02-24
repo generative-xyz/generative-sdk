@@ -4,6 +4,8 @@ import {convertPrivateKey, generateTaprootAddress} from "./bitcoin/utils";
 
 import {UTXO} from "./bitcoin/types";
 
+import {getBTCBalance} from "./bitcoin/wallet";
+
 export {
     convertPrivateKey,
     createTx,
@@ -11,4 +13,5 @@ export {
     UTXO,
     selectUTXOs,
     generateTaprootAddress,
+    getBTCBalance,
 };

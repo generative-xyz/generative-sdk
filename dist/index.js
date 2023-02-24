@@ -344,9 +344,27 @@ const broadcastTx = async (txHex) => {
     return response.data;
 };
 
+const getBTCBalance = (params) => {
+    let btcBalance = 0;
+    const { utxos, inscriptions } = params;
+    // filter normal UTXO and inscription UTXO to send
+    utxos.forEach(utxo => {
+        // txIDKey = tx_hash:tx_output_n
+        let txIDKey = utxo.tx_hash.concat(":");
+        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
+        // try to get inscriptionInfos
+        const inscriptionInfos = inscriptions[txIDKey];
+        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
+            btcBalance += utxo.value;
+        }
+    });
+    return btcBalance;
+};
+
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.createTx = createTx;
 exports.generateTaprootAddress = generateTaprootAddress;
+exports.getBTCBalance = getBTCBalance;
 exports.selectUTXOs = selectUTXOs;
 //# sourceMappingURL=index.js.map

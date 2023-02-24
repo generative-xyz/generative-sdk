@@ -66,4 +66,11 @@ declare const broadcastTx: (txHex: string) => Promise<string>;
 declare const convertPrivateKey: (bytes: Buffer) => string;
 declare const generateTaprootAddress: (privateKey: Buffer) => string;
 
-export { UTXO, broadcastTx, convertPrivateKey, createTx, generateTaprootAddress, selectUTXOs };
+declare const getBTCBalance: (params: {
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+}) => number;
+
+export { UTXO, broadcastTx, convertPrivateKey, createTx, generateTaprootAddress, getBTCBalance, selectUTXOs };
