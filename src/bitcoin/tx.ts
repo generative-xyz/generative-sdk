@@ -59,6 +59,9 @@ const selectUTXOs = (
         isUseInscriptionPayFee = false;
     }
 
+    // convert feeRate to interger
+    feeRatePerByte = Math.round(feeRatePerByte);
+
     // estimate fee
     const { numIns, numOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
     const estFee: number = estimateTxFee(numIns, numOuts, feeRatePerByte);
