@@ -95,7 +95,12 @@ const selectUTXOs = (
                     }
                     inscriptionUTXO = utxo;
                     inscriptionInfo = inscription;
-                    maxAmountInsTransfer = inscriptionUTXO.value - inscriptionInfo.offset - 1 ;
+                    
+                    maxAmountInsTransfer = inscriptionUTXO.value - inscriptionInfo.offset - MinSatInscription;
+                    if (maxAmountInsTransfer <= 0) {
+                        throw new Error("Value in the inscription is not enough to pay fee");
+                    }
+
                     console.log("maxAmountInsTransfer ", maxAmountInsTransfer);
                 }
             }
