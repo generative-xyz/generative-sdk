@@ -25,7 +25,6 @@
             { "allowTemplateLiterals": true }
         ],
         "keyword-spacing": ["error", { "before": true }],
-        "space-before-blocks": ["error"],
-        "@typescript-eslint/no-var-requires": 0
+        "space-before-blocks": ["error"]
     }
 }

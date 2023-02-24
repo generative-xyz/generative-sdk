@@ -2,6 +2,7 @@ import {
     initEccLib,
     crypto,
     payments,
+    Signer
 } from "bitcoinjs-lib";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
