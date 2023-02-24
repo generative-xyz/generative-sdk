@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "module": "esnext",
     "moduleResolution": "node",
     "removeComments": false,
     "sourceMap": true,
@@ -8,15 +7,10 @@
     "outDir": "build/compiled",
     "declaration": true,
     "strict": true,
+    "module": "esnext",
     "noEmitOnError": true,
     "lib": ["es2017"],
-    "esModuleInterop": true,
-    "baseUrl": "./src",
-    "paths": {
-      "@src/*": ["./*"],
-      "@root/*": ["../*"]
-    }
+    "esModuleInterop": true
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "build", "dist", "test"]
+  "include": ["src"]
 }
