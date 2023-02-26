@@ -21,7 +21,6 @@
     "make-bundle": "rollup --config",
     "build": "run-s clear _tsc make-bundle",
     "watch": "tsc --watch",
-    "prepare": "husky install",
     "commit-msg": "commitlint --edit \"$1\"",
     "pre-commit": "lint-staged && yarn build",
     "test": "ts-mocha -p tsconfig.json test/bitcoin.spec.ts"
