@@ -133,19 +133,6 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
     let valueOutInscription = 0;
     let changeAmount = 0;
     let maxAmountInsTransfer = 0;
-    // validation
-    if (sendInscriptionID !== "" && sendAmount > 0) {
-        throw new Error("Don't support send BTC while sending inscription");
-    }
-    if (sendInscriptionID === "" && sendAmount === 0) {
-        throw new Error("Payment info is empty");
-    }
-    if (sendInscriptionID !== "") {
-        isUseInscriptionPayFee = true;
-    }
-    else {
-        isUseInscriptionPayFee = false;
-    }
     // convert feeRate to interger
     feeRatePerByte = Math.round(feeRatePerByte);
     // estimate fee
@@ -172,20 +159,14 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
             if (sendInscriptionID !== "") {
                 const inscription = inscriptionInfos.find(ins => ins.id === sendInscriptionID);
                 if (inscription !== undefined) {
-                    // don't support send tx with tx_output_n != 0
-                    if (utxo.tx_output_n !== 0) {
-                        throw new Error(`InscriptionID ${{ sendInscriptionID }} is not supported to send because tx_output_n is not 0.`);
-                    }
                     // don't support send tx with outcoin that includes more than one inscription
                     if (inscriptionInfos.length > 1) {
                         throw new Error(`InscriptionID ${{ sendInscriptionID }} is not supported to send.`);
                     }
                     inscriptionUTXO = utxo;
                     inscriptionInfo = inscription;
-                    maxAmountInsTransfer = inscriptionUTXO.value - inscriptionInfo.offset - MinSatInscription;
-                    if (maxAmountInsTransfer <= 0) {
-                        throw new Error("Your balance is insufficient for covering the network fees.");
-                    }
+                    maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSatInscription;
+                    console.log("maxAmountInsTransfer: ", maxAmountInsTransfer);
                 }
             }
         }
@@ -194,10 +175,9 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         if (inscriptionUTXO === null || inscriptionInfo == null) {
             throw new Error("Can not find inscription UTXO for sendInscriptionID");
         }
-        if (isUseInscriptionPayFee) {
-            if (maxAmountInsTransfer < estFee) {
-                throw new Error("Your balance is insufficient for covering the network fees.");
-            }
+        // if value is not enough to pay fee, MUST use normal UTXOs to pay fee
+        if (isUseInscriptionPayFee && maxAmountInsTransfer < estFee) {
+            isUseInscriptionPayFee = false;
         }
         // push inscription UTXO to create tx
         resultUTXOs.push(inscriptionUTXO);
@@ -350,6 +330,81 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     const txHex = tx.toHex();
     return { txID: tx.getId(), txHex, fee };
 };
+/**
+* createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* This function is used for testing.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount amount need to send (in sat)
+* @param valueOutInscription inscription output's value (in sat)
+* @param changeAmount cardinal change amount (in sat)
+* @param fee transaction fee (in sat)
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = "", receiverInsAddress, sendAmount, valueOutInscription, changeAmount, fee) => {
+    const network = bitcoinjsLib.networks.bitcoin; // mainnet
+    const selectedUTXOs = utxos;
+    // init key pair from senderPrivateKey
+    const keypair = ECPair.fromPrivateKey(senderPrivateKey);
+    // Tweak the original keypair
+    const tweakedSigner = tweakSigner(keypair, { network });
+    // Generate an address from the tweaked public key
+    const p2pktr = bitcoinjsLib.payments.p2tr({
+        pubkey: toXOnly(tweakedSigner.publicKey),
+        network
+    });
+    const senderAddress = p2pktr.address ? p2pktr.address : "";
+    if (senderAddress === "") {
+        throw new Error("Can not get sender address from private key");
+    }
+    const psbt = new bitcoinjsLib.Psbt({ network });
+    // add inputs
+    selectedUTXOs.forEach((input) => {
+        psbt.addInput({
+            hash: input.tx_hash,
+            index: input.tx_output_n,
+            witnessUtxo: { value: input.value, script: p2pktr.output },
+            tapInternalKey: toXOnly(keypair.publicKey)
+        });
+    });
+    // add outputs
+    if (sendInscriptionID !== "") {
+        // add output inscription
+        psbt.addOutput({
+            address: receiverInsAddress,
+            value: valueOutInscription,
+        });
+    }
+    // add output send BTC
+    if (sendAmount > 0) {
+        psbt.addOutput({
+            address: receiverInsAddress,
+            value: sendAmount,
+        });
+    }
+    // add change output
+    if (changeAmount > 0) {
+        psbt.addOutput({
+            address: senderAddress,
+            value: changeAmount,
+        });
+    }
+    // sign tx
+    selectedUTXOs.forEach((utxo, index) => {
+        psbt.signInput(index, tweakedSigner);
+    });
+    psbt.finalizeAllInputs();
+    // get tx hex
+    const tx = psbt.extractTransaction();
+    console.log("Transaction : ", tx);
+    const txHex = tx.toHex();
+    return { txID: tx.getId(), txHex, fee };
+};
 const broadcastTx = async (txHex) => {
     const blockstream = new axios__default["default"].Axios({
         baseURL: BlockStreamURL
@@ -379,6 +434,7 @@ exports.MinSatInscription = MinSatInscription;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.createTx = createTx;
+exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.getBTCBalance = getBTCBalance;
 exports.selectUTXOs = selectUTXOs;
