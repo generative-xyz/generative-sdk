@@ -1,12 +1,13 @@
-import {broadcastTx, createTx, selectUTXOs} from "./bitcoin/tx";
 
-import {convertPrivateKey, generateTaprootAddress} from "./bitcoin/utils";
+import { createTx, selectUTXOs, broadcastTx, createTxWithSpecificUTXOs } from "./bitcoin/tx";
 
-import {UTXO, Inscription} from "./bitcoin/types";
+import { convertPrivateKey, generateTaprootAddress } from "./bitcoin/utils";
 
-import {getBTCBalance} from "./bitcoin/wallet";
+import { UTXO, Inscription } from "./bitcoin/types";
 
-import {MinSatInscription} from "./bitcoin/constants";
+import { getBTCBalance } from "./bitcoin/wallet";
+
+import { MinSatInscription } from "./bitcoin/constants";
 
 export {
     convertPrivateKey,
@@ -18,4 +19,5 @@ export {
     generateTaprootAddress,
     getBTCBalance,
     MinSatInscription,
+    createTxWithSpecificUTXOs
 };

@@ -56,6 +56,27 @@ declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: 
     txHex: string;
     fee: number;
 };
+/**
+* createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* This function is used for testing.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount amount need to send (in sat)
+* @param valueOutInscription inscription output's value (in sat)
+* @param changeAmount cardinal change amount (in sat)
+* @param fee transaction fee (in sat)
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createTxWithSpecificUTXOs: (senderPrivateKey: Buffer, utxos: UTXO[], sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: number, valueOutInscription: number, changeAmount: number, fee: number) => {
+    txID: string;
+    txHex: string;
+    fee: number;
+};
 declare const broadcastTx: (txHex: string) => Promise<string>;
 
 /**
@@ -75,4 +96,4 @@ declare const getBTCBalance: (params: {
 
 declare const MinSatInscription = 3000;
 
-export { Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, createTx, generateTaprootAddress, getBTCBalance, selectUTXOs };
+export { Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, createTx, createTxWithSpecificUTXOs, generateTaprootAddress, getBTCBalance, selectUTXOs };
