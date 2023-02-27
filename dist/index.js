@@ -31,7 +31,7 @@ var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
 var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
 
 const BlockStreamURL = "https://blockstream.info/api";
-const MinSatInscription = 3000;
+const MinSatInscription = 546;
 
 const wif = require("wif");
 bitcoinjsLib.initEccLib(ecc__namespace);
