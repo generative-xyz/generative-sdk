@@ -1,4 +1,4 @@
-import { Inscription, UTXO } from "./types";
+import { ICreateTxResp, Inscription, UTXO } from "./types";
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
 * if sending inscription, the first selected UTXO is always the UTXO contain inscription.
@@ -39,10 +39,6 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
 */
 declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: number, feeRatePerByte: number, isUseInscriptionPayFeeParam?: boolean) => {
-    txID: string;
-    txHex: string;
-    fee: number;
-};
+}, sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: number, feeRatePerByte: number, isUseInscriptionPayFeeParam?: boolean) => ICreateTxResp;
 declare const broadcastTx: (txHex: string) => Promise<string>;
 export { selectUTXOs, createTx, broadcastTx, };

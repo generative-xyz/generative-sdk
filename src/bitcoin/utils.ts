@@ -51,7 +51,7 @@ const estimateNumInOutputs = (inscriptionID: string, sendAmount: number, isUseIn
 
     if (sendAmount > 0 || !isUseInscriptionPayFee) {
         numIns++;
-        numOuts++;  // for change BTC output
+        numOuts++; // for change BTC output
     }
     return { numIns, numOuts };
 };

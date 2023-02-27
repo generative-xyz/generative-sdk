@@ -1,4 +1,3 @@
-
 import { Inscription, UTXO } from "./types";
 
 const getBTCBalance = (

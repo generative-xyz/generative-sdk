@@ -348,7 +348,7 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee };
+    return { txID: tx.getId(), txHex, fee, selectedUTXOs };
 };
 const broadcastTx = async (txHex) => {
     const blockstream = new axios__default["default"].Axios({
@@ -375,10 +375,18 @@ const getBTCBalance = (params) => {
     return btcBalance;
 };
 
+exports.BlockStreamURL = BlockStreamURL;
+exports.ECPair = ECPair;
+exports.MinSatInscription = MinSatInscription;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.createTx = createTx;
+exports.estimateNumInOutputs = estimateNumInOutputs;
+exports.estimateTxFee = estimateTxFee;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.getBTCBalance = getBTCBalance;
 exports.selectUTXOs = selectUTXOs;
+exports.tapTweakHash = tapTweakHash;
+exports.toXOnly = toXOnly;
+exports.tweakSigner = tweakSigner;
 //# sourceMappingURL=index.js.map

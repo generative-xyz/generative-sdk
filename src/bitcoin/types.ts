@@ -4,11 +4,6 @@ interface UTXO {
     tx_input_n: number;
     tx_output_n: number;
     value: number;
-    // RefBalance    int       `json:"ref_balance"`
-    // Spent         bool      `json:"spent"`
-    // Confirmations int       `json:"confirmations"`
-    // Confirmed     time.Time `json:"confirmed"`
-    // DoubleSpend   bool      `json:"double_spend"`
 }
 
 // key : "TxID:OutcoinIndex" : Inscription[]
@@ -17,7 +12,15 @@ interface Inscription {
     id: string,
 }
 
+interface ICreateTxResp {
+    txID: string,
+    txHex: string,
+    fee: number,
+    selectedUTXOs: UTXO[]
+}
+
 export {
     UTXO,
-    Inscription
+    Inscription,
+    ICreateTxResp
 };

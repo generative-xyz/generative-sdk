@@ -9,4 +9,10 @@ interface Inscription {
     offset: number;
     id: string;
 }
-export { UTXO, Inscription };
+interface ICreateTxResp {
+    txID: string;
+    txHex: string;
+    fee: number;
+    selectedUTXOs: UTXO[];
+}
+export { UTXO, Inscription, ICreateTxResp };
