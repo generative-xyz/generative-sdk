@@ -4,7 +4,7 @@ import {
     Psbt
 } from "bitcoinjs-lib";
 import axios, { AxiosResponse } from "axios";
-import { Inscription, UTXO } from "./types";
+import { ICreateTxResp, Inscription, UTXO } from "./types";
 import { BlockStreamURL, MinSatInscription } from "./constants";
 import {
     toXOnly,
@@ -227,9 +227,9 @@ const createTx = (
     receiverInsAddress: string,
     sendAmount: number,
     feeRatePerByte: number,
-    isUseInscriptionPayFeeParam = true,  // default is true
-): { txID: string, txHex: string, fee: number } => {
-    const network = networks.bitcoin;  // mainnet
+    isUseInscriptionPayFeeParam = true, // default is true
+): ICreateTxResp => {
+    const network = networks.bitcoin; // mainnet
 
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
@@ -295,7 +295,7 @@ const createTx = (
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee };
+    return { txID: tx.getId(), txHex, fee, selectedUTXOs };
 };
 
 const broadcastTx = async (txHex: string): Promise<string> => {
