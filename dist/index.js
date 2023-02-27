@@ -375,6 +375,7 @@ const getBTCBalance = (params) => {
     return btcBalance;
 };
 
+exports.MinSatInscription = MinSatInscription;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.createTx = createTx;

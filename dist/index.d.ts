@@ -73,4 +73,6 @@ declare const getBTCBalance: (params: {
     };
 }) => number;
 
-export { UTXO, broadcastTx, convertPrivateKey, createTx, generateTaprootAddress, getBTCBalance, selectUTXOs };
+declare const MinSatInscription = 3000;
+
+export { Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, createTx, generateTaprootAddress, getBTCBalance, selectUTXOs };
