@@ -392,8 +392,6 @@ describe("Create tx with multiple UTXOs Tests", () => {
     assert.equal(changeAmount, 0);
   });
 
-
-
   it("insciption offset != 0 : MUST return 2 selected UTXOs (insciption & medium UTXO to pay fee) - isUseInscriptionPayFeeParam = default", () => {
     let sendInscriptionID = "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1";
     let isUseInscriptionPayFeeParam = false;

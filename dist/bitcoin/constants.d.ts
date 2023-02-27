@@ -1,3 +1,3 @@
 declare const BlockStreamURL = "https://blockstream.info/api";
-declare const MinSatInscription = 3000;
+declare const MinSatInscription = 546;
 export { BlockStreamURL, MinSatInscription };
