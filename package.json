@@ -23,7 +23,9 @@
     "watch": "tsc --watch",
     "commit-msg": "commitlint --edit \"$1\"",
     "pre-commit": "lint-staged && yarn build",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/bitcoin.spec.ts'"
+    "test": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/bitcoin.spec.ts'",
+    "test-util": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/utils.spec.ts'",
+    "test-psbt": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/psbt.spec.ts'"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^17.4.4",
