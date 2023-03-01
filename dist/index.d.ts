@@ -48,6 +48,38 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
     fee: number;
 };
 /**
+* selectUTXOs selects the most reasonable UTXOs to create the transaction.
+* if sending inscription, the first selected UTXO is always the UTXO contain inscription.
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @returns the ordinal UTXO
+* @returns the actual flag using inscription coin to pay fee
+* @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
+*/
+declare const selectOrdinalUTXO: (utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}, inscriptionID: string) => UTXO;
+/**
+* selectCardinalUTXOs selects the most reasonable UTXOs to create the transaction.
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendAmount satoshi amount need to send
+* @param isSelectDummyUTXO need to select dummy UTXO or not
+* @returns the list of selected UTXOs
+* @returns the actual flag using inscription coin to pay fee
+* @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
+*/
+declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}, sendAmount: number, isSelectDummyUTXO: boolean) => {
+    selectedUTXOs: UTXO[];
+    dummyUTXO: UTXO;
+};
+
+/**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param senderPrivateKey buffer private key of the sender
@@ -95,6 +127,12 @@ declare const ECPair: ECPairAPI;
 * @returns the WIF private key string
 */
 declare const convertPrivateKey: (bytes: Buffer) => string;
+/**
+* convertPrivateKeyFromStr converts private key WIF string to Buffer
+* @param str private key string
+* @returns buffer private key
+*/
+declare const convertPrivateKeyFromStr: (str: string) => Buffer;
 /**
 * estimateTxFee estimates the transaction fee
 * @param numIns number of inputs in the transaction
@@ -146,30 +184,58 @@ declare const createPSBTToSale: (params: {
     price: number;
     sellerAddress: string;
     sellerPrivateKey: Buffer;
+    dummyUTXO: UTXO;
+    creatorAddress: string;
+    feeForCreator: number;
 }) => string;
 /**
 * createPSBTToBuy creates the partially signed bitcoin transaction to buy the inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbt PSBT from seller
 * @param buyerPrivateKey buffer private key of the buyer
-* @param sellerAddress payment address of the seller to recieve BTC from buyer
-* @param ordinalInput ordinal input coin to sell
+* @param buyerAddress payment address of the buy to receive inscription
+* @param valueInscription value in inscription
 * @param price price of the inscription that the seller wants to sell (in satoshi)
+* @param paymentUtxos cardinal input coins to payment
+* @param dummyUtxo cardinal dummy input coin
 * @returns the encoded base64 partially signed transaction
 */
 declare const createPSBTToBuy: (params: {
     sellerSignedPsbt: Psbt;
     buyerPrivateKey: Buffer;
     buyerAddress: string;
-    sellerAddress: string;
     valueInscription: number;
     price: number;
     paymentUtxos: UTXO[];
     dummyUtxo: UTXO;
     feeRate: number;
-}) => {
-    txID: string;
-    txHex: string;
-    fee: number;
-};
+}) => ICreateTxResp;
+/**
+* reqListForSaleInscription creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerPrivateKey buffer private key of the seller
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @returns the base64 encode Psbt
+*/
+declare const reqListForSaleInscription: (sellerPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}, sellInscriptionID: string | undefined, receiverBTCAddress: string, price: number, creatorAddress?: string, feeForCreator?: number) => string;
+/**
+* reqBuyInscription creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbtB64 buffer private key of the buyer
+* @param buyerPrivateKey buffer private key of the buyer
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @returns the base64 encode Psbt
+*/
+declare const reqBuyInscription: (sellerSignedPsbtB64: string, buyerPrivateKey: Buffer, buyerAddress: string, valueInscription: number, price: number, utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}, feeRatePerByte: number) => ICreateTxResp;
 
-export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, createPSBTToBuy, createPSBTToSale, createTx, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
+export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createPSBTToBuy, createPSBTToSale, createTx, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectOrdinalUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
