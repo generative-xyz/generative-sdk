@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { Signer } from "bitcoinjs-lib";
+import { payments, Signer } from "bitcoinjs-lib";
 import { ECPairAPI } from "ecpair";
 declare const ECPair: ECPairAPI;
 /**
@@ -31,4 +31,10 @@ declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
 declare const generateTaprootAddress: (privateKey: Buffer) => string;
-export { convertPrivateKey, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, };
+declare const generateTaprootKeyPair: (privateKey: Buffer) => {
+    keyPair: import("ecpair").ECPairInterface;
+    senderAddress: string;
+    tweakedSigner: Signer;
+    p2pktr: payments.Payment;
+};
+export { convertPrivateKey, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, };

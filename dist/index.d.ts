@@ -1,14 +1,15 @@
 /// <reference types="node" />
-import { Signer } from 'bitcoinjs-lib';
+import { networks, Signer, payments, Psbt } from 'bitcoinjs-lib';
+import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
 declare const MinSatInscription = 3000;
+declare const network: networks.Network;
+declare const DummyUTXOValue = 1000;
 
 interface UTXO {
     tx_hash: string;
-    block_height: number;
-    tx_input_n: number;
     tx_output_n: number;
     value: number;
 }
@@ -96,6 +97,12 @@ declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
 declare const generateTaprootAddress: (privateKey: Buffer) => string;
+declare const generateTaprootKeyPair: (privateKey: Buffer) => {
+    keyPair: ecpair.ECPairInterface;
+    senderAddress: string;
+    tweakedSigner: Signer;
+    p2pktr: payments.Payment;
+};
 
 declare const getBTCBalance: (params: {
     utxos: UTXO[];
@@ -104,4 +111,44 @@ declare const getBTCBalance: (params: {
     };
 }) => number;
 
-export { BlockStreamURL, ECPair, ICreateTxResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, createTx, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, getBTCBalance, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
+/**
+* createPSBTForSale creates the partially signed bitcoin transaction to sale the inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerPrivateKey buffer private key of the seller
+* @param sellerAddress payment address of the seller to recieve BTC from buyer
+* @param ordinalInput ordinal input coin to sell
+* @param price price of the inscription that the seller wants to sell (in satoshi)
+* @returns the encoded base64 partially signed transaction
+*/
+declare const createPSBTToSale: (params: {
+    ordinalInput: UTXO;
+    price: number;
+    sellerAddress: string;
+    sellerPrivateKey: Buffer;
+}) => string;
+/**
+* createPSBTToBuy creates the partially signed bitcoin transaction to buy the inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param buyerPrivateKey buffer private key of the buyer
+* @param sellerAddress payment address of the seller to recieve BTC from buyer
+* @param ordinalInput ordinal input coin to sell
+* @param price price of the inscription that the seller wants to sell (in satoshi)
+* @returns the encoded base64 partially signed transaction
+*/
+declare const createPSBTToBuy: (params: {
+    sellerSignedPsbt: Psbt;
+    buyerPrivateKey: Buffer;
+    buyerAddress: string;
+    sellerAddress: string;
+    valueInscription: number;
+    price: number;
+    paymentUtxos: UTXO[];
+    dummyUtxo: UTXO;
+    feeRate: number;
+}) => {
+    txID: string;
+    txHex: string;
+    fee: number;
+};
+
+export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, createPSBTToBuy, createPSBTToSale, createTx, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };

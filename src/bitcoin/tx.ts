@@ -288,6 +288,7 @@ const createTx = (
     // sign tx
     selectedUTXOs.forEach((utxo, index) => {
         psbt.signInput(index, tweakedSigner);
+        console.log("psbt after signing tapKeySig: ", psbt.data.inputs[index].tapKeySig,  psbt.data.inputs[index].tapKeySig?.length);
     });
     psbt.finalizeAllInputs();
 

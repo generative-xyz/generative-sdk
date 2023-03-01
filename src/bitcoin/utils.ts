@@ -5,6 +5,7 @@ import {
     payments,
     Signer
 } from "bitcoinjs-lib";
+import {network} from "./constants";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
 initEccLib(ecc);
@@ -103,6 +104,25 @@ const generateTaprootAddress = (privateKey: Buffer): string => {
     return address ? address : "";
 };
 
+const generateTaprootKeyPair = (privateKey: Buffer) => {
+    // init key pair from senderPrivateKey
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    // Tweak the original keypair
+    const tweakedSigner = tweakSigner(keyPair, { network });
+
+    // Generate an address from the tweaked public key
+    const p2pktr = payments.p2tr({
+        pubkey: toXOnly(tweakedSigner.publicKey),
+        network
+    });
+    const senderAddress = p2pktr.address ? p2pktr.address : "";
+    if (senderAddress === "") {
+        throw new Error("Can not get sender address from private key");
+    }
+
+    return {keyPair, senderAddress, tweakedSigner, p2pktr};
+};
+
 export {
     convertPrivateKey,
     estimateTxFee,
@@ -112,4 +132,5 @@ export {
     tapTweakHash,
     ECPair,
     generateTaprootAddress,
+    generateTaprootKeyPair,
 };
