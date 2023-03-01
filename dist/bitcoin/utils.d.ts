@@ -9,6 +9,12 @@ declare const ECPair: ECPairAPI;
 */
 declare const convertPrivateKey: (bytes: Buffer) => string;
 /**
+* convertPrivateKeyFromStr converts private key WIF string to Buffer
+* @param str private key string
+* @returns buffer private key
+*/
+declare const convertPrivateKeyFromStr: (str: string) => Buffer;
+/**
 * estimateTxFee estimates the transaction fee
 * @param numIns number of inputs in the transaction
 * @param numOuts number of outputs in the transaction
@@ -37,4 +43,4 @@ declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     tweakedSigner: Signer;
     p2pktr: payments.Payment;
 };
-export { convertPrivateKey, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, };
+export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, };

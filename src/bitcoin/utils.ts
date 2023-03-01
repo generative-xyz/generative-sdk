@@ -5,7 +5,7 @@ import {
     payments,
     Signer
 } from "bitcoinjs-lib";
-import {network} from "./constants";
+import { network } from "./constants";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
 initEccLib(ecc);
@@ -18,6 +18,16 @@ const ECPair: ECPairAPI = ECPairFactory(ecc);
 */
 const convertPrivateKey = (bytes: Buffer): string => {
     return wif.encode(128, bytes, true);
+};
+
+/**
+* convertPrivateKeyFromStr converts private key WIF string to Buffer
+* @param str private key string
+* @returns buffer private key
+*/
+const convertPrivateKeyFromStr = (str: string): Buffer => {
+    const res = wif.decode(str);
+    return res?.privateKey;
 };
 
 /**
@@ -120,11 +130,12 @@ const generateTaprootKeyPair = (privateKey: Buffer) => {
         throw new Error("Can not get sender address from private key");
     }
 
-    return {keyPair, senderAddress, tweakedSigner, p2pktr};
+    return { keyPair, senderAddress, tweakedSigner, p2pktr };
 };
 
 export {
     convertPrivateKey,
+    convertPrivateKeyFromStr,
     estimateTxFee,
     estimateNumInOutputs,
     toXOnly,
