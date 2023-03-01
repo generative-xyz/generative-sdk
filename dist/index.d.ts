@@ -184,7 +184,7 @@ declare const createPSBTToSale: (params: {
     price: number;
     sellerAddress: string;
     sellerPrivateKey: Buffer;
-    dummyUTXO: UTXO;
+    dummyUTXO: any;
     creatorAddress: string;
     feeForCreator: number;
 }) => string;
