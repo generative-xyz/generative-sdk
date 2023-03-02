@@ -109,7 +109,7 @@ describe("Buy and Sell inscription with PSBT", () => {
                 price: price,
                 sellerAddress: sellerAddress,
                 sellerPrivateKey: sellerPrivateKey,
-                dummyUTXO: null,
+                dummyUTXO: {},
                 creatorAddress: "",
                 feeForCreator: 0,
             });
