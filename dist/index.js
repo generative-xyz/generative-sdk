@@ -910,12 +910,14 @@ const reqListForSaleInscription = async (params) => {
     // if there is no dummy UTXO, we have to create and broadcast the tx to split dummy UTXO first
     let dummyUTXORes;
     let selectedUTXOs = [];
+    let splitTxID = "";
     if (needDummyUTXO) {
         try {
             // create dummy UTXO from cardinal UTXOs
             const res = await createDummyUTXOFromCardinal(sellerPrivateKey, utxos, inscriptions, feeRatePerByte);
             dummyUTXORes = res.dummyUTXO;
             selectedUTXOs = res.selectedUTXOs;
+            splitTxID = res.splitTxID;
         }
         catch (e) {
             // create dummy UTXO from inscription UTXO
@@ -926,6 +928,7 @@ const reqListForSaleInscription = async (params) => {
             catch (e) {
                 throw new Error(`Broadcast the split tx from inscription error ${{ e }}`);
             }
+            splitTxID = txID;
             newInscriptionUTXO = {
                 tx_hash: txID,
                 tx_output_n: 0,
@@ -947,7 +950,7 @@ const reqListForSaleInscription = async (params) => {
         creatorAddress: creatorAddress,
         feePayToCreator: feePayToCreator,
     });
-    return { base64Psbt, selectedUTXOs: selectedUTXOs };
+    return { base64Psbt, selectedUTXOs: selectedUTXOs, splitTxID };
 };
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.

@@ -251,7 +251,7 @@ const reqListForSaleInscription = async (
         creatorAddress: string,
         feeRatePerByte: number,
     }
-): Promise<{ base64Psbt: string, selectedUTXOs: UTXO[] }> => {
+): Promise<{ base64Psbt: string, selectedUTXOs: UTXO[], splitTxID: string }> => {
     const { sellerPrivateKey,
         utxos,
         inscriptions,
@@ -302,6 +302,7 @@ const reqListForSaleInscription = async (
     // if there is no dummy UTXO, we have to create and broadcast the tx to split dummy UTXO first
     let dummyUTXORes: any;
     let selectedUTXOs: UTXO[] = [];
+    let splitTxID = "";
 
     if (needDummyUTXO) {
         try {
@@ -309,6 +310,7 @@ const reqListForSaleInscription = async (
             const res = await createDummyUTXOFromCardinal(sellerPrivateKey, utxos, inscriptions, feeRatePerByte);
             dummyUTXORes = res.dummyUTXO;
             selectedUTXOs = res.selectedUTXOs;
+            splitTxID = res.splitTxID;
 
         } catch (e) {
             // create dummy UTXO from inscription UTXO
@@ -318,6 +320,7 @@ const reqListForSaleInscription = async (
             } catch (e) {
                 throw new Error(`Broadcast the split tx from inscription error ${{ e }}`);
             }
+            splitTxID = txID;
 
             newInscriptionUTXO = {
                 tx_hash: txID,
@@ -342,7 +345,7 @@ const reqListForSaleInscription = async (
         feePayToCreator: feePayToCreator,
     });
 
-    return { base64Psbt, selectedUTXOs: selectedUTXOs };
+    return { base64Psbt, selectedUTXOs: selectedUTXOs, splitTxID };
 };
 
 /**
