@@ -1,4 +1,4 @@
-import { ICreateTxResp, Inscription, UTXO } from "./types";
+import { ICreateTxResp, Inscription, UTXO, ICreateTxSplitInscriptionResp } from "./types";
 import { selectUTXOs } from "./selectcoin";
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
@@ -39,5 +39,30 @@ declare const createTxWithSpecificUTXOs: (senderPrivateKey: Buffer, utxos: UTXO[
     txHex: string;
     fee: number;
 };
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createTxSplitFundFromOrdinalUTXO: (senderPrivateKey: Buffer, inscriptionUTXO: UTXO, inscriptionInfo: Inscription, sendAmount: number, feeRatePerByte: number) => ICreateTxSplitInscriptionResp;
+declare const createDummyUTXOFromCardinal: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}, feeRatePerByte: number) => Promise<{
+    dummyUTXO: UTXO;
+    splitTxID: string;
+    selectedUTXOs: UTXO[];
+    newUTXO: any;
+    fee: number;
+}>;
 declare const broadcastTx: (txHex: string) => Promise<string>;
-export { selectUTXOs, createTx, broadcastTx, createTxWithSpecificUTXOs, };
+export { selectUTXOs, createTx, broadcastTx, createTxWithSpecificUTXOs, createTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, };

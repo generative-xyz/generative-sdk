@@ -10,13 +10,13 @@ import { ICreateTxResp, Inscription, UTXO } from "./types";
 * @returns the encoded base64 partially signed transaction
 */
 declare const createPSBTToSale: (params: {
-    ordinalInput: UTXO;
-    price: number;
-    sellerAddress: string;
     sellerPrivateKey: Buffer;
-    dummyUTXO: any;
+    receiverBTCAddress: string;
+    inscriptionUTXO: UTXO;
+    amountPayToSeller: number;
+    feePayToCreator: number;
     creatorAddress: string;
-    feeForCreator: number;
+    dummyUTXO: UTXO;
 }) => string;
 /**
 * createPSBTToBuy creates the partially signed bitcoin transaction to buy the inscription.
@@ -33,7 +33,7 @@ declare const createPSBTToSale: (params: {
 declare const createPSBTToBuy: (params: {
     sellerSignedPsbt: Psbt;
     buyerPrivateKey: Buffer;
-    buyerAddress: string;
+    receiverInscriptionAddress: string;
     valueInscription: number;
     price: number;
     paymentUtxos: UTXO[];
@@ -48,11 +48,25 @@ declare const createPSBTToBuy: (params: {
 * @param inscriptions list of inscription infos of the seller
 * @param sellInscriptionID id of inscription to sell
 * @param receiverBTCAddress the seller's address to receive BTC
+* @param amountPayToSeller BTC amount to pay to seller
+* @param feePayToCreator BTC fee to pay to creator
+* @param creatorAddress address of creator
+* amountPayToSeller + feePayToCreator = price that is showed on UI
 * @returns the base64 encode Psbt
 */
-declare const reqListForSaleInscription: (sellerPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
-    [key: string]: Inscription[];
-}, sellInscriptionID: string | undefined, receiverBTCAddress: string, price: number, creatorAddress?: string, feeForCreator?: number) => string;
+declare const reqListForSaleInscription: (params: {
+    sellerPrivateKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sellInscriptionID: string;
+    receiverBTCAddress: string;
+    amountPayToSeller: number;
+    feePayToCreator: number;
+    creatorAddress: string;
+    feeRatePerByte: number;
+}) => Promise<string>;
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -62,9 +76,19 @@ declare const reqListForSaleInscription: (sellerPrivateKey: Buffer, utxos: UTXO[
 * @param inscriptions list of inscription infos of the seller
 * @param sellInscriptionID id of inscription to sell
 * @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
 * @returns the base64 encode Psbt
 */
-declare const reqBuyInscription: (sellerSignedPsbtB64: string, buyerPrivateKey: Buffer, buyerAddress: string, valueInscription: number, price: number, utxos: UTXO[], inscriptions: {
-    [key: string]: Inscription[];
-}, feeRatePerByte: number) => ICreateTxResp;
+declare const reqBuyInscription: (params: {
+    sellerSignedPsbtB64: string;
+    buyerPrivateKey: Buffer;
+    receiverInscriptionAddress: string;
+    valueInscription: number;
+    price: number;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+}) => Promise<ICreateTxResp>;
 export { createPSBTToSale, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, };

@@ -14,11 +14,21 @@ interface ICreateTxResp {
     txID: string,
     txHex: string,
     fee: number,
+    selectedUTXOs: UTXO[],
+    changeAmount: number,
+}
+
+interface ICreateTxSplitInscriptionResp {
+    txID: string,
+    txHex: string,
+    fee: number,
     selectedUTXOs: UTXO[]
+    newValueInscription: number,
 }
 
 export {
     UTXO,
     Inscription,
-    ICreateTxResp
+    ICreateTxResp,
+    ICreateTxSplitInscriptionResp,
 };
