@@ -1,4 +1,4 @@
-import { createPSBTToSale, createPSBTToBuy, UTXO, network, convertPrivateKeyFromStr, convertPrivateKey } from "../dist/index";
+import { createPSBTToSell, createPSBTToBuy, UTXO, network, convertPrivateKeyFromStr, convertPrivateKey } from "../dist/index";
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
 
@@ -104,7 +104,7 @@ describe("Buy and Sell inscription with PSBT", () => {
         const price = 1078;
 
         try {
-            signedTx = createPSBTToSale({
+            signedTx = createPSBTToSell({
                 ordinalInput: ordinalUTXO,
                 price: price,
                 sellerAddress: sellerAddress,

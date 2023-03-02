@@ -1,7 +1,7 @@
 import { Psbt } from "bitcoinjs-lib";
 import { ICreateTxResp, Inscription, UTXO } from "./types";
 /**
-* createPSBTForSale creates the partially signed bitcoin transaction to sale the inscription.
+* createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param sellerPrivateKey buffer private key of the seller
 * @param sellerAddress payment address of the seller to recieve BTC from buyer
@@ -9,7 +9,7 @@ import { ICreateTxResp, Inscription, UTXO } from "./types";
 * @param price price of the inscription that the seller wants to sell (in satoshi)
 * @returns the encoded base64 partially signed transaction
 */
-declare const createPSBTToSale: (params: {
+declare const createPSBTToSell: (params: {
     sellerPrivateKey: Buffer;
     receiverBTCAddress: string;
     inscriptionUTXO: UTXO;
@@ -83,7 +83,6 @@ declare const reqBuyInscription: (params: {
     sellerSignedPsbtB64: string;
     buyerPrivateKey: Buffer;
     receiverInscriptionAddress: string;
-    valueInscription: number;
     price: number;
     utxos: UTXO[];
     inscriptions: {
@@ -91,4 +90,4 @@ declare const reqBuyInscription: (params: {
     };
     feeRatePerByte: number;
 }) => Promise<ICreateTxResp>;
-export { createPSBTToSale, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, };
+export { createPSBTToSell, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, };

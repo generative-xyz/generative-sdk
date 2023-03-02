@@ -706,7 +706,7 @@ const getBTCBalance = (params) => {
 };
 
 /**
-* createPSBTForSale creates the partially signed bitcoin transaction to sale the inscription.
+* createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param sellerPrivateKey buffer private key of the seller
 * @param sellerAddress payment address of the seller to recieve BTC from buyer
@@ -714,7 +714,7 @@ const getBTCBalance = (params) => {
 * @param price price of the inscription that the seller wants to sell (in satoshi)
 * @returns the encoded base64 partially signed transaction
 */
-const createPSBTToSale = (params) => {
+const createPSBTToSell = (params) => {
     const psbt = new bitcoinjsLib.Psbt({ network });
     const { inscriptionUTXO: ordinalInput, amountPayToSeller: price, receiverBTCAddress: sellerAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator: feeForCreator } = params;
     const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(sellerPrivateKey);
@@ -936,7 +936,7 @@ const reqListForSaleInscription = async (params) => {
             };
         }
     }
-    const base64Psbt = createPSBTToSale({
+    const base64Psbt = createPSBTToSell({
         inscriptionUTXO: newInscriptionUTXO,
         amountPayToSeller: amountPayToSeller,
         receiverBTCAddress: receiverBTCAddress,
@@ -960,9 +960,18 @@ const reqListForSaleInscription = async (params) => {
 * @returns the base64 encode Psbt
 */
 const reqBuyInscription = async (params) => {
-    const { sellerSignedPsbtB64, buyerPrivateKey, receiverInscriptionAddress, valueInscription, price, utxos, inscriptions, feeRatePerByte } = params;
+    var _a;
+    const { sellerSignedPsbtB64, buyerPrivateKey, receiverInscriptionAddress, price, utxos, inscriptions, feeRatePerByte } = params;
     // decode seller's signed PSBT
     const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+    const sellerInputs = sellerSignedPsbt.data.inputs;
+    if (sellerInputs.length === 0) {
+        throw new Error("Invalid seller's PSBT.");
+    }
+    const valueInscription = (_a = sellerInputs[0].witnessUtxo) === null || _a === void 0 ? void 0 : _a.value;
+    if (valueInscription === undefined || valueInscription === 0) {
+        throw new Error("Invalid value inscription in seller's PSBT.");
+    }
     const newUTXOs = utxos;
     // select or create dummy UTXO
     const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO } = await createDummyUTXOFromCardinal(buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
@@ -1003,7 +1012,7 @@ exports.convertPrivateKey = convertPrivateKey;
 exports.convertPrivateKeyFromStr = convertPrivateKeyFromStr;
 exports.createDummyUTXOFromCardinal = createDummyUTXOFromCardinal;
 exports.createPSBTToBuy = createPSBTToBuy;
-exports.createPSBTToSale = createPSBTToSale;
+exports.createPSBTToSell = createPSBTToSell;
 exports.createTx = createTx;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
 exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;

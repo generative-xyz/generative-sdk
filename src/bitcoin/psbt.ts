@@ -15,7 +15,7 @@ import { selectCardinalUTXOs, selectOrdinalUTXO as selectInscriptionUTXO } from 
 import { broadcastTx, createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO } from "./tx";
 
 /**
-* createPSBTForSale creates the partially signed bitcoin transaction to sale the inscription. 
+* createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription. 
 * NOTE: Currently, the function only supports sending from Taproot address. 
 * @param sellerPrivateKey buffer private key of the seller
 * @param sellerAddress payment address of the seller to recieve BTC from buyer
@@ -24,7 +24,7 @@ import { broadcastTx, createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalU
 * @returns the encoded base64 partially signed transaction
 */
 
-const createPSBTToSale = (
+const createPSBTToSell = (
     params: {
         sellerPrivateKey: Buffer,
         receiverBTCAddress: string,  // default is seller address
@@ -330,7 +330,7 @@ const reqListForSaleInscription = async (
         }
     }
 
-    const base64Psbt = createPSBTToSale({
+    const base64Psbt = createPSBTToSell({
         inscriptionUTXO: newInscriptionUTXO,
         amountPayToSeller: amountPayToSeller,
         receiverBTCAddress: receiverBTCAddress,
@@ -360,18 +360,15 @@ const reqBuyInscription = async (
         sellerSignedPsbtB64: string,
         buyerPrivateKey: Buffer,
         receiverInscriptionAddress: string,
-        valueInscription: number,
         price: number,
         utxos: UTXO[],
         inscriptions: { [key: string]: Inscription[] },
         feeRatePerByte: number,
     }
 ): Promise<ICreateTxResp> => {
-
     const { sellerSignedPsbtB64,
         buyerPrivateKey,
         receiverInscriptionAddress,
-        valueInscription,
         price,
         utxos,
         inscriptions,
@@ -379,6 +376,14 @@ const reqBuyInscription = async (
     } = params;
     // decode seller's signed PSBT
     const sellerSignedPsbt = Psbt.fromBase64(sellerSignedPsbtB64, { network });
+    const sellerInputs = sellerSignedPsbt.data.inputs;
+    if (sellerInputs.length === 0) {
+        throw new Error("Invalid seller's PSBT.");
+    }
+    const valueInscription = sellerInputs[0].witnessUtxo?.value;
+    if (valueInscription === undefined || valueInscription === 0) {
+        throw new Error("Invalid value inscription in seller's PSBT.");
+    }
 
     const newUTXOs = utxos;
 
@@ -419,7 +424,7 @@ const reqBuyInscription = async (
 };
 
 export {
-    createPSBTToSale,
+    createPSBTToSell,
     createPSBTToBuy,
     reqListForSaleInscription,
     reqBuyInscription,
