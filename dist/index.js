@@ -909,11 +909,13 @@ const reqListForSaleInscription = async (params) => {
     // select dummy UTXO 
     // if there is no dummy UTXO, we have to create and broadcast the tx to split dummy UTXO first
     let dummyUTXORes;
+    let selectedUTXOs = [];
     if (needDummyUTXO) {
         try {
             // create dummy UTXO from cardinal UTXOs
             const res = await createDummyUTXOFromCardinal(sellerPrivateKey, utxos, inscriptions, feeRatePerByte);
             dummyUTXORes = res.dummyUTXO;
+            selectedUTXOs = res.selectedUTXOs;
         }
         catch (e) {
             // create dummy UTXO from inscription UTXO
@@ -945,7 +947,7 @@ const reqListForSaleInscription = async (params) => {
         creatorAddress: creatorAddress,
         feePayToCreator: feePayToCreator,
     });
-    return base64Psbt;
+    return { base64Psbt, selectedUTXOs: selectedUTXOs };
 };
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
