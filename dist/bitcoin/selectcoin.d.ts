@@ -33,7 +33,7 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
 * @returns the value of inscription outputs, and the change amount (if any)
 * @returns the network fee
 */
-declare const selectOrdinalUTXO: (utxos: UTXO[], inscriptions: {
+declare const selectInscriptionUTXO: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }, inscriptionID: string) => {
     inscriptionUTXO: UTXO;
@@ -70,4 +70,4 @@ declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
 declare const selectTheSmallestUTXO: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }) => UTXO;
-export { selectUTXOs, selectOrdinalUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, };
+export { selectUTXOs, selectInscriptionUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, };

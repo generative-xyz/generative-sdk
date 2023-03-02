@@ -160,24 +160,24 @@ const selectUTXOs = (
 
     // re-estimate fee with exact number of inputs and outputs
     const { numOuts: reNumOuts } = estimateNumInOutputs(sendInscriptionID, sendAmount, isUseInscriptionPayFee);
-    let fee: number = estimateTxFee(resultUTXOs.length, reNumOuts, feeRatePerByte);
+    let feeRes: number = estimateTxFee(resultUTXOs.length, reNumOuts, feeRatePerByte);
 
     // calculate output amount
     if (isUseInscriptionPayFee) {
-        if (maxAmountInsTransfer < fee) {
-            fee = maxAmountInsTransfer;
+        if (maxAmountInsTransfer < feeRes) {
+            feeRes = maxAmountInsTransfer;
         }
-        valueOutInscription = inscriptionUTXO.value - fee;
+        valueOutInscription = inscriptionUTXO.value - feeRes;
         changeAmount = totalInputAmount - sendAmount;
     } else {
-        if (totalInputAmount < sendAmount + fee) {
-            fee = totalInputAmount - sendAmount;
+        if (totalInputAmount < sendAmount + feeRes) {
+            feeRes = totalInputAmount - sendAmount;
         }
         valueOutInscription = inscriptionUTXO?.value || 0;
-        changeAmount = totalInputAmount - sendAmount - fee;
+        changeAmount = totalInputAmount - sendAmount - feeRes;
     }
 
-    return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount, fee: fee };
+    return { selectedUTXOs: resultUTXOs, isUseInscriptionPayFee: isUseInscriptionPayFee, valueOutInscription: valueOutInscription, changeAmount: changeAmount, fee: feeRes };
 };
 
 /**
@@ -191,7 +191,7 @@ const selectUTXOs = (
 * @returns the value of inscription outputs, and the change amount (if any)
 * @returns the network fee
 */
-const selectOrdinalUTXO = (
+const selectInscriptionUTXO = (
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
     inscriptionID: string,
@@ -201,26 +201,27 @@ const selectOrdinalUTXO = (
     }
 
     // filter normal UTXO and inscription UTXO to send
-    utxos.forEach(utxo => {
+    for (const utxo of utxos) {
         // txIDKey = tx_hash:tx_output_n
         let txIDKey = utxo.tx_hash.concat(":");
         txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
+        console.log("txIDKey: ", txIDKey);
 
         // try to get inscriptionInfos
         const inscriptionInfos = inscriptions[txIDKey];
-        if (inscriptionInfos.length > 0) {
+        if (inscriptionInfos !== undefined && inscriptionInfos !== null && inscriptionInfos.length > 0) {
             const inscription = inscriptionInfos.find(ins => ins.id === inscriptionID);
             if (inscription !== undefined) {
                 // don't support send tx with outcoin that includes more than one inscription
                 if (inscriptionInfos.length > 1) {
-                    throw new Error(`InscriptionID ${{ inscriptionID }} is not supported to send.`);
+                    throw new Error("InscriptionID is not supported to send " + inscriptionID);
                 }
                 return { inscriptionUTXO: utxo, inscriptionInfo: inscription };
             }
         }
-    });
+    }
 
-    throw new Error(`InscriptionID ${{ inscriptionID }} not found in your wallet.`);
+    throw new Error("InscriptionID not found in your wallet " + inscriptionID);
 };
 
 /**
@@ -286,6 +287,9 @@ const selectCardinalUTXOs = (
     let totalInputAmount = 0;
     const totalSendAmount = sendAmount;
     if (totalSendAmount > 0) {
+        if (normalUTXOs.length === 0) {
+            throw new Error("Your balance is insufficient.");
+        }
         if (normalUTXOs[normalUTXOs.length - 1].value >= totalSendAmount) {
             // select the smallest utxo
             resultUTXOs.push(normalUTXOs[normalUTXOs.length - 1]);
@@ -375,7 +379,7 @@ const selectTheSmallestUTXO = (
 
 export {
     selectUTXOs,
-    selectOrdinalUTXO,
+    selectInscriptionUTXO,
     selectCardinalUTXOs,
     selectTheSmallestUTXO,
 };
