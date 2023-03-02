@@ -289,6 +289,7 @@ declare const reqListForSaleInscription: (params: {
 }) => Promise<{
     base64Psbt: string;
     selectedUTXOs: UTXO[];
+    splitTxID: string;
 }>;
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
