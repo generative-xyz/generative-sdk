@@ -44,6 +44,7 @@ const createTx = (
     const network = networks.bitcoin; // mainnet
 
     // select UTXOs
+
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     console.log("selectedUTXOs: ", selectedUTXOs);
 
@@ -292,7 +293,9 @@ const createDummyUTXOFromCardinal = async (
     } else {
         const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
 
-        const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte);
+        const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
+
+        // TODO: uncomment here
         try {
             await broadcastTx(txHex);
         } catch (e) {

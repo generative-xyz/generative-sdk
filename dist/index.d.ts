@@ -66,7 +66,7 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
 * @returns the value of inscription outputs, and the change amount (if any)
 * @returns the network fee
 */
-declare const selectOrdinalUTXO: (utxos: UTXO[], inscriptions: {
+declare const selectInscriptionUTXO: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }, inscriptionID: string) => {
     inscriptionUTXO: UTXO;
@@ -315,4 +315,4 @@ declare const reqBuyInscription: (params: {
     feeRatePerByte: number;
 }) => Promise<ICreateTxResp>;
 
-export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, ICreateTxSplitInscriptionResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectOrdinalUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
+export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, ICreateTxSplitInscriptionResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
