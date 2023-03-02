@@ -66,7 +66,10 @@ declare const reqListForSaleInscription: (params: {
     feePayToCreator: number;
     creatorAddress: string;
     feeRatePerByte: number;
-}) => Promise<string>;
+}) => Promise<{
+    base64Psbt: string;
+    selectedUTXOs: UTXO[];
+}>;
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.

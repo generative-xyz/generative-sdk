@@ -251,7 +251,7 @@ const reqListForSaleInscription = async (
         creatorAddress: string,
         feeRatePerByte: number,
     }
-): Promise<string> => {
+): Promise<{ base64Psbt: string, selectedUTXOs: UTXO[] }> => {
     const { sellerPrivateKey,
         utxos,
         inscriptions,
@@ -301,12 +301,14 @@ const reqListForSaleInscription = async (
     // select dummy UTXO 
     // if there is no dummy UTXO, we have to create and broadcast the tx to split dummy UTXO first
     let dummyUTXORes: any;
+    let selectedUTXOs: UTXO[] = [];
 
     if (needDummyUTXO) {
         try {
             // create dummy UTXO from cardinal UTXOs
             const res = await createDummyUTXOFromCardinal(sellerPrivateKey, utxos, inscriptions, feeRatePerByte);
             dummyUTXORes = res.dummyUTXO;
+            selectedUTXOs = res.selectedUTXOs;
 
         } catch (e) {
             // create dummy UTXO from inscription UTXO
@@ -340,7 +342,7 @@ const reqListForSaleInscription = async (
         feePayToCreator: feePayToCreator,
     });
 
-    return base64Psbt;
+    return { base64Psbt, selectedUTXOs: selectedUTXOs };
 };
 
 /**
@@ -366,7 +368,8 @@ const reqBuyInscription = async (
         feeRatePerByte: number,
     }
 ): Promise<ICreateTxResp> => {
-    const { sellerSignedPsbtB64,
+    const {
+        sellerSignedPsbtB64,
         buyerPrivateKey,
         receiverInscriptionAddress,
         price,
