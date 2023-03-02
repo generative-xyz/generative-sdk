@@ -195,7 +195,7 @@ const selectOrdinalUTXO = (
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
     inscriptionID: string,
-): UTXO => {
+): { inscriptionUTXO: UTXO, inscriptionInfo: Inscription } => {
     if (inscriptionID === "") {
         throw Error("Inscription must not be empty string");
     }
@@ -215,7 +215,7 @@ const selectOrdinalUTXO = (
                 if (inscriptionInfos.length > 1) {
                     throw new Error(`InscriptionID ${{ inscriptionID }} is not supported to send.`);
                 }
-                return utxo;
+                return { inscriptionUTXO: utxo, inscriptionInfo: inscription };
             }
         }
     });
@@ -321,8 +321,61 @@ const selectCardinalUTXOs = (
     return { selectedUTXOs: resultUTXOs, dummyUTXO: dummyUTXO };
 };
 
+
+/**
+* selectCardinalUTXOs selects the most reasonable UTXOs to create the transaction. 
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendAmount satoshi amount need to send 
+* @param isSelectDummyUTXO need to select dummy UTXO or not
+* @returns the list of selected UTXOs
+* @returns the actual flag using inscription coin to pay fee
+* @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
+*/
+const selectTheSmallestUTXO = (
+    utxos: UTXO[],
+    inscriptions: { [key: string]: Inscription[] },
+): UTXO => {
+    let normalUTXOs: UTXO[] = [];
+
+    // filter normal UTXO and inscription UTXO 
+    utxos.forEach(utxo => {
+        // txIDKey = tx_hash:tx_output_n
+        let txIDKey = utxo.tx_hash.concat(":");
+        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
+
+        // try to get inscriptionInfos
+        const inscriptionInfos = inscriptions[txIDKey];
+
+        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
+            // normal UTXO
+            normalUTXOs.push(utxo);
+        }
+    });
+
+    if (normalUTXOs.length === 0) {
+        throw new Error("Your wallet has no cardinal UTXOs.");
+    }
+
+    normalUTXOs = normalUTXOs.sort(
+        (a: UTXO, b: UTXO): number => {
+            if (a.value > b.value) {
+                return -1;
+            }
+            if (a.value < b.value) {
+                return 1;
+            }
+            return 0;
+        }
+    );
+
+    return normalUTXOs[normalUTXOs.length - 1];
+};
+
 export {
     selectUTXOs,
     selectOrdinalUTXO,
     selectCardinalUTXOs,
+    selectTheSmallestUTXO,
 };

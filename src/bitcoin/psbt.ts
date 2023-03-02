@@ -11,7 +11,8 @@ import {
     generateTaprootKeyPair,
 } from "./utils";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
-import { selectCardinalUTXOs, selectOrdinalUTXO } from "./selectcoin";
+import { selectCardinalUTXOs, selectOrdinalUTXO as selectInscriptionUTXO } from "./selectcoin";
+import { broadcastTx, createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO } from "./tx";
 
 /**
 * createPSBTForSale creates the partially signed bitcoin transaction to sale the inscription. 
@@ -25,17 +26,17 @@ import { selectCardinalUTXOs, selectOrdinalUTXO } from "./selectcoin";
 
 const createPSBTToSale = (
     params: {
-        ordinalInput: UTXO,
-        price: number,
-        sellerAddress: string,
         sellerPrivateKey: Buffer,
-        dummyUTXO: any,
+        receiverBTCAddress: string,  // default is seller address
+        inscriptionUTXO: UTXO,
+        amountPayToSeller: number,
+        feePayToCreator: number,
         creatorAddress: string,
-        feeForCreator: number,
+        dummyUTXO: UTXO,
     },
 ): string => {
     const psbt = new Psbt({ network });
-    const { ordinalInput, price, sellerAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feeForCreator } = params;
+    const { inscriptionUTXO: ordinalInput, amountPayToSeller: price, receiverBTCAddress: sellerAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator: feeForCreator } = params;
 
     const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(sellerPrivateKey);
 
@@ -50,11 +51,17 @@ const createPSBTToSale = (
         sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
     });
 
-    psbt.addOutput({
-        address: sellerAddress,
-        value: price,
-    });
-
+    if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.value > 0) {
+        psbt.addOutput({
+            address: sellerAddress,
+            value: price + dummyUTXO.value,
+        });
+    } else {
+        psbt.addOutput({
+            address: sellerAddress,
+            value: price,
+        });
+    }
 
     // the second input and output
     // add dummy UTXO and output for paying to creator
@@ -67,9 +74,6 @@ const createPSBTToSale = (
             tapInternalKey: toXOnly(keyPair.publicKey),
             sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
         });
-
-        // TODO: thinking
-        // + dummyUTXO.value,
 
         psbt.addOutput({
             address: creatorAddress,
@@ -101,12 +105,11 @@ const createPSBTToSale = (
 * @param dummyUtxo cardinal dummy input coin
 * @returns the encoded base64 partially signed transaction
 */
-// TODO: add fee for creator
 const createPSBTToBuy = (
     params: {
         sellerSignedPsbt: Psbt,
         buyerPrivateKey: Buffer,
-        buyerAddress: string,
+        receiverInscriptionAddress: string,
         valueInscription: number,
         price: number,
         paymentUtxos: UTXO[],
@@ -118,7 +121,7 @@ const createPSBTToBuy = (
     const {
         sellerSignedPsbt,
         buyerPrivateKey,
-        buyerAddress,
+        receiverInscriptionAddress: buyerAddress,
         valueInscription,
         price,
         paymentUtxos,
@@ -219,7 +222,7 @@ const createPSBTToBuy = (
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo] };
+    return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo], changeAmount: changeValue };
 };
 
 /**
@@ -230,36 +233,111 @@ const createPSBTToBuy = (
 * @param inscriptions list of inscription infos of the seller
 * @param sellInscriptionID id of inscription to sell
 * @param receiverBTCAddress the seller's address to receive BTC
+* @param amountPayToSeller BTC amount to pay to seller
+* @param feePayToCreator BTC fee to pay to creator
+* @param creatorAddress address of creator
+* amountPayToSeller + feePayToCreator = price that is showed on UI
 * @returns the base64 encode Psbt
 */
-const reqListForSaleInscription = (
-    sellerPrivateKey: Buffer,
-    utxos: UTXO[],
-    inscriptions: { [key: string]: Inscription[] },
-    sellInscriptionID = "",
-    receiverBTCAddress: string,
-    price: number,
-    creatorAddress = "",
-    feeForCreator = 0,
-): string => {
+const reqListForSaleInscription = async (
+    params: {
+        sellerPrivateKey: Buffer,
+        utxos: UTXO[],
+        inscriptions: { [key: string]: Inscription[] },
+        sellInscriptionID: string,
+        receiverBTCAddress: string,
+        amountPayToSeller: number,
+        feePayToCreator: number,
+        creatorAddress: string,
+        feeRatePerByte: number,
+    }
+): Promise<string> => {
+    const { sellerPrivateKey,
+        utxos,
+        inscriptions,
+        sellInscriptionID,
+        receiverBTCAddress,
+        feeRatePerByte
+    } = params;
 
-    const ordinalInput = selectOrdinalUTXO(utxos, inscriptions, sellInscriptionID);
+    let {
+        amountPayToSeller,
+        feePayToCreator,
+        creatorAddress,
+    } = params;
 
-    // select cardinal dummy UTXO
-    let dummyUTXO: any;
-    if (feeForCreator > 0) {
-        const res = selectCardinalUTXOs(utxos, inscriptions, 0, true);
-        dummyUTXO = res.dummyUTXO;
+    // validation
+    if (feePayToCreator > 0 && creatorAddress === "") {
+        throw new Error("Creator address must not be empty.");
+    }
+    if (sellInscriptionID === "") {
+        throw new Error("SellInscriptionID must not be empty.");
+    }
+    if (receiverBTCAddress === "") {
+        throw new Error("receiverBTCAddress must not be empty.");
+    }
+    if (amountPayToSeller === 0) {
+        throw new Error("amountPayToSeller must be greater than zero.");
+    }
+
+    let needDummyUTXO = false;
+
+    if (feePayToCreator > 0) {
+        // creator is the selller
+        if (creatorAddress !== receiverBTCAddress) {
+            needDummyUTXO = true;
+        } else {
+            // create only one output, don't need to create 2 outputs
+            amountPayToSeller += feePayToCreator;
+            creatorAddress = "";
+            feePayToCreator = 0;
+        }
+    }
+
+    // select inscription UTXO
+    const { inscriptionUTXO, inscriptionInfo } = selectInscriptionUTXO(utxos, inscriptions, sellInscriptionID);
+    let newInscriptionUTXO = inscriptionUTXO;
+
+    // select dummy UTXO 
+    // if there is no dummy UTXO, we have to create and broadcast the tx to split dummy UTXO first
+    let dummyUTXORes: any;
+
+    if (needDummyUTXO) {
+        try {
+            // create dummy UTXO from cardinal UTXOs
+            const res = await createDummyUTXOFromCardinal(sellerPrivateKey, utxos, inscriptions, feeRatePerByte);
+            dummyUTXORes = res.dummyUTXO;
+
+        } catch (e) {
+            // create dummy UTXO from inscription UTXO
+            const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
+            try {
+                await broadcastTx(txHex);
+            } catch (e) {
+                throw new Error(`Broadcast the split tx from inscription error ${{ e }}`);
+            }
+
+            newInscriptionUTXO = {
+                tx_hash: txID,
+                tx_output_n: 0,
+                value: newValueInscription,
+            };
+            dummyUTXORes = {
+                tx_hash: txID,
+                tx_output_n: 1,
+                value: DummyUTXOValue,
+            };
+        }
     }
 
     const base64Psbt = createPSBTToSale({
-        ordinalInput: ordinalInput,
-        price: price,
-        sellerAddress: receiverBTCAddress,
+        inscriptionUTXO: newInscriptionUTXO,
+        amountPayToSeller: amountPayToSeller,
+        receiverBTCAddress: receiverBTCAddress,
         sellerPrivateKey: sellerPrivateKey,
-        dummyUTXO: dummyUTXO,
+        dummyUTXO: dummyUTXORes,
         creatorAddress: creatorAddress,
-        feeForCreator: feeForCreator,
+        feePayToCreator: feePayToCreator,
     });
 
     return base64Psbt;
@@ -274,32 +352,59 @@ const reqListForSaleInscription = (
 * @param inscriptions list of inscription infos of the seller
 * @param sellInscriptionID id of inscription to sell
 * @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
 * @returns the base64 encode Psbt
 */
-const reqBuyInscription = (
-    sellerSignedPsbtB64: string,
-    buyerPrivateKey: Buffer,
-    buyerAddress: string,
-    valueInscription: number,
-    price: number,
-    utxos: UTXO[],
-    inscriptions: { [key: string]: Inscription[] },
-    feeRatePerByte: number,
-): ICreateTxResp => {
+const reqBuyInscription = async (
+    params: {
+        sellerSignedPsbtB64: string,
+        buyerPrivateKey: Buffer,
+        receiverInscriptionAddress: string,
+        valueInscription: number,
+        price: number,
+        utxos: UTXO[],
+        inscriptions: { [key: string]: Inscription[] },
+        feeRatePerByte: number,
+    }
+): Promise<ICreateTxResp> => {
+
+    const { sellerSignedPsbtB64,
+        buyerPrivateKey,
+        receiverInscriptionAddress,
+        valueInscription,
+        price,
+        utxos,
+        inscriptions,
+        feeRatePerByte
+    } = params;
     // decode seller's signed PSBT
     const sellerSignedPsbt = Psbt.fromBase64(sellerSignedPsbtB64, { network });
 
+    const newUTXOs = utxos;
+
+    // select or create dummy UTXO
+    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO } = await createDummyUTXOFromCardinal(buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
+
+    // remove selected utxo, and append new UTXO to list of UTXO to create the next PSBT 
+    selectedUTXOs.forEach((selectedUtxo) => {
+        const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
+        newUTXOs.splice(index, 1);
+    });
+
+    newUTXOs.push(newUTXO);
+
     // select cardinal UTXOs to payment
-    const { selectedUTXOs, dummyUTXO } = selectCardinalUTXOs(utxos, inscriptions, price, true);
+    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, price, false);
+
 
     // create PBTS from the seller's one
     const res = createPSBTToBuy({
         sellerSignedPsbt: sellerSignedPsbt,
         buyerPrivateKey: buyerPrivateKey,
-        buyerAddress: buyerAddress,
+        receiverInscriptionAddress: receiverInscriptionAddress,
         valueInscription: valueInscription,
         price: price,
-        paymentUtxos: selectedUTXOs,
+        paymentUtxos: paymentUTXOs,
         dummyUtxo: dummyUTXO,
         feeRate: feeRatePerByte,
     });
@@ -307,8 +412,9 @@ const reqBuyInscription = (
     return {
         txID: res?.txID,
         txHex: res?.txHex,
-        fee: res?.fee,
-        selectedUTXOs: [...selectedUTXOs, dummyUTXO]
+        fee: res?.fee + feeSplitUTXO,
+        selectedUTXOs: [...selectedUTXOs, ...paymentUTXOs, dummyUTXO],
+        changeAmount: res.changeAmount,
     };
 };
 

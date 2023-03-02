@@ -35,7 +35,10 @@ declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
 */
 declare const selectOrdinalUTXO: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, inscriptionID: string) => UTXO;
+}, inscriptionID: string) => {
+    inscriptionUTXO: UTXO;
+    inscriptionInfo: Inscription;
+};
 /**
 * selectCardinalUTXOs selects the most reasonable UTXOs to create the transaction.
 * @param utxos list of utxos (include non-inscription and inscription utxos)
@@ -53,4 +56,18 @@ declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
     selectedUTXOs: UTXO[];
     dummyUTXO: UTXO;
 };
-export { selectUTXOs, selectOrdinalUTXO, selectCardinalUTXOs, };
+/**
+* selectCardinalUTXOs selects the most reasonable UTXOs to create the transaction.
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendAmount satoshi amount need to send
+* @param isSelectDummyUTXO need to select dummy UTXO or not
+* @returns the list of selected UTXOs
+* @returns the actual flag using inscription coin to pay fee
+* @returns the value of inscription outputs, and the change amount (if any)
+* @returns the network fee
+*/
+declare const selectTheSmallestUTXO: (utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}) => UTXO;
+export { selectUTXOs, selectOrdinalUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, };
