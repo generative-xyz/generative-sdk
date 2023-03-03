@@ -4,7 +4,7 @@ import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
-declare const MinSatInscription = 546;
+declare const MinSats = 1000;
 declare const network: networks.Network;
 declare const DummyUTXOValue = 1000;
 
@@ -315,4 +315,4 @@ declare const reqBuyInscription: (params: {
     feeRatePerByte: number;
 }) => Promise<ICreateTxResp>;
 
-export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, ICreateTxSplitInscriptionResp, Inscription, MinSatInscription, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
+export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, ICreateTxSplitInscriptionResp, Inscription, MinSats, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
