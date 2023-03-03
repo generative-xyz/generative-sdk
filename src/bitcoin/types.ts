@@ -18,6 +18,22 @@ interface ICreateTxResp {
     changeAmount: number,
 }
 
+interface ICreateTxBuyResp {
+    txID: string,
+    txHex: string,
+    fee: number,
+    selectedUTXOs: UTXO[],
+    splitTxID: string,
+    splitUTXOs: UTXO[],
+}
+
+interface ICreateTxSellResp {
+    base64Psbt: string,
+    selectedUTXOs: UTXO[],
+    splitTxID: string,
+    splitUTXOs: UTXO[],
+}
+
 interface ICreateTxSplitInscriptionResp {
     txID: string,
     txHex: string,
@@ -31,4 +47,6 @@ export {
     Inscription,
     ICreateTxResp,
     ICreateTxSplitInscriptionResp,
+    ICreateTxBuyResp,
+    ICreateTxSellResp,
 };

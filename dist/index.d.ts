@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { networks, Signer, payments, Psbt } from 'bitcoinjs-lib';
+import { networks, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
 
@@ -7,6 +7,8 @@ declare const BlockStreamURL = "https://blockstream.info/api";
 declare const MinSats = 1000;
 declare const network: networks.Network;
 declare const DummyUTXOValue = 1000;
+declare const InputSize = 68;
+declare const OutputSize = 43;
 
 interface UTXO {
     tx_hash: string;
@@ -23,6 +25,20 @@ interface ICreateTxResp {
     fee: number;
     selectedUTXOs: UTXO[];
     changeAmount: number;
+}
+interface ICreateTxBuyResp {
+    txID: string;
+    txHex: string;
+    fee: number;
+    selectedUTXOs: UTXO[];
+    splitTxID: string;
+    splitUTXOs: UTXO[];
+}
+interface ICreateTxSellResp {
+    base64Psbt: string;
+    selectedUTXOs: UTXO[];
+    splitTxID: string;
+    splitUTXOs: UTXO[];
 }
 interface ICreateTxSplitInscriptionResp {
     txID: string;
@@ -202,6 +218,17 @@ declare const estimateNumInOutputs: (inscriptionID: string, sendAmount: number, 
     numIns: number;
     numOuts: number;
 };
+/**
+* estimateNumInOutputs estimates number of inputs and outputs by parameters:
+* @param inscriptionID id of inscription to send (if any)
+* @param sendAmount satoshi amount need to send
+* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
+* @returns returns the estimated number of inputs and outputs in the transaction
+*/
+declare const estimateNumInOutputsForBuyInscription: (sellerSignedPsbt: Psbt) => {
+    numIns: number;
+    numOuts: number;
+};
 declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
@@ -286,11 +313,7 @@ declare const reqListForSaleInscription: (params: {
     feePayToCreator: number;
     creatorAddress: string;
     feeRatePerByte: number;
-}) => Promise<{
-    base64Psbt: string;
-    selectedUTXOs: UTXO[];
-    splitTxID: string;
-}>;
+}) => Promise<ICreateTxSellResp>;
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -313,6 +336,6 @@ declare const reqBuyInscription: (params: {
         [key: string]: Inscription[];
     };
     feeRatePerByte: number;
-}) => Promise<ICreateTxResp>;
+}) => Promise<ICreateTxBuyResp>;
 
-export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxResp, ICreateTxSplitInscriptionResp, Inscription, MinSats, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
+export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };

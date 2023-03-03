@@ -34,6 +34,8 @@ const BlockStreamURL = "https://blockstream.info/api";
 const MinSats = 1000;
 const network = bitcoinjsLib.networks.bitcoin; // mainnet
 const DummyUTXOValue = 1000;
+const InputSize = 68;
+const OutputSize = 43;
 
 const wif = require("wif");
 bitcoinjsLib.initEccLib(ecc__namespace);
@@ -87,6 +89,19 @@ const estimateNumInOutputs = (inscriptionID, sendAmount, isUseInscriptionPayFee)
         numIns++;
         numOuts++; // for change BTC output
     }
+    return { numIns, numOuts };
+};
+/**
+* estimateNumInOutputs estimates number of inputs and outputs by parameters:
+* @param inscriptionID id of inscription to send (if any)
+* @param sendAmount satoshi amount need to send
+* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
+* @returns returns the estimated number of inputs and outputs in the transaction
+*/
+const estimateNumInOutputsForBuyInscription = (sellerSignedPsbt) => {
+    const numIns = 1 + sellerSignedPsbt.txInputs.length + 2;
+    const numOuts = 1 + sellerSignedPsbt.txOutputs.length + 1 + 1;
+    console.log("numIns, numOuts:", numIns, numOuts);
     return { numIns, numOuts };
 };
 function toXOnly(pubkey) {
@@ -459,6 +474,10 @@ const selectTheSmallestUTXO = (utxos, inscriptions) => {
 * @returns the network fee
 */
 const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true) => {
+    // validation
+    if (sendAmount > 0 && sendAmount < MinSats) {
+        throw new Error("sendAmount must not be less than " + MinSats);
+    }
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     let feeRes = fee;
@@ -604,6 +623,10 @@ const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = 
 * @returns the network fee
 */
 const createTxSplitFundFromOrdinalUTXO = (senderPrivateKey, inscriptionUTXO, inscriptionInfo, sendAmount, feeRatePerByte) => {
+    // validation
+    if (sendAmount > 0 && sendAmount < MinSats) {
+        throw new Error("sendAmount must not be less than " + MinSats);
+    }
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
     const maxAmountInsSpend = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
     const fee = estimateTxFee(1, 2, feeRatePerByte);
@@ -655,12 +678,11 @@ const createDummyUTXOFromCardinal = async (senderPrivateKey, utxos, inscriptions
         const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
         // TODO: uncomment here
-        try {
-            await broadcastTx(txHex);
-        }
-        catch (e) {
-            throw new Error(`Broadcast the split tx error ${{ e }}`);
-        }
+        // try {
+        //     await broadcastTx(txHex);
+        // } catch (e) {
+        //     throw new Error(`Broadcast the split tx error ${{ e }}`);
+        // }
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
             tx_hash: txID,
@@ -683,7 +705,6 @@ const broadcastTx = async (txHex) => {
     });
     const response = await blockstream.post("/tx", txHex);
     const { status, data } = response;
-    console.log("status, data: ", status, data);
     if (status !== 200) {
         throw Error("Broadcast tx error " + data);
     }
@@ -718,7 +739,7 @@ const getBTCBalance = (params) => {
 */
 const createPSBTToSell = (params) => {
     const psbt = new bitcoinjsLib.Psbt({ network });
-    const { inscriptionUTXO: ordinalInput, amountPayToSeller: price, receiverBTCAddress: sellerAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator: feeForCreator } = params;
+    const { inscriptionUTXO: ordinalInput, amountPayToSeller, receiverBTCAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator } = params;
     const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(sellerPrivateKey);
     // add ordinal input into the first input coins with 
     // sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY
@@ -731,19 +752,19 @@ const createPSBTToSell = (params) => {
     });
     if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.value > 0) {
         psbt.addOutput({
-            address: sellerAddress,
-            value: price + dummyUTXO.value,
+            address: receiverBTCAddress,
+            value: amountPayToSeller + dummyUTXO.value,
         });
     }
     else {
         psbt.addOutput({
-            address: sellerAddress,
-            value: price,
+            address: receiverBTCAddress,
+            value: amountPayToSeller,
         });
     }
     // the second input and output
     // add dummy UTXO and output for paying to creator
-    if (feeForCreator > 0 && creatorAddress !== "") {
+    if (feePayToCreator > 0 && creatorAddress !== "") {
         psbt.addInput({
             hash: dummyUTXO.tx_hash,
             index: dummyUTXO.tx_output_n,
@@ -753,15 +774,20 @@ const createPSBTToSell = (params) => {
         });
         psbt.addOutput({
             address: creatorAddress,
-            value: feeForCreator
+            value: feePayToCreator
         });
     }
     // sign tx
     psbt.txInputs.forEach((utxo, index) => {
         psbt.signInput(index, tweakedSigner, [bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY]);
-        const isValid = psbt.validateSignaturesOfInput(index, ecc.verifySchnorr, tweakedSigner.publicKey);
-        if (!isValid) {
-            throw new Error("Tx signature is invalid");
+        try {
+            const isValid = psbt.validateSignaturesOfInput(index, ecc.verifySchnorr, tweakedSigner.publicKey);
+            if (!isValid) {
+                throw new Error("Tx signature is invalid " + index);
+            }
+        }
+        catch (e) {
+            throw new Error("Tx signature is invalid " + index);
         }
     });
     psbt.finalizeAllInputs();
@@ -781,10 +807,9 @@ const createPSBTToSell = (params) => {
 */
 const createPSBTToBuy = (params) => {
     const psbt = new bitcoinjsLib.Psbt({ network });
-    const { sellerSignedPsbt, buyerPrivateKey, price, receiverInscriptionAddress: buyerAddress, valueInscription, paymentUtxos, dummyUtxo, feeRate } = params;
+    const { sellerSignedPsbt, buyerPrivateKey, price, receiverInscriptionAddress, valueInscription, paymentUtxos, dummyUtxo, feeRate } = params;
     let totalValue = 0;
-    let totalPaymentValue = 0;
-    const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(buyerPrivateKey);
+    const { keyPair, tweakedSigner, p2pktr, senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
     // Add dummy utxo to the first input coin
     psbt.addInput({
         hash: dummyUtxo.tx_hash,
@@ -796,7 +821,7 @@ const createPSBTToBuy = (params) => {
     // the frist output coin has value equal to the sum of dummy value and value inscription
     // this makes sure the first output coin is inscription outcoin 
     psbt.addOutput({
-        address: buyerAddress,
+        address: receiverInscriptionAddress,
         value: dummyUtxo.value + valueInscription,
     });
     if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
@@ -822,24 +847,38 @@ const createPSBTToBuy = (params) => {
             tapInternalKey: toXOnly(keyPair.publicKey),
         });
         totalValue += utxo.value;
-        totalPaymentValue += utxo.value;
     }
-    // Create a new dummy utxo output for the next purchase
-    psbt.addOutput({
-        address: buyerAddress,
-        value: DummyUTXOValue,
-    });
-    const fee = estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate);
-    const changeValue = totalValue - dummyUtxo.value - price - fee;
+    let fee = estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate);
+    console.log("psbt.txInputs.length, psbt.txOutputs.length, feeRate: ", psbt.txInputs.length, psbt.txOutputs.length, feeRate);
+    let changeValue = totalValue - price - fee;
+    if (changeValue >= DummyUTXOValue) {
+        // Create a new dummy utxo output for the next purchase
+        psbt.addOutput({
+            address: buyerAddress,
+            value: DummyUTXOValue,
+        });
+        changeValue -= DummyUTXOValue;
+        const extraFee = OutputSize * feeRate;
+        if (changeValue >= extraFee) {
+            changeValue -= extraFee;
+            fee += extraFee;
+        }
+    }
     if (changeValue < 0) {
         throw Error("Your balance is insufficient.");
     }
+    console.log("fee: ", fee);
     // Change utxo
     if (changeValue > 0) {
-        psbt.addOutput({
-            address: buyerAddress,
-            value: changeValue,
-        });
+        if (changeValue >= MinSats) {
+            psbt.addOutput({
+                address: buyerAddress,
+                value: changeValue,
+            });
+        }
+        else {
+            fee += changeValue;
+        }
     }
     // sign tx
     psbt.txInputs.forEach((utxo, index) => {
@@ -853,11 +892,11 @@ const createPSBTToBuy = (params) => {
             try {
                 const isValid = psbt.validateSignaturesOfInput(index, ecc.verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    throw new Error("Tx signature is invalid" + index);
+                    console.log("Tx signature is invalid " + index);
                 }
             }
             catch (e) {
-                console.log("Tx signature is invalid" + index);
+                console.log("Tx signature is invalid " + index);
             }
         }
     });
@@ -910,6 +949,12 @@ const reqListForSaleInscription = async (params) => {
             feePayToCreator = 0;
         }
     }
+    if (amountPayToSeller < MinSats) {
+        throw new Error("amountPayToSeller must not be less than " + MinSats);
+    }
+    if (feePayToCreator > 0 && feePayToCreator < MinSats) {
+        throw new Error("feePayToCreator must not be less than " + MinSats);
+    }
     // select inscription UTXO
     const { inscriptionUTXO, inscriptionInfo } = selectInscriptionUTXO(utxos, inscriptions, sellInscriptionID);
     console.log("sell inscriptionUTXO: ", inscriptionUTXO);
@@ -933,12 +978,11 @@ const reqListForSaleInscription = async (params) => {
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
             // TODO: uncomment here
-            try {
-                await broadcastTx(txHex);
-            }
-            catch (e) {
-                throw new Error(`Broadcast the split tx from inscription error ${{ e }}`);
-            }
+            // try {
+            //     await broadcastTx(txHex);
+            // } catch (e) {
+            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
+            // }
             splitTxID = txID;
             newInscriptionUTXO = {
                 tx_hash: txID,
@@ -965,7 +1009,7 @@ const reqListForSaleInscription = async (params) => {
         creatorAddress: creatorAddress,
         feePayToCreator: feePayToCreator,
     });
-    return { base64Psbt, selectedUTXOs: selectedUTXOs, splitTxID };
+    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs };
 };
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
@@ -1016,7 +1060,11 @@ const reqBuyInscription = async (params) => {
     }
     console.log("buy newUTXOs: ", newUTXOs);
     // select cardinal UTXOs to payment
-    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, price, false);
+    const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(sellerSignedPsbt);
+    const estFee = estimateTxFee(numIns, numOuts, feeRatePerByte);
+    console.log("estFee: ", estFee);
+    const estTotalPaymentAmount = price + DummyUTXOValue + estimateTxFee(numIns, numOuts, feeRatePerByte);
+    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, estTotalPaymentAmount, false);
     console.log("buy paymentUTXOs: ", paymentUTXOs);
     // create PBTS from the seller's one
     const res = createPSBTToBuy({
@@ -1033,15 +1081,18 @@ const reqBuyInscription = async (params) => {
         txID: res === null || res === void 0 ? void 0 : res.txID,
         txHex: res === null || res === void 0 ? void 0 : res.txHex,
         fee: (res === null || res === void 0 ? void 0 : res.fee) + feeSplitUTXO,
-        selectedUTXOs: [...selectedUTXOs, ...paymentUTXOs, dummyUTXO],
-        changeAmount: res.changeAmount,
+        selectedUTXOs: [...paymentUTXOs, dummyUTXO],
+        splitTxID,
+        splitUTXOs: [...selectedUTXOs]
     };
 };
 
 exports.BlockStreamURL = BlockStreamURL;
 exports.DummyUTXOValue = DummyUTXOValue;
 exports.ECPair = ECPair;
+exports.InputSize = InputSize;
 exports.MinSats = MinSats;
+exports.OutputSize = OutputSize;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.convertPrivateKeyFromStr = convertPrivateKeyFromStr;
@@ -1052,6 +1103,7 @@ exports.createTx = createTx;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
 exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
 exports.estimateNumInOutputs = estimateNumInOutputs;
+exports.estimateNumInOutputsForBuyInscription = estimateNumInOutputsForBuyInscription;
 exports.estimateTxFee = estimateTxFee;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;

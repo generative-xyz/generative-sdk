@@ -8,6 +8,8 @@ import {
 import { network } from "./constants";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
+import { Inscription, UTXO } from "./types";
+import { Psbt } from "bitcoinjs-lib";
 initEccLib(ecc);
 const ECPair: ECPairAPI = ECPairFactory(ecc);
 
@@ -64,6 +66,23 @@ const estimateNumInOutputs = (inscriptionID: string, sendAmount: number, isUseIn
         numIns++;
         numOuts++; // for change BTC output
     }
+    return { numIns, numOuts };
+};
+
+
+/**
+* estimateNumInOutputs estimates number of inputs and outputs by parameters: 
+* @param inscriptionID id of inscription to send (if any)
+* @param sendAmount satoshi amount need to send 
+* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
+* @returns returns the estimated number of inputs and outputs in the transaction
+*/
+const estimateNumInOutputsForBuyInscription = (
+    sellerSignedPsbt: Psbt,
+): { numIns: number, numOuts: number } => {
+    const numIns = 1 + sellerSignedPsbt.txInputs.length + 2;
+    const numOuts = 1 + sellerSignedPsbt.txOutputs.length + 1 + 1;
+    console.log("numIns, numOuts:", numIns, numOuts);
     return { numIns, numOuts };
 };
 
@@ -138,6 +157,7 @@ export {
     convertPrivateKeyFromStr,
     estimateTxFee,
     estimateNumInOutputs,
+    estimateNumInOutputsForBuyInscription,
     toXOnly,
     tweakSigner,
     tapTweakHash,

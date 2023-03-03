@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { payments, Signer } from "bitcoinjs-lib";
 import { ECPairAPI } from "ecpair";
+import { Psbt } from 'bitcoinjs-lib';
 declare const ECPair: ECPairAPI;
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -33,6 +34,17 @@ declare const estimateNumInOutputs: (inscriptionID: string, sendAmount: number, 
     numIns: number;
     numOuts: number;
 };
+/**
+* estimateNumInOutputs estimates number of inputs and outputs by parameters:
+* @param inscriptionID id of inscription to send (if any)
+* @param sendAmount satoshi amount need to send
+* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
+* @returns returns the estimated number of inputs and outputs in the transaction
+*/
+declare const estimateNumInOutputsForBuyInscription: (sellerSignedPsbt: Psbt) => {
+    numIns: number;
+    numOuts: number;
+};
 declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
@@ -43,4 +55,4 @@ declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     tweakedSigner: Signer;
     p2pktr: payments.Payment;
 };
-export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, };
+export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, };

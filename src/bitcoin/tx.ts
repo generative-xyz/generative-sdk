@@ -41,6 +41,10 @@ const createTx = (
     feeRatePerByte: number,
     isUseInscriptionPayFeeParam = true, // default is true
 ): ICreateTxResp => {
+    // validation
+    if (sendAmount > 0 && sendAmount < MinSats) {
+        throw new Error("sendAmount must not be less than " + MinSats);
+    }
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     let feeRes = fee;
@@ -211,6 +215,7 @@ const createTxWithSpecificUTXOs = (
 * @returns the hex signed transaction
 * @returns the network fee
 */
+
 const createTxSplitFundFromOrdinalUTXO = (
     senderPrivateKey: Buffer,
     inscriptionUTXO: UTXO,
@@ -218,6 +223,11 @@ const createTxSplitFundFromOrdinalUTXO = (
     sendAmount: number,
     feeRatePerByte: number,
 ): ICreateTxSplitInscriptionResp => {
+    // validation
+    if (sendAmount > 0 && sendAmount < MinSats) {
+        throw new Error("sendAmount must not be less than " + MinSats);
+    }
+
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
 
     const maxAmountInsSpend = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
@@ -286,11 +296,11 @@ const createDummyUTXOFromCardinal = async (
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
 
         // TODO: uncomment here
-        try {
-            await broadcastTx(txHex);
-        } catch (e) {
-            throw new Error(`Broadcast the split tx error ${{ e }}`);
-        }
+        // try {
+        //     await broadcastTx(txHex);
+        // } catch (e) {
+        //     throw new Error(`Broadcast the split tx error ${{ e }}`);
+        // }
 
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
@@ -318,7 +328,6 @@ const broadcastTx = async (txHex: string): Promise<string> => {
     });
     const response: AxiosResponse = await blockstream.post("/tx", txHex);
     const { status, data } = response;
-    console.log("status, data: ", status, data);
     if (status !== 200) {
         throw Error("Broadcast tx error " + data);
     }
