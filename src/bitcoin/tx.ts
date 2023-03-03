@@ -49,8 +49,6 @@ const createTx = (
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     let feeRes = fee;
-    console.log("selectedUTXOs: ", selectedUTXOs);
-
 
     // init key pair and tweakedSigner from senderPrivateKey
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
