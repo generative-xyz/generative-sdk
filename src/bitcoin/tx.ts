@@ -5,7 +5,7 @@ import {
 } from "bitcoinjs-lib";
 import axios, { AxiosResponse } from "axios";
 import { ICreateTxResp, Inscription, UTXO, ICreateTxSplitInscriptionResp } from "./types";
-import { BlockStreamURL, DummyUTXOValue, MinSatInscription, network } from "./constants";
+import { BlockStreamURL, DummyUTXOValue, MinSats, network } from "./constants";
 import {
     toXOnly,
     tweakSigner,
@@ -41,27 +41,14 @@ const createTx = (
     feeRatePerByte: number,
     isUseInscriptionPayFeeParam = true, // default is true
 ): ICreateTxResp => {
-    const network = networks.bitcoin; // mainnet
-
     // select UTXOs
-
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+    let feeRes = fee;
     console.log("selectedUTXOs: ", selectedUTXOs);
 
-    // init key pair from senderPrivateKey
-    const keypair = ECPair.fromPrivateKey(senderPrivateKey);
-    // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
 
-    // Generate an address from the tweaked public key
-    const p2pktr = payments.p2tr({
-        pubkey: toXOnly(tweakedSigner.publicKey),
-        network
-    });
-    const senderAddress = p2pktr.address ? p2pktr.address : "";
-    if (senderAddress === "") {
-        throw new Error("Can not get sender address from private key");
-    }
+    // init key pair and tweakedSigner from senderPrivateKey
+    const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
 
     const psbt = new Psbt({ network });
     // add inputs
@@ -70,7 +57,7 @@ const createTx = (
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value, script: p2pktr.output as Buffer },
-            tapInternalKey: toXOnly(keypair.publicKey)
+            tapInternalKey: toXOnly(keyPair.publicKey)
         });
     });
 
@@ -92,16 +79,19 @@ const createTx = (
 
     // add change output
     if (changeAmount > 0) {
-        psbt.addOutput({
-            address: senderAddress,
-            value: changeAmount,
-        });
+        if (changeAmount >= MinSats) {
+            psbt.addOutput({
+                address: senderAddress,
+                value: changeAmount,
+            });
+        } else {
+            feeRes += changeAmount;
+        }
     }
 
     // sign tx
     selectedUTXOs.forEach((utxo, index) => {
         psbt.signInput(index, tweakedSigner);
-        console.log("psbt after signing tapKeySig: ", psbt.data.inputs[index].tapKeySig, psbt.data.inputs[index].tapKeySig?.length);
     });
     psbt.finalizeAllInputs();
 
@@ -109,7 +99,7 @@ const createTx = (
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee, selectedUTXOs, changeAmount };
+    return { txID: tx.getId(), txHex, fee: feeRes, selectedUTXOs, changeAmount };
 };
 
 /**
@@ -230,7 +220,7 @@ const createTxSplitFundFromOrdinalUTXO = (
 ): ICreateTxSplitInscriptionResp => {
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
 
-    const maxAmountInsSpend = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSatInscription;
+    const maxAmountInsSpend = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
 
     const fee = estimateTxFee(1, 2, feeRatePerByte);
 
@@ -321,11 +311,17 @@ const createDummyUTXOFromCardinal = async (
     }
 };
 
+
 const broadcastTx = async (txHex: string): Promise<string> => {
     const blockstream = new axios.Axios({
         baseURL: BlockStreamURL
     });
-    const response: AxiosResponse<string> = await blockstream.post("/tx", txHex);
+    const response: AxiosResponse = await blockstream.post("/tx", txHex);
+    const { status, data } = response;
+    console.log("status, data: ", status, data);
+    if (status !== 200) {
+        throw Error("Broadcast tx error " + data);
+    }
     return response.data;
 };
 

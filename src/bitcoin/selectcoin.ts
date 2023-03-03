@@ -5,7 +5,7 @@ import {
 } from "bitcoinjs-lib";
 import axios, { AxiosResponse } from "axios";
 import { ICreateTxResp, Inscription, UTXO } from "./types";
-import { BlockStreamURL, MinSatInscription, DummyUTXOValue } from "./constants";
+import { BlockStreamURL, MinSats, DummyUTXOValue } from "./constants";
 import {
     toXOnly,
     tweakSigner,
@@ -80,7 +80,7 @@ const selectUTXOs = (
                     }
                     inscriptionUTXO = utxo;
                     inscriptionInfo = inscription;
-                    maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSatInscription;
+                    maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
                     console.log("maxAmountInsTransfer: ", maxAmountInsTransfer);
                 }
             }
@@ -141,7 +141,7 @@ const selectUTXOs = (
                 }
             }
             if (totalInputAmount < totalSendAmount) {
-                throw new Error("Your balance is insufficient.");
+                throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
             }
         } else {
             // select the nearest UTXO
