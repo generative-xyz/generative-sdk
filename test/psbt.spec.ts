@@ -106,15 +106,15 @@ let sellerUTXOs = [
     // inscription UTXOs
     // real
 
-    {
-        tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
-        tx_output_n: 1,
-        value: 1078, // normal
-    },
+    // {
+    //     tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
+    //     tx_output_n: 1,
+    //     value: 1078, // normal
+    // },
     {
         tx_hash: "1bdb522dc035d83fd4c837e2cef53d12de348aa2602f1ad9bd5102f8e9d200c9",
         tx_output_n: 0,
-        value: 1786,
+        value: 5786,
     },
     {
         tx_hash: "300ec1c7401199c356072efa4b38387d38211dad8b0970372772ba5f4164d3f3",
@@ -126,11 +126,11 @@ let sellerUTXOs = [
         tx_output_n: 0,
         value: 4228,
     },
-    {
-        tx_hash: "da7d8f7d7234d65ce8876475ba75e7ab60f6ea807fc0b248270f640db2d0189f",
-        tx_output_n: 1,
-        value: 1536, // normal
-    },
+    // {
+    //     tx_hash: "da7d8f7d7234d65ce8876475ba75e7ab60f6ea807fc0b248270f640db2d0189f",
+    //     tx_output_n: 1,
+    //     value: 1536, // normal
+    // },
     {
         tx_hash: "357b0288744386a5a62c4bda4640566750feee7c0e15f7888d247d251b8db75c",
         tx_output_n: 0,

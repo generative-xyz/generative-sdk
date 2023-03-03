@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { payments, Signer } from "bitcoinjs-lib";
 import { ECPairAPI } from "ecpair";
-import { Psbt } from 'bitcoinjs-lib';
+import { Psbt } from "bitcoinjs-lib";
 declare const ECPair: ECPairAPI;
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -55,4 +55,5 @@ declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     tweakedSigner: Signer;
     p2pktr: payments.Payment;
 };
-export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, };
+declare const fromSat: (sat: number) => number;
+export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, fromSat, };

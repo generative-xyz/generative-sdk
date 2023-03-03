@@ -9,6 +9,7 @@ import {
     estimateTxFee,
     generateTaprootKeyPair,
     estimateNumInOutputsForBuyInscription,
+    fromSat,
 } from "./utils";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
 import { selectCardinalUTXOs, selectInscriptionUTXO } from "./selectcoin";
@@ -154,7 +155,7 @@ const createPSBTToBuy = (
     });
 
     if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
-        throw new Error("Length of inputs and output in seller signed psbt must not be different.");
+        throw new Error("Length of inputs and outputs in seller signed psbt must not be different.");
     }
 
     for (let i = 0; i < sellerSignedPsbt.txInputs.length; i++) {
@@ -316,10 +317,10 @@ const reqListForSaleInscription = async (
     }
 
     if (amountPayToSeller < MinSats) {
-        throw new Error("amountPayToSeller must not be less than " + MinSats);
+        throw new Error("amountPayToSeller must not be less than " + fromSat(MinSats) + " BTC.");
     }
     if (feePayToCreator > 0 && feePayToCreator < MinSats) {
-        throw new Error("feePayToCreator must not be less than " + MinSats);
+        throw new Error("feePayToCreator must not be less than " + fromSat(MinSats) + " BTC.");
     }
 
     // select inscription UTXO
@@ -348,11 +349,11 @@ const reqListForSaleInscription = async (
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
 
             // TODO: uncomment here
-            // try {
-            //     await broadcastTx(txHex);
-            // } catch (e) {
-            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
-            // }
+            try {
+                await broadcastTx(txHex);
+            } catch (e) {
+                throw new Error("Broadcast the split tx from inscription error " + e?.toString());
+            }
             splitTxID = txID;
 
             newInscriptionUTXO = {

@@ -152,6 +152,10 @@ const generateTaprootKeyPair = (privateKey: Buffer) => {
     return { keyPair, senderAddress, tweakedSigner, p2pktr };
 };
 
+const fromSat = (sat: number): number => {
+    return sat / 1e8;
+};
+
 export {
     convertPrivateKey,
     convertPrivateKeyFromStr,
@@ -164,4 +168,5 @@ export {
     ECPair,
     generateTaprootAddress,
     generateTaprootKeyPair,
+    fromSat,
 };
