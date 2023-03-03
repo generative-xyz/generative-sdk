@@ -447,7 +447,7 @@ const selectTheSmallestUTXO = (utxos, inscriptions) => {
         }
     });
     if (normalUTXOs.length === 0) {
-        throw new Error("Your wallet has no cardinal UTXOs.");
+        throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
     }
     normalUTXOs = normalUTXOs.sort((a, b) => {
         if (a.value > b.value) {
@@ -533,7 +533,7 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee: feeRes, selectedUTXOs, changeAmount };
+    return { txID: tx.getId(), txHex, fee: feeRes, selectedUTXOs, changeAmount, tx };
 };
 /**
 * createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).
@@ -681,12 +681,11 @@ const createDummyUTXOFromCardinal = async (senderPrivateKey, utxos, inscriptions
         const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
         // TODO: uncomment here
-        try {
-            await broadcastTx(txHex);
-        }
-        catch (e) {
-            throw new Error(`Broadcast the split tx error ${{ e }}`);
-        }
+        // try {
+        //     await broadcastTx(txHex);
+        // } catch (e) {
+        //     throw new Error("Broadcast the split tx error " + e?.toString());
+        // }
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
             tx_hash: txID,
@@ -908,7 +907,7 @@ const createPSBTToBuy = (params) => {
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo], changeAmount: changeValue };
+    return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo], changeAmount: changeValue, tx };
 };
 /**
 * reqListForSaleInscription creates the PSBT of the seller to list for sale inscription.
@@ -982,12 +981,11 @@ const reqListForSaleInscription = async (params) => {
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
             // TODO: uncomment here
-            try {
-                await broadcastTx(txHex);
-            }
-            catch (e) {
-                throw new Error("Broadcast the split tx from inscription error " + (e === null || e === void 0 ? void 0 : e.toString()));
-            }
+            // try {
+            //     await broadcastTx(txHex);
+            // } catch (e) {
+            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
+            // }
             splitTxID = txID;
             newInscriptionUTXO = {
                 tx_hash: txID,
@@ -1083,6 +1081,7 @@ const reqBuyInscription = async (params) => {
         feeRate: feeRatePerByte,
     });
     return {
+        tx: res.tx,
         txID: res === null || res === void 0 ? void 0 : res.txID,
         txHex: res === null || res === void 0 ? void 0 : res.txHex,
         fee: (res === null || res === void 0 ? void 0 : res.fee) + feeSplitUTXO,
