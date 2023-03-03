@@ -4,7 +4,7 @@ import {
     UTXO,
     Inscription,
     createTx,
-    MinSatInscription,
+    MinSats,
     createTxWithSpecificUTXOs,
     convertPrivateKey,
     convertPrivateKeyFromStr,
@@ -50,9 +50,9 @@ import {
 
 let UTXOs: UTXO[] = [
     {
-        tx_hash: "da7d8f7d7234d65ce8876475ba75e7ab60f6ea807fc0b248270f640db2d0189f",
+        tx_hash: "9a6a37681c0ad4326e8f30e75359bb4cb6627b4a515d8c317ffae5d42d5c39d1",
         tx_output_n: 0,
-        value: 6000
+        value: 10000
     }
 ];
 
@@ -92,8 +92,8 @@ let UTXOs: UTXO[] = [
 // TODO: fill the private key
 var senderPrivateKey = Buffer.from([]);
 
-let buyerPrivateKeyWIF = "";
-let buyerAddress = "";
+let buyerPrivateKeyWIF = "L2NTiSnoDRZR3aDTqWbyTv9RDhQ2gJhxCt6HpGfeZ3PLAF3xQr2h";
+let buyerAddress = "bc1ppswwdq6crzrktla4y0urfmcqe8n7wttsvxdx39k4ruvd008x8rvqmnwpk9";
 let buyerPrivateKey = convertPrivateKeyFromStr(buyerPrivateKeyWIF);
 console.log("buyerPrivateKey: ", buyerPrivateKey);
 
@@ -107,8 +107,10 @@ let inscriptions: { [key: string]: Inscription[] } = {
     // "be6360fc87a5e81ef88b9dfbf6b299556af19476a68a3dbd24725f3422f1124e:0": [{ id: "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0", offset: 0 }]
 
     // for test
-    "fecd11d6da5404af3574db4d4fd87aa2d4e2a4d4c3d7d6a767474eeea34e55f3:0": [{ id: "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0", offset: 1607 }],
-    "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09:0": [{ id: "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1", offset: 568 }]
+    // "fecd11d6da5404af3574db4d4fd87aa2d4e2a4d4c3d7d6a767474eeea34e55f3:0": [{ id: "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0", offset: 1607 }],
+    // "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09:0": [{ id: "dd1d3dfce672ccdeabf0b4d96de95045760e465ab359171132fb3dbff232ab09i1", offset: 568 }]
+
+    "9a6a37681c0ad4326e8f30e75359bb4cb6627b4a515d8c317ffae5d42d5c39d1:0": [{ id: "9a6a37681c0ad4326e8f30e75359bb4cb6627b4a515d8c317ffae5d42d5c39d1i0", offset: 0 }],
 };
 
 let sendInscriptionID = "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0";
@@ -229,7 +231,7 @@ let isUseInscriptionPayFeeParam = true;
 // //     assert.equal(actualInscriptionID, sendInscriptionID);
 // //     assert.equal(isUseInscriptionPayFee, true);
 // //     assert.equal(valueOutInscription, 5274 - fee);
-// //     assert.equal(valueOutInscription >= MinSatInscription, true);
+// //     assert.equal(valueOutInscription >= MinSats, true);
 // //     assert.equal(changeAmount, 0);
 // //   });
 
@@ -395,7 +397,7 @@ describe("Create tx with multiple UTXOs Tests", () => {
     //         assert.equal(actualInscriptionID, sendInscriptionID);
     //         assert.equal(isUseInscriptionPayFee, true);
     //         assert.equal(valueOutInscription, 5274 - fee);
-    //         assert.equal(valueOutInscription >= MinSatInscription, true);
+    //         assert.equal(valueOutInscription >= MinSats, true);
     //         assert.equal(changeAmount, 0);
     //     });
 
@@ -516,13 +518,15 @@ describe("Create tx with multiple UTXOs Tests", () => {
     // });
 
     it("send BTC - should return 1 selected UTXO - isUseInscriptionPayFeeParam = true", () => {
-        let sendInscriptionID = "";
-        let sendAmount = 1000;
+        let sendInscriptionID = "9a6a37681c0ad4326e8f30e75359bb4cb6627b4a515d8c317ffae5d42d5c39d1i0";
+        let sendAmount = 0;
+        let receiverBTC = "bc1prvw0jnlq7zhvy3jxuley9qjxm8kpz2wgwrd2e7nce455am6glpxqavdcc9";
+
 
         // const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
         //   UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
 
-        const { txID, txHex, fee: feeRes } = createTx(buyerPrivateKey, UTXOs, inscriptions, sendInscriptionID, buyerAddress, sendAmount, 6, true);
+        const { txID, txHex, fee: feeRes } = createTx(buyerPrivateKey, UTXOs, inscriptions, sendInscriptionID, receiverBTC, sendAmount, 6, true);
         console.log(txID, txHex, feeRes);
     });
 

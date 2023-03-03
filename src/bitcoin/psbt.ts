@@ -2,13 +2,13 @@ import {
     Psbt,
     Transaction
 } from "bitcoinjs-lib";
-
-import { ICreateTxResp, Inscription, UTXO } from "./types";
-import { network, DummyUTXOValue } from "./constants";
+import { ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
+import { network, DummyUTXOValue, MinSats, InputSize, OutputSize } from "./constants";
 import {
     toXOnly,
     estimateTxFee,
     generateTaprootKeyPair,
+    estimateNumInOutputsForBuyInscription,
 } from "./utils";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
 import { selectCardinalUTXOs, selectInscriptionUTXO } from "./selectcoin";
@@ -36,7 +36,7 @@ const createPSBTToSell = (
     },
 ): string => {
     const psbt = new Psbt({ network });
-    const { inscriptionUTXO: ordinalInput, amountPayToSeller: price, receiverBTCAddress: sellerAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator: feeForCreator } = params;
+    const { inscriptionUTXO: ordinalInput, amountPayToSeller, receiverBTCAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator } = params;
 
     const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(sellerPrivateKey);
 
@@ -53,20 +53,20 @@ const createPSBTToSell = (
 
     if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.value > 0) {
         psbt.addOutput({
-            address: sellerAddress,
-            value: price + dummyUTXO.value,
+            address: receiverBTCAddress,
+            value: amountPayToSeller + dummyUTXO.value,
         });
     } else {
         psbt.addOutput({
-            address: sellerAddress,
-            value: price,
+            address: receiverBTCAddress,
+            value: amountPayToSeller,
         });
     }
 
     // the second input and output
     // add dummy UTXO and output for paying to creator
 
-    if (feeForCreator > 0 && creatorAddress !== "") {
+    if (feePayToCreator > 0 && creatorAddress !== "") {
         psbt.addInput({
             hash: dummyUTXO.tx_hash,
             index: dummyUTXO.tx_output_n,
@@ -77,16 +77,20 @@ const createPSBTToSell = (
 
         psbt.addOutput({
             address: creatorAddress,
-            value: feeForCreator
+            value: feePayToCreator
         });
     }
 
     // sign tx
     psbt.txInputs.forEach((utxo, index) => {
         psbt.signInput(index, tweakedSigner, [Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY]);
-        const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
-        if (!isValid) {
-            throw new Error("Tx signature is invalid");
+        try {
+            const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
+            if (!isValid) {
+                throw new Error("Tx signature is invalid " + index);
+            }
+        } catch (e) {
+            throw new Error("Tx signature is invalid " + index);
         }
     });
     psbt.finalizeAllInputs();
@@ -123,16 +127,15 @@ const createPSBTToBuy = (
         sellerSignedPsbt,
         buyerPrivateKey,
         price,
-        receiverInscriptionAddress: buyerAddress,
+        receiverInscriptionAddress,
         valueInscription,
         paymentUtxos,
         dummyUtxo,
         feeRate
     } = params;
     let totalValue = 0;
-    let totalPaymentValue = 0;
 
-    const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(buyerPrivateKey);
+    const { keyPair, tweakedSigner, p2pktr, senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
 
     // Add dummy utxo to the first input coin
     psbt.addInput({
@@ -146,7 +149,7 @@ const createPSBTToBuy = (
     // the frist output coin has value equal to the sum of dummy value and value inscription
     // this makes sure the first output coin is inscription outcoin 
     psbt.addOutput({
-        address: buyerAddress,
+        address: receiverInscriptionAddress,
         value: dummyUtxo.value + valueInscription,
     });
 
@@ -177,28 +180,42 @@ const createPSBTToBuy = (
         });
 
         totalValue += utxo.value;
-        totalPaymentValue += utxo.value;
     }
 
-    // Create a new dummy utxo output for the next purchase
-    psbt.addOutput({
-        address: buyerAddress,
-        value: DummyUTXOValue,
-    });
+    let fee = estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate);
+    console.log("psbt.txInputs.length, psbt.txOutputs.length, feeRate: ", psbt.txInputs.length, psbt.txOutputs.length, feeRate);
+    let changeValue = totalValue - price - fee;
 
-    const fee = estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate);
+    if (changeValue >= DummyUTXOValue) {
+        // Create a new dummy utxo output for the next purchase
+        psbt.addOutput({
+            address: buyerAddress,
+            value: DummyUTXOValue,
+        });
+        changeValue -= DummyUTXOValue;
 
-    const changeValue = totalValue - dummyUtxo.value - price - fee;
+        const extraFee = OutputSize * feeRate;
+        if (changeValue >= extraFee) {
+            changeValue -= extraFee;
+            fee += extraFee;
+        }
+    }
+
     if (changeValue < 0) {
         throw Error("Your balance is insufficient.");
     }
+    console.log("fee: ", fee);
 
     // Change utxo
     if (changeValue > 0) {
-        psbt.addOutput({
-            address: buyerAddress,
-            value: changeValue,
-        });
+        if (changeValue >= MinSats) {
+            psbt.addOutput({
+                address: buyerAddress,
+                value: changeValue,
+            });
+        } else {
+            fee += changeValue;
+        }
     }
 
     // sign tx
@@ -214,10 +231,10 @@ const createPSBTToBuy = (
             try {
                 const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    throw new Error("Tx signature is invalid" + index);
+                    console.log("Tx signature is invalid " + index);
                 }
             } catch (e) {
-                console.log("Tx signature is invalid" + index);
+                console.log("Tx signature is invalid " + index);
             }
         }
     });
@@ -255,7 +272,7 @@ const reqListForSaleInscription = async (
         creatorAddress: string,
         feeRatePerByte: number,
     }
-): Promise<{ base64Psbt: string, selectedUTXOs: UTXO[], splitTxID: string }> => {
+): Promise<ICreateTxSellResp> => {
     const { sellerPrivateKey,
         utxos,
         inscriptions,
@@ -298,6 +315,13 @@ const reqListForSaleInscription = async (
         }
     }
 
+    if (amountPayToSeller < MinSats) {
+        throw new Error("amountPayToSeller must not be less than " + MinSats);
+    }
+    if (feePayToCreator > 0 && feePayToCreator < MinSats) {
+        throw new Error("feePayToCreator must not be less than " + MinSats);
+    }
+
     // select inscription UTXO
     const { inscriptionUTXO, inscriptionInfo } = selectInscriptionUTXO(utxos, inscriptions, sellInscriptionID);
     console.log("sell inscriptionUTXO: ", inscriptionUTXO);
@@ -324,11 +348,11 @@ const reqListForSaleInscription = async (
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
 
             // TODO: uncomment here
-            try {
-                await broadcastTx(txHex);
-            } catch (e) {
-                throw new Error(`Broadcast the split tx from inscription error ${{ e }}`);
-            }
+            // try {
+            //     await broadcastTx(txHex);
+            // } catch (e) {
+            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
+            // }
             splitTxID = txID;
 
             newInscriptionUTXO = {
@@ -358,7 +382,7 @@ const reqListForSaleInscription = async (
         feePayToCreator: feePayToCreator,
     });
 
-    return { base64Psbt, selectedUTXOs: selectedUTXOs, splitTxID };
+    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs };
 };
 
 /**
@@ -383,7 +407,7 @@ const reqBuyInscription = async (
         inscriptions: { [key: string]: Inscription[] },
         feeRatePerByte: number,
     }
-): Promise<ICreateTxResp> => {
+): Promise<ICreateTxBuyResp> => {
     const {
         sellerSignedPsbtB64,
         buyerPrivateKey,
@@ -409,7 +433,8 @@ const reqBuyInscription = async (
     const newUTXOs = utxos;
 
     // select or create dummy UTXO
-    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO } = await createDummyUTXOFromCardinal(buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
+    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO } = await createDummyUTXOFromCardinal(
+        buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
 
     console.log("buy dummyUTXO: ", dummyUTXO);
     console.log("buy splitTxID: ", splitTxID);
@@ -435,7 +460,12 @@ const reqBuyInscription = async (
     console.log("buy newUTXOs: ", newUTXOs);
 
     // select cardinal UTXOs to payment
-    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, price, false);
+    const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(sellerSignedPsbt);
+    const estFee = estimateTxFee(numIns, numOuts, feeRatePerByte);
+    console.log("estFee: ", estFee);
+    const estTotalPaymentAmount = price + DummyUTXOValue + estimateTxFee(numIns, numOuts, feeRatePerByte);
+
+    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, estTotalPaymentAmount, false);
 
     console.log("buy paymentUTXOs: ", paymentUTXOs);
 
@@ -455,8 +485,9 @@ const reqBuyInscription = async (
         txID: res?.txID,
         txHex: res?.txHex,
         fee: res?.fee + feeSplitUTXO,
-        selectedUTXOs: [...selectedUTXOs, ...paymentUTXOs, dummyUTXO],
-        changeAmount: res.changeAmount,
+        selectedUTXOs: [...paymentUTXOs, dummyUTXO],
+        splitTxID,
+        splitUTXOs: [...selectedUTXOs]
     };
 };
 
