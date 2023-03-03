@@ -295,11 +295,11 @@ const createDummyUTXOFromCardinal = async (
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
 
         // TODO: uncomment here
-        // try {
-        //     await broadcastTx(txHex);
-        // } catch (e) {
-        //     throw new Error("Broadcast the split tx error " + e?.toString());
-        // }
+        try {
+            await broadcastTx(txHex);
+        } catch (e) {
+            throw new Error("Broadcast the split tx error " + e?.toString());
+        }
 
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
