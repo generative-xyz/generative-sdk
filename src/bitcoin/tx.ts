@@ -12,7 +12,8 @@ import {
     ECPair,
     estimateTxFee,
     estimateNumInOutputs,
-    generateTaprootKeyPair
+    generateTaprootKeyPair,
+    fromSat
 } from "./utils";
 import { selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
 
@@ -43,7 +44,7 @@ const createTx = (
 ): ICreateTxResp => {
     // validation
     if (sendAmount > 0 && sendAmount < MinSats) {
-        throw new Error("sendAmount must not be less than " + MinSats);
+        throw new Error("sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
@@ -225,7 +226,7 @@ const createTxSplitFundFromOrdinalUTXO = (
 ): ICreateTxSplitInscriptionResp => {
     // validation
     if (sendAmount > 0 && sendAmount < MinSats) {
-        throw new Error("sendAmount must not be less than " + MinSats);
+        throw new Error("sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
 
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
@@ -236,7 +237,7 @@ const createTxSplitFundFromOrdinalUTXO = (
 
     const totalAmountSpend = sendAmount + fee;
     if (totalAmountSpend > maxAmountInsSpend) {
-        throw new Error("Your balance is insufficient.");
+        throw new Error("Your balance is insufficient. Please top up BTC to your wallet to pay network fee.");
     }
 
     const newValueInscription = inscriptionUTXO.value - totalAmountSpend;
@@ -296,11 +297,11 @@ const createDummyUTXOFromCardinal = async (
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
 
         // TODO: uncomment here
-        // try {
-        //     await broadcastTx(txHex);
-        // } catch (e) {
-        //     throw new Error(`Broadcast the split tx error ${{ e }}`);
-        // }
+        try {
+            await broadcastTx(txHex);
+        } catch (e) {
+            throw new Error(`Broadcast the split tx error ${{ e }}`);
+        }
 
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {

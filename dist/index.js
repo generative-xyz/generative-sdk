@@ -152,6 +152,9 @@ const generateTaprootKeyPair = (privateKey) => {
     }
     return { keyPair, senderAddress, tweakedSigner, p2pktr };
 };
+const fromSat = (sat) => {
+    return sat / 1e8;
+};
 
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
@@ -232,7 +235,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
     let totalInputAmount = 0;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Your balance is insufficient.");
+            throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
         }
         normalUTXOs = normalUTXOs.sort((a, b) => {
             if (a.value > b.value) {
@@ -382,7 +385,7 @@ const selectCardinalUTXOs = (utxos, inscriptions, sendAmount, isSelectDummyUTXO)
     const totalSendAmount = sendAmount;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Your balance is insufficient.");
+            throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
         }
         if (normalUTXOs[normalUTXOs.length - 1].value >= totalSendAmount) {
             // select the smallest utxo
@@ -400,7 +403,7 @@ const selectCardinalUTXOs = (utxos, inscriptions, sendAmount, isSelectDummyUTXO)
                 }
             }
             if (totalInputAmount < totalSendAmount) {
-                throw new Error("Your balance is insufficient.");
+                throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
             }
         }
         else {
@@ -476,7 +479,7 @@ const selectTheSmallestUTXO = (utxos, inscriptions) => {
 const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true) => {
     // validation
     if (sendAmount > 0 && sendAmount < MinSats) {
-        throw new Error("sendAmount must not be less than " + MinSats);
+        throw new Error("sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
@@ -625,14 +628,14 @@ const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = 
 const createTxSplitFundFromOrdinalUTXO = (senderPrivateKey, inscriptionUTXO, inscriptionInfo, sendAmount, feeRatePerByte) => {
     // validation
     if (sendAmount > 0 && sendAmount < MinSats) {
-        throw new Error("sendAmount must not be less than " + MinSats);
+        throw new Error("sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
     const maxAmountInsSpend = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
     const fee = estimateTxFee(1, 2, feeRatePerByte);
     const totalAmountSpend = sendAmount + fee;
     if (totalAmountSpend > maxAmountInsSpend) {
-        throw new Error("Your balance is insufficient.");
+        throw new Error("Your balance is insufficient. Please top up BTC to your wallet to pay network fee.");
     }
     const newValueInscription = inscriptionUTXO.value - totalAmountSpend;
     const psbt = new bitcoinjsLib.Psbt({ network });
@@ -678,11 +681,12 @@ const createDummyUTXOFromCardinal = async (senderPrivateKey, utxos, inscriptions
         const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
         // TODO: uncomment here
-        // try {
-        //     await broadcastTx(txHex);
-        // } catch (e) {
-        //     throw new Error(`Broadcast the split tx error ${{ e }}`);
-        // }
+        try {
+            await broadcastTx(txHex);
+        }
+        catch (e) {
+            throw new Error(`Broadcast the split tx error ${{ e }}`);
+        }
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
             tx_hash: txID,
@@ -825,7 +829,7 @@ const createPSBTToBuy = (params) => {
         value: dummyUtxo.value + valueInscription,
     });
     if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
-        throw new Error("Length of inputs and output in seller signed psbt must not be different.");
+        throw new Error("Length of inputs and outputs in seller signed psbt must not be different.");
     }
     for (let i = 0; i < sellerSignedPsbt.txInputs.length; i++) {
         // Add seller signed input
@@ -950,10 +954,10 @@ const reqListForSaleInscription = async (params) => {
         }
     }
     if (amountPayToSeller < MinSats) {
-        throw new Error("amountPayToSeller must not be less than " + MinSats);
+        throw new Error("amountPayToSeller must not be less than " + fromSat(MinSats) + " BTC.");
     }
     if (feePayToCreator > 0 && feePayToCreator < MinSats) {
-        throw new Error("feePayToCreator must not be less than " + MinSats);
+        throw new Error("feePayToCreator must not be less than " + fromSat(MinSats) + " BTC.");
     }
     // select inscription UTXO
     const { inscriptionUTXO, inscriptionInfo } = selectInscriptionUTXO(utxos, inscriptions, sellInscriptionID);
@@ -978,11 +982,12 @@ const reqListForSaleInscription = async (params) => {
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
             // TODO: uncomment here
-            // try {
-            //     await broadcastTx(txHex);
-            // } catch (e) {
-            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
-            // }
+            try {
+                await broadcastTx(txHex);
+            }
+            catch (e) {
+                throw new Error("Broadcast the split tx from inscription error " + (e === null || e === void 0 ? void 0 : e.toString()));
+            }
             splitTxID = txID;
             newInscriptionUTXO = {
                 tx_hash: txID,
@@ -1105,6 +1110,7 @@ exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
 exports.estimateNumInOutputs = estimateNumInOutputs;
 exports.estimateNumInOutputsForBuyInscription = estimateNumInOutputsForBuyInscription;
 exports.estimateTxFee = estimateTxFee;
+exports.fromSat = fromSat;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;

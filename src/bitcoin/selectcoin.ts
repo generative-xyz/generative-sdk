@@ -109,7 +109,7 @@ const selectUTXOs = (
     let totalInputAmount = 0;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Your balance is insufficient.");
+            throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
         }
 
         normalUTXOs = normalUTXOs.sort(
@@ -288,7 +288,7 @@ const selectCardinalUTXOs = (
     const totalSendAmount = sendAmount;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Your balance is insufficient.");
+            throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
         }
         if (normalUTXOs[normalUTXOs.length - 1].value >= totalSendAmount) {
             // select the smallest utxo
@@ -305,7 +305,7 @@ const selectCardinalUTXOs = (
                 }
             }
             if (totalInputAmount < totalSendAmount) {
-                throw new Error("Your balance is insufficient.");
+                throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
             }
         } else {
             // select the nearest UTXO

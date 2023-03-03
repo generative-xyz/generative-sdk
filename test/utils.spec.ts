@@ -5,7 +5,7 @@ import {
     payments,
     Psbt
 } from "bitcoinjs-lib";
-import { broadcastTx } from "../src/index";
+import { broadcastTx, fromSat } from "../src/index";
 const network = networks.bitcoin;  // mainnet
 
 
@@ -21,6 +21,16 @@ describe("Broadcast Tx Tests", async () => {
         }
 
         assert.notEqual(er, null);
+    })
+});
+
+describe("Convert from sat Tests", async () => {
+    it("should return 0.00001", async () => {
+        const amt = 1000;
+        const res = fromSat(amt);
+        console.log("res: ", res);
+
+        assert.equal(res, 0.00001);
     })
 });
 
