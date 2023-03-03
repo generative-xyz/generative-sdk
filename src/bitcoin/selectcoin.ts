@@ -1,15 +1,6 @@
+import { Inscription, UTXO } from "./types";
+import { MinSats, DummyUTXOValue } from "./constants";
 import {
-    networks,
-    payments,
-    Psbt
-} from "bitcoinjs-lib";
-import axios, { AxiosResponse } from "axios";
-import { ICreateTxResp, Inscription, UTXO } from "./types";
-import { BlockStreamURL, MinSats, DummyUTXOValue } from "./constants";
-import {
-    toXOnly,
-    tweakSigner,
-    ECPair,
     estimateTxFee,
     estimateNumInOutputs
 } from "./utils";
@@ -359,7 +350,7 @@ const selectTheSmallestUTXO = (
     });
 
     if (normalUTXOs.length === 0) {
-        throw new Error("Your wallet has no cardinal UTXOs.");
+        throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
     }
 
     normalUTXOs = normalUTXOs.sort(

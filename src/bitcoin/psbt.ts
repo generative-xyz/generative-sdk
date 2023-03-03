@@ -244,7 +244,7 @@ const createPSBTToBuy = (
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
-    return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo], changeAmount: changeValue };
+    return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo], changeAmount: changeValue, tx };
 };
 
 /**
@@ -349,11 +349,11 @@ const reqListForSaleInscription = async (
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
 
             // TODO: uncomment here
-            try {
-                await broadcastTx(txHex);
-            } catch (e) {
-                throw new Error("Broadcast the split tx from inscription error " + e?.toString());
-            }
+            // try {
+            //     await broadcastTx(txHex);
+            // } catch (e) {
+            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
+            // }
             splitTxID = txID;
 
             newInscriptionUTXO = {
@@ -483,6 +483,7 @@ const reqBuyInscription = async (
     });
 
     return {
+        tx: res.tx,
         txID: res?.txID,
         txHex: res?.txHex,
         fee: res?.fee + feeSplitUTXO,

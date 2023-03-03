@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { networks, Psbt, Signer, payments } from 'bitcoinjs-lib';
+import { networks, Transaction, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
 
@@ -20,6 +20,7 @@ interface Inscription {
     id: string;
 }
 interface ICreateTxResp {
+    tx: Transaction;
     txID: string;
     txHex: string;
     fee: number;
@@ -27,6 +28,7 @@ interface ICreateTxResp {
     changeAmount: number;
 }
 interface ICreateTxBuyResp {
+    tx: Transaction;
     txID: string;
     txHex: string;
     fee: number;

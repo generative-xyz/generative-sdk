@@ -1,3 +1,4 @@
+import { Transaction } from "bitcoinjs-lib";
 interface UTXO {
     tx_hash: string;
     tx_output_n: number;
@@ -8,6 +9,7 @@ interface Inscription {
     id: string;
 }
 interface ICreateTxResp {
+    tx: Transaction;
     txID: string;
     txHex: string;
     fee: number;
@@ -15,6 +17,7 @@ interface ICreateTxResp {
     changeAmount: number;
 }
 interface ICreateTxBuyResp {
+    tx: Transaction;
     txID: string;
     txHex: string;
     fee: number;
