@@ -343,11 +343,11 @@ const reqListForSaleInscription = async (
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
 
             // TODO: uncomment here
-            // try {
-            //     await broadcastTx(txHex);
-            // } catch (e) {
-            //     throw new Error("Broadcast the split tx from inscription error " + e?.toString());
-            // }
+            try {
+                await broadcastTx(txHex);
+            } catch (e) {
+                throw new Error("Broadcast the split tx from inscription error " + e?.toString());
+            }
             splitTxID = txID;
 
             newInscriptionUTXO = {
