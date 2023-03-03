@@ -115,8 +115,6 @@ const selectUTXOs = (
             }
         );
 
-        console.log("normalUTXOs: ", normalUTXOs);
-
         if (normalUTXOs[normalUTXOs.length - 1].value >= totalSendAmount) {
             // select the smallest utxo
             resultUTXOs.push(normalUTXOs[normalUTXOs.length - 1]);
@@ -196,7 +194,6 @@ const selectInscriptionUTXO = (
         // txIDKey = tx_hash:tx_output_n
         let txIDKey = utxo.tx_hash.concat(":");
         txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
-        console.log("txIDKey: ", txIDKey);
 
         // try to get inscriptionInfos
         const inscriptionInfos = inscriptions[txIDKey];
@@ -262,9 +259,6 @@ const selectCardinalUTXOs = (
             return 0;
         }
     );
-
-    console.log("normalUTXOs: ", normalUTXOs);
-
 
     if (isSelectDummyUTXO) {
         if (normalUTXOs[normalUTXOs.length - 1].value <= DummyUTXOValue) {

@@ -82,7 +82,6 @@ const estimateNumInOutputsForBuyInscription = (
 ): { numIns: number, numOuts: number } => {
     const numIns = 1 + sellerSignedPsbt.txInputs.length + 2;
     const numOuts = 1 + sellerSignedPsbt.txOutputs.length + 1 + 1;
-    console.log("numIns, numOuts:", numIns, numOuts);
     return { numIns, numOuts };
 };
 
