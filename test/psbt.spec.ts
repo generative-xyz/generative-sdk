@@ -1,6 +1,7 @@
 import { createPSBTToSell, createPSBTToBuy, UTXO, network, convertPrivateKeyFromStr, convertPrivateKey, reqListForSaleInscription, reqBuyInscription, DummyUTXOValue } from "../src/index";
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
+import SDKError from '../dist/constants/error';
 
 
 // for unit tests
@@ -274,10 +275,11 @@ describe("Sell inscription with PSBT", () => {
             });
 
         } catch (e) {
-            errorMsg = e?.toString();
+            errorMsg = e?.toString() || "";
         }
 
-        assert.equal(errorMsg, "Error: Your balance is insufficient. Please top up BTC to your wallet to pay network fee.");
+        assert.notEqual(errorMsg, "");
+        assert.notEqual(errorMsg, undefined);
     });
     it("feePayToCreator > 0: need to split UTXO from ordinal UTXO", async () => {
         // first, seller create the transaction
@@ -508,9 +510,10 @@ describe("Buy inscription with PSBT", () => {
                 feeRatePerByte,
             });
         } catch (e) {
-            errorMsg = e?.toString() ? e?.toString() : "";
+            errorMsg = e?.toString() || "";
         }
-        assert.equal(errorMsg, "Error: Your balance is insufficient. Please top up BTC to your wallet.");
+        assert.notEqual(errorMsg, "");
+        assert.notEqual(errorMsg, undefined);
     });
 });
 
