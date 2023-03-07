@@ -29,6 +29,7 @@ interface ICreateTxBuyResp {
     selectedUTXOs: UTXO[],
     splitTxID: string,
     splitUTXOs: UTXO[],
+    splitTxRaw: string,
 }
 
 interface ICreateTxSellResp {
@@ -36,6 +37,7 @@ interface ICreateTxSellResp {
     selectedUTXOs: UTXO[],
     splitTxID: string,
     splitUTXOs: UTXO[],
+    splitTxRaw: string,
 }
 
 interface ICreateTxSplitInscriptionResp {

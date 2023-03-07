@@ -202,7 +202,7 @@ const createPSBTToBuy = (
     }
 
     if (changeValue < 0) {
-        throw Error("Your balance is insufficient.");
+        throw new Error("Your balance is insufficient.");
     }
 
     // Change utxo
@@ -330,6 +330,7 @@ const reqListForSaleInscription = async (
     let dummyUTXORes: any;
     let selectedUTXOs: UTXO[] = [];
     let splitTxID = "";
+    let splitTxRaw = "";
 
     if (needDummyUTXO) {
         try {
@@ -338,17 +339,12 @@ const reqListForSaleInscription = async (
             dummyUTXORes = res.dummyUTXO;
             selectedUTXOs = res.selectedUTXOs;
             splitTxID = res.splitTxID;
+            splitTxRaw = res.txHex;
         } catch (e) {
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
-
-            // TODO: uncomment here
-            try {
-                await broadcastTx(txHex);
-            } catch (e) {
-                throw new Error("Broadcast the split tx from inscription error " + e?.toString());
-            }
             splitTxID = txID;
+            splitTxRaw = txHex;
 
             newInscriptionUTXO = {
                 tx_hash: txID,
@@ -376,7 +372,7 @@ const reqListForSaleInscription = async (
         feePayToCreator: feePayToCreator,
     });
 
-    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs };
+    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
 };
 
 /**
@@ -425,7 +421,7 @@ const reqBuyInscription = async (
     const newUTXOs = utxos;
 
     // select or create dummy UTXO
-    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO } = await createDummyUTXOFromCardinal(
+    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO, txHex: splitTxRaw } = await createDummyUTXOFromCardinal(
         buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
 
     console.log("buy dummyUTXO: ", dummyUTXO);
@@ -477,7 +473,8 @@ const reqBuyInscription = async (
         fee: res?.fee + feeSplitUTXO,
         selectedUTXOs: [...paymentUTXOs, dummyUTXO],
         splitTxID,
-        splitUTXOs: [...selectedUTXOs]
+        splitUTXOs: [...selectedUTXOs],
+        splitTxRaw: splitTxRaw,
     };
 };
 

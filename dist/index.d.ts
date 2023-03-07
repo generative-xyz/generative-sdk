@@ -35,12 +35,14 @@ interface ICreateTxBuyResp {
     selectedUTXOs: UTXO[];
     splitTxID: string;
     splitUTXOs: UTXO[];
+    splitTxRaw: string;
 }
 interface ICreateTxSellResp {
     base64Psbt: string;
     selectedUTXOs: UTXO[];
     splitTxID: string;
     splitUTXOs: UTXO[];
+    splitTxRaw: string;
 }
 interface ICreateTxSplitInscriptionResp {
     txID: string;
@@ -185,6 +187,7 @@ declare const createDummyUTXOFromCardinal: (senderPrivateKey: Buffer, utxos: UTX
     selectedUTXOs: UTXO[];
     newUTXO: any;
     fee: number;
+    txHex: string;
 }>;
 declare const broadcastTx: (txHex: string) => Promise<string>;
 
