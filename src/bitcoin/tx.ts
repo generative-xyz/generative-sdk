@@ -16,6 +16,7 @@ import {
     fromSat
 } from "./utils";
 import { selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
+import SDKError, { ERROR_CODE } from "../constants/error";
 
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions). 
@@ -44,7 +45,7 @@ const createTx = (
 ): ICreateTxResp => {
     // validation
     if (sendAmount > 0 && sendAmount < MinSats) {
-        throw new Error("sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
@@ -147,7 +148,7 @@ const createTxWithSpecificUTXOs = (
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
-        throw new Error("Can not get sender address from private key");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Can not get the sender address from the private key");
     }
 
     const psbt = new Psbt({ network });
@@ -224,7 +225,7 @@ const createTxSplitFundFromOrdinalUTXO = (
 ): ICreateTxSplitInscriptionResp => {
     // validation
     if (sendAmount > 0 && sendAmount < MinSats) {
-        throw new Error("sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
 
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
@@ -235,7 +236,7 @@ const createTxSplitFundFromOrdinalUTXO = (
 
     const totalAmountSpend = sendAmount + fee;
     if (totalAmountSpend > maxAmountInsSpend) {
-        throw new Error("Your balance is insufficient. Please top up BTC to your wallet to pay network fee.");
+        throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_PAY_FEE);
     }
 
     const newValueInscription = inscriptionUTXO.value - totalAmountSpend;
@@ -321,7 +322,7 @@ const broadcastTx = async (txHex: string): Promise<string> => {
     const response: AxiosResponse = await blockstream.post("/tx", txHex);
     const { status, data } = response;
     if (status !== 200) {
-        throw Error("Broadcast tx error " + data);
+        throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
     }
     return response.data;
 };

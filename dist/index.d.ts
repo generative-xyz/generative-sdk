@@ -97,7 +97,6 @@ declare const selectInscriptionUTXO: (utxos: UTXO[], inscriptions: {
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
 * @param sendAmount satoshi amount need to send
-* @param isSelectDummyUTXO need to select dummy UTXO or not
 * @returns the list of selected UTXOs
 * @returns the actual flag using inscription coin to pay fee
 * @returns the value of inscription outputs, and the change amount (if any)
@@ -105,12 +104,11 @@ declare const selectInscriptionUTXO: (utxos: UTXO[], inscriptions: {
 */
 declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, sendAmount: number, isSelectDummyUTXO: boolean) => {
+}, sendAmount: number) => {
     selectedUTXOs: UTXO[];
-    dummyUTXO: UTXO;
 };
 /**
-* selectCardinalUTXOs selects the most reasonable UTXOs to create the transaction.
+* selectTheSmallestUTXO selects the most reasonable UTXOs to create the transaction.
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
 * @param sendAmount satoshi amount need to send

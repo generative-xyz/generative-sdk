@@ -14,6 +14,7 @@ import {
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
 import { selectCardinalUTXOs, selectInscriptionUTXO } from "./selectcoin";
 import { broadcastTx, createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO } from "./tx";
+import SDKError, { ERROR_CODE } from "../constants/error";
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription. 
@@ -85,13 +86,14 @@ const createPSBTToSell = (
     // sign tx
     psbt.txInputs.forEach((utxo, index) => {
         psbt.signInput(index, tweakedSigner, [Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY]);
+        let isValid = true;
         try {
-            const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
-            if (!isValid) {
-                throw new Error("Tx signature is invalid " + index);
-            }
+            isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
         } catch (e) {
-            throw new Error("Tx signature is invalid " + index);
+            isValid = false;
+        }
+        if (!isValid) {
+            throw new SDKError(ERROR_CODE.INVALID_SIG);
         }
     });
     psbt.finalizeAllInputs();
@@ -155,7 +157,7 @@ const createPSBTToBuy = (
     });
 
     if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
-        throw new Error("Length of inputs and outputs in seller signed psbt must not be different.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Length of inputs and outputs in seller psbt must not be different.");
     }
 
     for (let i = 0; i < sellerSignedPsbt.txInputs.length; i++) {
@@ -202,7 +204,7 @@ const createPSBTToBuy = (
     }
 
     if (changeValue < 0) {
-        throw new Error("Your balance is insufficient.");
+        throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
     }
 
     // Change utxo
@@ -288,16 +290,16 @@ const reqListForSaleInscription = async (
 
     // validation
     if (feePayToCreator > 0 && creatorAddress === "") {
-        throw new Error("Creator address must not be empty.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Creator address must not be empty.");
     }
     if (sellInscriptionID === "") {
-        throw new Error("SellInscriptionID must not be empty.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "SellInscriptionID must not be empty.");
     }
     if (receiverBTCAddress === "") {
-        throw new Error("receiverBTCAddress must not be empty.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "receiverBTCAddress must not be empty.");
     }
     if (amountPayToSeller === 0) {
-        throw new Error("amountPayToSeller must be greater than zero.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "amountPayToSeller must be greater than zero.");
     }
 
     let needDummyUTXO = false;
@@ -315,10 +317,10 @@ const reqListForSaleInscription = async (
     }
 
     if (amountPayToSeller < MinSats) {
-        throw new Error("amountPayToSeller must not be less than " + fromSat(MinSats) + " BTC.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "amountPayToSeller must not be less than " + fromSat(MinSats) + " BTC.");
     }
     if (feePayToCreator > 0 && feePayToCreator < MinSats) {
-        throw new Error("feePayToCreator must not be less than " + fromSat(MinSats) + " BTC.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "feePayToCreator must not be less than " + fromSat(MinSats) + " BTC.");
     }
 
     // select inscription UTXO
@@ -411,11 +413,11 @@ const reqBuyInscription = async (
     const sellerSignedPsbt = Psbt.fromBase64(sellerSignedPsbtB64, { network });
     const sellerInputs = sellerSignedPsbt.data.inputs;
     if (sellerInputs.length === 0) {
-        throw new Error("Invalid seller's PSBT.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
     }
     const valueInscription = sellerInputs[0].witnessUtxo?.value;
     if (valueInscription === undefined || valueInscription === 0) {
-        throw new Error("Invalid value inscription in seller's PSBT.");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid value inscription in seller's PSBT.");
     }
 
     const newUTXOs = utxos;
@@ -451,7 +453,7 @@ const reqBuyInscription = async (
     const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(sellerSignedPsbt);
     const estTotalPaymentAmount = price + DummyUTXOValue + estimateTxFee(numIns, numOuts, feeRatePerByte);
 
-    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, estTotalPaymentAmount, false);
+    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, estTotalPaymentAmount);
 
 
     // create PBTS from the seller's one
