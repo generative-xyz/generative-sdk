@@ -46,6 +46,10 @@ interface ICreateTxSplitInscriptionResp {
     newValueInscription: number,
 }
 
+interface Wallet {
+    privKey: string,
+}
+
 export {
     UTXO,
     Inscription,
@@ -53,4 +57,5 @@ export {
     ICreateTxSplitInscriptionResp,
     ICreateTxBuyResp,
     ICreateTxSellResp,
+    Wallet
 };
