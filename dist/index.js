@@ -198,7 +198,7 @@ class SDKError extends Error {
     constructor(code, desc) {
         super();
         const _error = ERROR_MESSAGE[code];
-        this.message = `${_error} ERROR_CODE${code}` || "";
+        this.message = `${_error.message} ERROR_CODE${code}` || "";
         this.code = code;
         this.desc = desc || (_error === null || _error === void 0 ? void 0 : _error.desc);
     }
@@ -1113,9 +1113,12 @@ const reqBuyInscription = async (params) => {
 exports.BlockStreamURL = BlockStreamURL;
 exports.DummyUTXOValue = DummyUTXOValue;
 exports.ECPair = ECPair;
+exports.ERROR_CODE = ERROR_CODE;
+exports.ERROR_MESSAGE = ERROR_MESSAGE;
 exports.InputSize = InputSize;
 exports.MinSats = MinSats;
 exports.OutputSize = OutputSize;
+exports.SDKError = SDKError;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.convertPrivateKeyFromStr = convertPrivateKeyFromStr;
