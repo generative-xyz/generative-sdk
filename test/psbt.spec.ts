@@ -1,7 +1,8 @@
 import { createPSBTToSell, createPSBTToBuy, UTXO, network, convertPrivateKeyFromStr, convertPrivateKey, reqListForSaleInscription, reqBuyInscription, DummyUTXOValue } from "../src/index";
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
-import SDKError from '../dist/constants/error';
+require("dotenv").config({ path: __dirname + "/.env" });
+console.log("path:", __dirname + "/.env");
 
 
 // for unit tests
@@ -204,15 +205,22 @@ let buyerInscriptions = {
     ]
 }
 
-// TODO: fill the private key
-var sellerPrivateKey = Buffer.from([]);
-let sellerAddress = "bc1prvw0jnlq7zhvy3jxuley9qjxm8kpz2wgwrd2e7nce455am6glpxqavdcc9";
+var sellerPrivateKeyWif = process.env.PRIV_KEY_1 || "";
+let sellerAddress = process.env.ADDRESS_1 || "";
+const sellerPrivateKey = convertPrivateKeyFromStr(sellerPrivateKeyWif);
+console.log("sellerPrivateKeyWif ", sellerPrivateKeyWif);
+console.log("sellerAddress ", sellerAddress);
 
-let buyerPrivateKeyWIF = "";
-let buyerAddress = "bc1pj2t2szx6rqzcyv63t3xepgdnhuj2zd3kfggrqmd9qwlg3vsx37fqywwhyx";
+let buyerPrivateKeyWIF = process.env.PRIV_KEY_2 || "";
+let buyerAddress = process.env.ADDRESS_2 || "";
 let buyerPrivateKey = convertPrivateKeyFromStr(buyerPrivateKeyWIF);
+console.log("buyerPrivateKeyWIF ", buyerPrivateKeyWIF);
+console.log("buyerAddress ", buyerAddress);
+
 
 const feeRatePerByte = 6;
+
+
 
 
 describe("Sell inscription with PSBT", () => {
