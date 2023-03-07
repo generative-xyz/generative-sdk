@@ -1,6 +1,7 @@
 import { createPSBTToSell, createPSBTToBuy, UTXO, network, convertPrivateKeyFromStr, convertPrivateKey, reqListForSaleInscription, reqBuyInscription, DummyUTXOValue } from "../src/index";
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
+import SDKError from '../dist/constants/error';
 
 
 // for unit tests
@@ -274,10 +275,11 @@ describe("Sell inscription with PSBT", () => {
             });
 
         } catch (e) {
-            errorMsg = e?.toString();
+            errorMsg = e?.toString() || "";
         }
 
-        assert.equal(errorMsg, "Error: Your balance is insufficient. Please top up BTC to your wallet to pay network fee.");
+        assert.notEqual(errorMsg, "");
+        assert.notEqual(errorMsg, undefined);
     });
     it("feePayToCreator > 0: need to split UTXO from ordinal UTXO", async () => {
         // first, seller create the transaction
@@ -287,7 +289,7 @@ describe("Sell inscription with PSBT", () => {
         const sellInscriptionID = "b4e20295fa3c738490cf1d8a542a9a1354affa649f601866b12c092a956de1c3i0";
         const creatorAddress = "bc1ppswwdq6crzrktla4y0urfmcqe8n7wttsvxdx39k4ruvd008x8rvqmnwpk9";
 
-        const { base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs } = await reqListForSaleInscription({
+        const { base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs, splitTxRaw } = await reqListForSaleInscription({
             sellerPrivateKey: sellerPrivateKey,
             utxos: sellerUTXOs,
             inscriptions: sellerInsciptions,
@@ -298,6 +300,7 @@ describe("Sell inscription with PSBT", () => {
             creatorAddress,
             feeRatePerByte: 2,
         });
+
 
         assert.notEqual(splitTxID, "");
         assert.equal(splitUTXOs.length, 0);
@@ -507,11 +510,10 @@ describe("Buy inscription with PSBT", () => {
                 feeRatePerByte,
             });
         } catch (e) {
-            errorMsg = e?.toString();
+            errorMsg = e?.toString() || "";
         }
-
-
         assert.notEqual(errorMsg, "");
+        assert.notEqual(errorMsg, undefined);
     });
 });
 

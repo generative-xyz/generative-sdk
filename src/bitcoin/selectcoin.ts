@@ -1,5 +1,6 @@
 import { Inscription, UTXO } from "./types";
 import { MinSats, DummyUTXOValue } from "./constants";
+import SDKError, { ERROR_CODE } from "../constants/error";
 import {
     estimateTxFee,
     estimateNumInOutputs
@@ -67,7 +68,7 @@ const selectUTXOs = (
                 if (inscription !== undefined) {
                     // don't support send tx with outcoin that includes more than one inscription
                     if (inscriptionInfos.length > 1) {
-                        throw new Error(`InscriptionID ${{ sendInscriptionID }} is not supported to send.`);
+                        throw new SDKError(ERROR_CODE.NOT_SUPPORT_SEND);
                     }
                     inscriptionUTXO = utxo;
                     inscriptionInfo = inscription;
@@ -80,7 +81,7 @@ const selectUTXOs = (
 
     if (sendInscriptionID !== "") {
         if (inscriptionUTXO === null || inscriptionInfo == null) {
-            throw new Error("Can not find inscription UTXO for sendInscriptionID");
+            throw new SDKError(ERROR_CODE.NOT_FOUND_INSCRIPTION);
         }
         // if value is not enough to pay fee, MUST use normal UTXOs to pay fee
         if (isUseInscriptionPayFee && maxAmountInsTransfer < estFee) {
@@ -100,7 +101,7 @@ const selectUTXOs = (
     let totalInputAmount = 0;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
+            throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
         }
 
         normalUTXOs = normalUTXOs.sort(
@@ -130,7 +131,7 @@ const selectUTXOs = (
                 }
             }
             if (totalInputAmount < totalSendAmount) {
-                throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
+                throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
             }
         } else {
             // select the nearest UTXO
@@ -186,7 +187,7 @@ const selectInscriptionUTXO = (
     inscriptionID: string,
 ): { inscriptionUTXO: UTXO, inscriptionInfo: Inscription } => {
     if (inscriptionID === "") {
-        throw Error("Inscription must not be empty string");
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "InscriptionID must not be an empty string");
     }
 
     // filter normal UTXO and inscription UTXO to send
@@ -202,14 +203,13 @@ const selectInscriptionUTXO = (
             if (inscription !== undefined) {
                 // don't support send tx with outcoin that includes more than one inscription
                 if (inscriptionInfos.length > 1) {
-                    throw new Error("InscriptionID is not supported to send " + inscriptionID);
+                    throw new SDKError(ERROR_CODE.NOT_SUPPORT_SEND);
                 }
                 return { inscriptionUTXO: utxo, inscriptionInfo: inscription };
             }
         }
     }
-
-    throw new Error("InscriptionID not found in your wallet " + inscriptionID);
+    throw new SDKError(ERROR_CODE.NOT_FOUND_INSCRIPTION);
 };
 
 /**
@@ -217,7 +217,6 @@ const selectInscriptionUTXO = (
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
 * @param sendAmount satoshi amount need to send 
-* @param isSelectDummyUTXO need to select dummy UTXO or not
 * @returns the list of selected UTXOs
 * @returns the actual flag using inscription coin to pay fee
 * @returns the value of inscription outputs, and the change amount (if any)
@@ -227,11 +226,9 @@ const selectCardinalUTXOs = (
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
     sendAmount: number,
-    isSelectDummyUTXO: boolean,
-): { selectedUTXOs: UTXO[], dummyUTXO: UTXO } => {
+): { selectedUTXOs: UTXO[] } => {
     const resultUTXOs: UTXO[] = [];
     let normalUTXOs: UTXO[] = [];
-    let dummyUTXO: any = null;
 
     // filter normal UTXO and inscription UTXO to send
     utxos.forEach(utxo => {
@@ -260,20 +257,11 @@ const selectCardinalUTXOs = (
         }
     );
 
-    if (isSelectDummyUTXO) {
-        if (normalUTXOs[normalUTXOs.length - 1].value <= DummyUTXOValue) {
-            dummyUTXO = normalUTXOs[normalUTXOs.length - 1];
-            normalUTXOs.pop();
-        } else {
-            throw new Error("No dummy UTXOs (value <= 1000) found in your address, you first need to create one.");
-        }
-    }
-
     let totalInputAmount = 0;
     const totalSendAmount = sendAmount;
     if (totalSendAmount > 0) {
         if (normalUTXOs.length === 0) {
-            throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
+            throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
         }
         if (normalUTXOs[normalUTXOs.length - 1].value >= totalSendAmount) {
             // select the smallest utxo
@@ -290,7 +278,7 @@ const selectCardinalUTXOs = (
                 }
             }
             if (totalInputAmount < totalSendAmount) {
-                throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
+                throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
             }
         } else {
             // select the nearest UTXO
@@ -307,12 +295,12 @@ const selectCardinalUTXOs = (
         }
     }
 
-    return { selectedUTXOs: resultUTXOs, dummyUTXO: dummyUTXO };
+    return { selectedUTXOs: resultUTXOs };
 };
 
 
 /**
-* selectCardinalUTXOs selects the most reasonable UTXOs to create the transaction. 
+* selectTheSmallestUTXO selects the most reasonable UTXOs to create the transaction. 
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
 * @param sendAmount satoshi amount need to send 
@@ -344,7 +332,7 @@ const selectTheSmallestUTXO = (
     });
 
     if (normalUTXOs.length === 0) {
-        throw new Error("Your balance is insufficient. Please top up BTC to your wallet.");
+        throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
     }
 
     normalUTXOs = normalUTXOs.sort(

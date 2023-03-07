@@ -63,6 +63,7 @@ declare const createDummyUTXOFromCardinal: (senderPrivateKey: Buffer, utxos: UTX
     selectedUTXOs: UTXO[];
     newUTXO: any;
     fee: number;
+    txHex: string;
 }>;
 declare const broadcastTx: (txHex: string) => Promise<string>;
 export { selectUTXOs, createTx, broadcastTx, createTxWithSpecificUTXOs, createTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, };
