@@ -1,8 +1,9 @@
-import { writeFile } from "fs";
 import { Inscription, UTXO, Wallet } from "./types";
 import { ethers, utils } from "ethers";
 import { AES, enc } from "crypto-js";
 import { convertPrivateKeyFromStr, generateTaprootKeyPair } from "./utils";
+import { randomBytes } from "crypto";
+import { keccak256 } from "js-sha3";
 
 const getBTCBalance = (
     params: {
@@ -54,17 +55,12 @@ const getBitcoinKeySignContent = (message: string): Buffer => {
 * NOTE: The client should save the corresponding evm address to retrieve the same BTC wallet. 
 * @param provider ETH provider
 * @param evmAddress evm address is chosen to create the valid signature on IMPORT_MESSAGE
-* @returns the base64 encode Psbt
+* @returns the password string
 */
-const derivePasswordWallet = async (evmAddress: string, provider: ethers.providers.Web3Provider): Promise<Buffer> => {
+const derivePasswordWallet = async (evmAddress: string, provider: ethers.providers.Web3Provider): Promise<string> => {
     // sign message with first sign transaction
     const IMPORT_MESSAGE =
         "Sign this message to import your Bitcoin wallet. This key will be used to encrypt your wallet.";
-
-    // const provider = new ethers.providers.Web3Provider(
-    //     window.ethereum as ethers.providers.ExternalProvider
-    // );
-    // const provider: ethers.providers.Web3Provider;
     const toSign =
         "0x" + getBitcoinKeySignContent(IMPORT_MESSAGE).toString("hex");
     const signature = await provider.send("personal_sign", [
@@ -72,12 +68,10 @@ const derivePasswordWallet = async (evmAddress: string, provider: ethers.provide
         evmAddress.toString(),
     ]);
 
-    // Password = Keccak256(sig)
-    const password = utils.arrayify(
-        utils.keccak256(utils.arrayify(signature))
-    );
+    // const signature = randomBytes(64);
 
-    return Buffer.from(password);
+    const password = keccak256(utils.arrayify(signature));
+    return password;
 };
 
 const encryptWallet = (wallet: Wallet, password: string) => {

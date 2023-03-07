@@ -25,8 +25,8 @@
     "pre-commit": "lint-staged && yarn build",
     "test": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/bitcoin.spec.ts'",
     "test-util": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/utils.spec.ts'",
-    "test-psbt": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/psbt.spec.ts'",
-    "test-wallet": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/wallet.spec.ts'"
+    "test-psbt": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/psbt.spec.ts'",
+    "test-wallet": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register  'test/wallet.spec.ts'"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^17.4.4",
@@ -40,6 +40,7 @@
     "@typescript-eslint/parser": "^5.53.0",
     "chai": "^4.3.7",
     "commitlint": "^17.4.4",
+    "dotenv": "^16.0.3",
     "eslint": "^8.11.0",
     "husky": "^8.0.3",
     "lint-staged": "^13.1.2",
@@ -62,6 +63,7 @@
     "ecpair": "^2.1.0",
     "ethers": "5.7.1",
     "form-data": "^4.0.0",
+    "js-sha3": "^0.8.0",
     "ts-mocha": "^10.0.0",
     "wif": "^2.0.6"
   },

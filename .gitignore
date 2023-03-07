@@ -65,9 +65,9 @@ typings/
 
 # dotenv environment variables file
 .env.local
+/test/.env
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
-
 
 .idea
