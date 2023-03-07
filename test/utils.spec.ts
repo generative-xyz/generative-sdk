@@ -6,6 +6,7 @@ import {
     Psbt
 } from "bitcoinjs-lib";
 import { broadcastTx, fromSat } from "../src/index";
+import BigNumber from "bignumber.js";
 const network = networks.bitcoin;  // mainnet
 
 
@@ -31,6 +32,18 @@ describe("Convert from sat Tests", async () => {
         console.log("res: ", res);
 
         assert.equal(res, 0.00001);
+    })
+});
+
+describe("Big Number Tests", async () => {
+    it("should return 0.00001", async () => {
+        const a = new BigNumber(1);
+        const b = new BigNumber(3);
+        const c = b.minus(a).minus(1).plus(5);
+
+        assert.equal(c.toNumber(), 6);
+        assert.equal(b.toNumber(), 3);
+        assert.equal(a.toNumber(), 1);
     })
 });
 
