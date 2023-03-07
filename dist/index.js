@@ -198,7 +198,7 @@ class SDKError extends Error {
     constructor(code, desc) {
         super();
         const _error = ERROR_MESSAGE[code];
-        this.message = `${_error.message} ERROR_CODE${code}` || "";
+        this.message = `${_error.message} (${code})` || "";
         this.code = code;
         this.desc = desc || (_error === null || _error === void 0 ? void 0 : _error.desc);
     }
