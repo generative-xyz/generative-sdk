@@ -670,18 +670,11 @@ const createDummyUTXOFromCardinal = async (senderPrivateKey, utxos, inscriptions
     const smallestUTXO = selectTheSmallestUTXO(utxos, inscriptions);
     if (smallestUTXO.value <= DummyUTXOValue) {
         dummyUTXO = smallestUTXO;
-        return { dummyUTXO: dummyUTXO, splitTxID: "", selectedUTXOs: [], newUTXO: newUTXO, fee: 0 };
+        return { dummyUTXO: dummyUTXO, splitTxID: "", selectedUTXOs: [], newUTXO: newUTXO, fee: 0, txHex: "" };
     }
     else {
-        const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
+        const { senderAddress } = generateTaprootKeyPair(senderPrivateKey);
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
-        // TODO: uncomment here
-        try {
-            await broadcastTx(txHex);
-        }
-        catch (e) {
-            throw new Error("Broadcast the split tx error " + (e === null || e === void 0 ? void 0 : e.toString()));
-        }
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
             tx_hash: txID,
@@ -695,7 +688,7 @@ const createDummyUTXOFromCardinal = async (senderPrivateKey, utxos, inscriptions
                 value: changeAmount,
             };
         }
-        return { dummyUTXO: dummyUTXO, splitTxID: txID, selectedUTXOs, newUTXO: newUTXO, fee };
+        return { dummyUTXO: dummyUTXO, splitTxID: txID, selectedUTXOs, newUTXO: newUTXO, fee, txHex };
     }
 };
 const broadcastTx = async (txHex) => {
@@ -863,7 +856,7 @@ const createPSBTToBuy = (params) => {
         }
     }
     if (changeValue < 0) {
-        throw Error("Your balance is insufficient.");
+        throw new Error("Your balance is insufficient.");
     }
     // Change utxo
     if (changeValue > 0) {
@@ -960,6 +953,7 @@ const reqListForSaleInscription = async (params) => {
     let dummyUTXORes;
     let selectedUTXOs = [];
     let splitTxID = "";
+    let splitTxRaw = "";
     if (needDummyUTXO) {
         try {
             // create dummy UTXO from cardinal UTXOs
@@ -967,18 +961,13 @@ const reqListForSaleInscription = async (params) => {
             dummyUTXORes = res.dummyUTXO;
             selectedUTXOs = res.selectedUTXOs;
             splitTxID = res.splitTxID;
+            splitTxRaw = res.txHex;
         }
         catch (e) {
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, DummyUTXOValue, feeRatePerByte);
-            // TODO: uncomment here
-            try {
-                await broadcastTx(txHex);
-            }
-            catch (e) {
-                throw new Error("Broadcast the split tx from inscription error " + (e === null || e === void 0 ? void 0 : e.toString()));
-            }
             splitTxID = txID;
+            splitTxRaw = txHex;
             newInscriptionUTXO = {
                 tx_hash: txID,
                 tx_output_n: 0,
@@ -1003,7 +992,7 @@ const reqListForSaleInscription = async (params) => {
         creatorAddress: creatorAddress,
         feePayToCreator: feePayToCreator,
     });
-    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs };
+    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
 };
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
@@ -1032,7 +1021,7 @@ const reqBuyInscription = async (params) => {
     }
     const newUTXOs = utxos;
     // select or create dummy UTXO
-    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO } = await createDummyUTXOFromCardinal(buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
+    const { dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO, txHex: splitTxRaw } = await createDummyUTXOFromCardinal(buyerPrivateKey, utxos, inscriptions, feeRatePerByte);
     console.log("buy dummyUTXO: ", dummyUTXO);
     console.log("buy splitTxID: ", splitTxID);
     console.log("buy selectedUTXOs for split: ", selectedUTXOs);
@@ -1074,7 +1063,8 @@ const reqBuyInscription = async (params) => {
         fee: (res === null || res === void 0 ? void 0 : res.fee) + feeSplitUTXO,
         selectedUTXOs: [...paymentUTXOs, dummyUTXO],
         splitTxID,
-        splitUTXOs: [...selectedUTXOs]
+        splitUTXOs: [...selectedUTXOs],
+        splitTxRaw: splitTxRaw,
     };
 };
 

@@ -24,12 +24,14 @@ interface ICreateTxBuyResp {
     selectedUTXOs: UTXO[];
     splitTxID: string;
     splitUTXOs: UTXO[];
+    splitTxRaw: string;
 }
 interface ICreateTxSellResp {
     base64Psbt: string;
     selectedUTXOs: UTXO[];
     splitTxID: string;
     splitUTXOs: UTXO[];
+    splitTxRaw: string;
 }
 interface ICreateTxSplitInscriptionResp {
     txID: string;

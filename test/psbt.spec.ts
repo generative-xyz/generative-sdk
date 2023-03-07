@@ -287,7 +287,7 @@ describe("Sell inscription with PSBT", () => {
         const sellInscriptionID = "b4e20295fa3c738490cf1d8a542a9a1354affa649f601866b12c092a956de1c3i0";
         const creatorAddress = "bc1ppswwdq6crzrktla4y0urfmcqe8n7wttsvxdx39k4ruvd008x8rvqmnwpk9";
 
-        const { base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs } = await reqListForSaleInscription({
+        const { base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs, splitTxRaw } = await reqListForSaleInscription({
             sellerPrivateKey: sellerPrivateKey,
             utxos: sellerUTXOs,
             inscriptions: sellerInsciptions,
@@ -298,6 +298,7 @@ describe("Sell inscription with PSBT", () => {
             creatorAddress,
             feeRatePerByte: 2,
         });
+
 
         assert.notEqual(splitTxID, "");
         assert.equal(splitUTXOs.length, 0);
@@ -507,11 +508,9 @@ describe("Buy inscription with PSBT", () => {
                 feeRatePerByte,
             });
         } catch (e) {
-            errorMsg = e?.toString();
+            errorMsg = e?.toString() ? e?.toString() : "";
         }
-
-
-        assert.notEqual(errorMsg, "");
+        assert.equal(errorMsg, "Error: Your balance is insufficient. Please top up BTC to your wallet.");
     });
 });
 

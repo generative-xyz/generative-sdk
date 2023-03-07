@@ -280,7 +280,7 @@ const createDummyUTXOFromCardinal = async (
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
     feeRatePerByte: number,
-): Promise<{ dummyUTXO: UTXO, splitTxID: string, selectedUTXOs: UTXO[], newUTXO: any, fee: number }> => {
+): Promise<{ dummyUTXO: UTXO, splitTxID: string, selectedUTXOs: UTXO[], newUTXO: any, fee: number, txHex: string }> => {
 
     // create dummy UTXO from cardinal UTXOs
     let dummyUTXO;
@@ -288,18 +288,11 @@ const createDummyUTXOFromCardinal = async (
     const smallestUTXO = selectTheSmallestUTXO(utxos, inscriptions);
     if (smallestUTXO.value <= DummyUTXOValue) {
         dummyUTXO = smallestUTXO;
-        return { dummyUTXO: dummyUTXO, splitTxID: "", selectedUTXOs: [], newUTXO: newUTXO, fee: 0 };
+        return { dummyUTXO: dummyUTXO, splitTxID: "", selectedUTXOs: [], newUTXO: newUTXO, fee: 0, txHex: "" };
     } else {
-        const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
+        const { senderAddress } = generateTaprootKeyPair(senderPrivateKey);
 
         const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
-
-        // TODO: uncomment here
-        try {
-            await broadcastTx(txHex);
-        } catch (e) {
-            throw new Error("Broadcast the split tx error " + e?.toString());
-        }
 
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
@@ -316,7 +309,7 @@ const createDummyUTXOFromCardinal = async (
             };
         }
 
-        return { dummyUTXO: dummyUTXO, splitTxID: txID, selectedUTXOs, newUTXO: newUTXO, fee };
+        return { dummyUTXO: dummyUTXO, splitTxID: txID, selectedUTXOs, newUTXO: newUTXO, fee, txHex };
     }
 };
 
