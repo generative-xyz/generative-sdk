@@ -40,4 +40,7 @@ interface ICreateTxSplitInscriptionResp {
     selectedUTXOs: UTXO[];
     newValueInscription: number;
 }
-export { UTXO, Inscription, ICreateTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, };
+interface Wallet {
+    privKey: string;
+}
+export { UTXO, Inscription, ICreateTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, Wallet };

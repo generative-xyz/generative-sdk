@@ -2,6 +2,7 @@
 import { networks, Transaction, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
+import { ethers } from 'ethers';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
 declare const MinSats = 1000;
@@ -50,6 +51,9 @@ interface ICreateTxSplitInscriptionResp {
     fee: number;
     selectedUTXOs: UTXO[];
     newValueInscription: number;
+}
+interface Wallet {
+    privKey: string;
 }
 
 /**
@@ -250,6 +254,21 @@ declare const getBTCBalance: (params: {
         [key: string]: Inscription[];
     };
 }) => number;
+declare const importBTCPrivateKey: (wifPrivKey: string) => {
+    privKeyBuffer: Buffer;
+    taprootAddress: string;
+};
+/**
+* derivePasswordWallet derive the password from ONE SPECIFIC evm address.
+* This password is used to encrypt and decrypt the imported BTC wallet.
+* NOTE: The client should save the corresponding evm address to retrieve the same BTC wallet.
+* @param provider ETH provider
+* @param evmAddress evm address is chosen to create the valid signature on IMPORT_MESSAGE
+* @returns the password string
+*/
+declare const derivePasswordWallet: (evmAddress: string, provider: ethers.providers.Web3Provider) => Promise<string>;
+declare const encryptWallet: (wallet: Wallet, password: string) => string;
+declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
@@ -342,4 +361,4 @@ declare const reqBuyInscription: (params: {
     feeRatePerByte: number;
 }) => Promise<ICreateTxBuyResp>;
 
-export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, fromSat, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
+export { BlockStreamURL, DummyUTXOValue, ECPair, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, UTXO, Wallet, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, derivePasswordWallet, encryptWallet, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, fromSat, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, importBTCPrivateKey, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, tapTweakHash, toXOnly, tweakSigner };
