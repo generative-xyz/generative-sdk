@@ -21,6 +21,7 @@ const config = [
       '@ethersproject',
       'ethers',
       'crypto-js',
+      'js-sha3',
     ],
     plugins: [resolve(), typescript()],
   },
