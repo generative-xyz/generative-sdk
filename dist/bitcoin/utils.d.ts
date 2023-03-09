@@ -2,6 +2,7 @@
 import { payments, Signer } from "bitcoinjs-lib";
 import { ECPairAPI } from "ecpair";
 import { Psbt } from "bitcoinjs-lib";
+import BigNumber from "bignumber.js";
 declare const ECPair: ECPairAPI;
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -30,7 +31,7 @@ declare const estimateTxFee: (numIns: number, numOuts: number, feeRatePerByte: n
 * @param isUseInscriptionPayFee use inscription output coin to pay fee or not
 * @returns returns the estimated number of inputs and outputs in the transaction
 */
-declare const estimateNumInOutputs: (inscriptionID: string, sendAmount: number, isUseInscriptionPayFee: boolean) => {
+declare const estimateNumInOutputs: (inscriptionID: string, sendAmount: BigNumber, isUseInscriptionPayFee: boolean) => {
     numIns: number;
     numOuts: number;
 };

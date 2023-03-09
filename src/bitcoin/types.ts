@@ -1,14 +1,15 @@
 import { Transaction } from "bitcoinjs-lib";
+import BigNumber from "bignumber.js";
 
 interface UTXO {
     tx_hash: string;
     tx_output_n: number;
-    value: number;
+    value: BigNumber;
 }
 
 // key : "TxID:OutcoinIndex" : Inscription[]
 interface Inscription {
-    offset: number,
+    offset: BigNumber,
     id: string,
 }
 
@@ -16,16 +17,16 @@ interface ICreateTxResp {
     tx: Transaction,
     txID: string,
     txHex: string,
-    fee: number,
+    fee: BigNumber,
     selectedUTXOs: UTXO[],
-    changeAmount: number,
+    changeAmount: BigNumber,
 }
 
 interface ICreateTxBuyResp {
     tx: Transaction,
     txID: string,
     txHex: string,
-    fee: number,
+    fee: BigNumber,
     selectedUTXOs: UTXO[],
     splitTxID: string,
     splitUTXOs: UTXO[],
@@ -43,9 +44,9 @@ interface ICreateTxSellResp {
 interface ICreateTxSplitInscriptionResp {
     txID: string,
     txHex: string,
-    fee: number,
+    fee: BigNumber,
     selectedUTXOs: UTXO[]
-    newValueInscription: number,
+    newValueInscription: BigNumber,
 }
 
 export {
