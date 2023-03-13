@@ -343,7 +343,6 @@ const reqListForSaleInscription = async (
             splitTxID = res.splitTxID;
             splitTxRaw = res.txHex;
         } catch (e) {
-            console.log("HHH Split fund from cardinal UTXO err: ", e);
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, new BigNumber(DummyUTXOValue), feeRatePerByte);
             splitTxID = txID;

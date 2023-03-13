@@ -50,7 +50,6 @@ const createTx = (
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     let feeRes = fee;
-    console.log("HHH selectedUTXOs: ", selectedUTXOs);
 
     // init key pair and tweakedSigner from senderPrivateKey
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
@@ -323,7 +322,6 @@ const broadcastTx = async (txHex: string): Promise<string> => {
     const response: AxiosResponse = await blockstream.post("/tx", txHex);
     const { status, data } = response;
     if (status !== 200) {
-        console.log("status ", status);
         throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
     }
     return response.data;
