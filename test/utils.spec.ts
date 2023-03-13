@@ -31,6 +31,12 @@ describe("Convert from sat Tests", async () => {
         console.log("res: ", res);
 
         assert.equal(res, 0.00001);
+
+        const arr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        // const arr = [0];
+        const newArr = arr.splice(0, arr.length - 1);
+        console.log("arr: ", arr);
+        console.log("newArr: ", newArr);
     })
 });
 

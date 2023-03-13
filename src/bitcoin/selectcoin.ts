@@ -3,8 +3,12 @@ import { MinSats, DummyUTXOValue } from "./constants";
 import SDKError, { ERROR_CODE } from "../constants/error";
 import {
     estimateTxFee,
-    estimateNumInOutputs
+    estimateNumInOutputs,
+    estimateNumInOutputsForBuyInscription
 } from "./utils";
+import {
+    Psbt,
+} from "bitcoinjs-lib";
 
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction. 
@@ -226,9 +230,11 @@ const selectCardinalUTXOs = (
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
     sendAmount: number,
-): { selectedUTXOs: UTXO[] } => {
+): { selectedUTXOs: UTXO[], remainUTXOs: UTXO[], totalInputAmount: number } => {
     const resultUTXOs: UTXO[] = [];
     let normalUTXOs: UTXO[] = [];
+    let remainUTXOs: UTXO[] = [];
+
 
     // filter normal UTXO and inscription UTXO to send
     utxos.forEach(utxo => {
@@ -257,6 +263,8 @@ const selectCardinalUTXOs = (
         }
     );
 
+    const cloneUTXOs = [...normalUTXOs];
+
     let totalInputAmount = 0;
     const totalSendAmount = sendAmount;
     if (totalSendAmount > 0) {
@@ -267,6 +275,8 @@ const selectCardinalUTXOs = (
             // select the smallest utxo
             resultUTXOs.push(normalUTXOs[normalUTXOs.length - 1]);
             totalInputAmount = normalUTXOs[normalUTXOs.length - 1].value;
+
+            remainUTXOs = cloneUTXOs.splice(0, normalUTXOs.length - 1);
         } else if (normalUTXOs[0].value < totalSendAmount) {
             // select multiple UTXOs
             for (let i = 0; i < normalUTXOs.length; i++) {
@@ -274,6 +284,7 @@ const selectCardinalUTXOs = (
                 resultUTXOs.push(utxo);
                 totalInputAmount += utxo.value;
                 if (totalInputAmount >= totalSendAmount) {
+                    remainUTXOs = cloneUTXOs.splice(i + 1, normalUTXOs.length - i - 1);
                     break;
                 }
             }
@@ -283,19 +294,61 @@ const selectCardinalUTXOs = (
         } else {
             // select the nearest UTXO
             let selectedUTXO = normalUTXOs[0];
+            let selectedIndex = 0;
             for (let i = 1; i < normalUTXOs.length; i++) {
                 if (normalUTXOs[i].value < totalSendAmount) {
                     resultUTXOs.push(selectedUTXO);
                     totalInputAmount = selectedUTXO.value;
+                    remainUTXOs = [...cloneUTXOs];
+                    remainUTXOs.splice(selectedIndex, 1);
                     break;
                 }
 
                 selectedUTXO = normalUTXOs[i];
+                selectedIndex = i;
             }
         }
     }
 
-    return { selectedUTXOs: resultUTXOs };
+    return { selectedUTXOs: resultUTXOs, remainUTXOs, totalInputAmount };
+};
+
+const selectUTXOsToCreateBuyTx = (
+    params: {
+        sellerSignedPsbt: Psbt,
+        price: number,
+        utxos: UTXO[],
+        inscriptions: { [key: string]: Inscription[] },
+        feeRate: number,
+    }
+): { selectedUTXOs: UTXO[] } => {
+
+    const {
+        sellerSignedPsbt,
+        price,
+        utxos,
+        inscriptions,
+        feeRate
+    } = params;
+
+    // estimate network fee
+    const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(3, 3, sellerSignedPsbt);
+    const estTotalPaymentAmount = price + estimateTxFee(numIns, numOuts, feeRate);
+
+    const { selectedUTXOs, remainUTXOs, totalInputAmount } = selectCardinalUTXOs(utxos, inscriptions, estTotalPaymentAmount);
+    let paymentUTXOs = selectedUTXOs;
+
+    // re-estimate network fee
+    const { numIns: finalNumIns, numOuts: finalNumOuts } = estimateNumInOutputsForBuyInscription(paymentUTXOs.length, 3, sellerSignedPsbt);
+    const finalTotalPaymentAmount = price + estimateTxFee(finalNumIns, finalNumOuts, feeRate);
+
+    if (finalTotalPaymentAmount > totalInputAmount) {
+        // need to select extra UTXOs
+        const { selectedUTXOs: extraUTXOs } = selectCardinalUTXOs(remainUTXOs, {}, finalTotalPaymentAmount - totalInputAmount);
+        paymentUTXOs = paymentUTXOs.concat(extraUTXOs);
+    }
+
+    return { selectedUTXOs: paymentUTXOs };
 };
 
 
@@ -355,4 +408,5 @@ export {
     selectInscriptionUTXO,
     selectCardinalUTXOs,
     selectTheSmallestUTXO,
+    selectUTXOsToCreateBuyTx,
 };

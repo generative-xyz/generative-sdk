@@ -1,7 +1,7 @@
 import { createPSBTToSell, createPSBTToBuy, UTXO, network, convertPrivateKeyFromStr, convertPrivateKey, reqListForSaleInscription, reqBuyInscription, DummyUTXOValue } from "../src/index";
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
-import SDKError from '../dist/constants/error';
+require("dotenv").config({ path: __dirname + "/.env" });
 
 
 // for unit tests
@@ -205,11 +205,12 @@ let buyerInscriptions = {
 }
 
 // TODO: fill the private key
-var sellerPrivateKey = Buffer.from([]);
-let sellerAddress = "bc1prvw0jnlq7zhvy3jxuley9qjxm8kpz2wgwrd2e7nce455am6glpxqavdcc9";
+var sellerPrivateKeyWIF = process.env.PRIV_KEY_1 || "";
+var sellerPrivateKey = convertPrivateKeyFromStr(sellerPrivateKeyWIF);
+let sellerAddress = process.env.ADDRESS_1 || "";
 
-let buyerPrivateKeyWIF = "";
-let buyerAddress = "bc1pj2t2szx6rqzcyv63t3xepgdnhuj2zd3kfggrqmd9qwlg3vsx37fqywwhyx";
+let buyerPrivateKeyWIF = process.env.PRIV_KEY_2 || "";
+let buyerAddress = process.env.ADDRESS_2 || "";
 let buyerPrivateKey = convertPrivateKeyFromStr(buyerPrivateKeyWIF);
 
 const feeRatePerByte = 6;
@@ -477,18 +478,15 @@ describe("Buy inscription with PSBT", () => {
 
         assert.equal(splitTxID, "");
         assert.equal(splitUTXOs.length, 0);
-        assert.equal(selectedUTXOsBuyer.length, 3);
+        assert.equal(selectedUTXOsBuyer.length, 2);
 
-        assert.equal(tx.ins.length, 4);
-        assert.equal(tx.outs.length, 4);
+        assert.equal(tx.ins.length, 3);
+        assert.equal(tx.outs.length, 3);
 
         // assert.equal(tx.ins[0]., 3);
         assert.equal(tx.outs[0].value, 1234 + 998); // dummy + inscription value
         assert.equal(tx.outs[1].value, 1100); // for seller
         assert.equal(tx.outs[2].value, 1000); // new dummy
-        assert.equal(tx.outs[3].value, 1697); // change amount
-        // no new dummy UTXO
-        // no change amount
 
         buyerUTXOs.pop();
 
@@ -514,6 +512,90 @@ describe("Buy inscription with PSBT", () => {
         }
         assert.notEqual(errorMsg, "");
         assert.notEqual(errorMsg, undefined);
+    });
+
+
+    it("seller PSBT has 2 inputs: must split dummy UTXO & but have not enough UTXO to payments", async () => {
+        const price = 2100;
+        let base64Psbt = "cHNidP8BALICAAAAAskA0un4AlG92RovYKKKNN4SPfXO4jfI1D/YNcAtUtsbAAAAAAD/////yQDS6fgCUb3ZGi9gooo03hI99c7iN8jUP9g1wC1S2xsBAAAAAP////8CMwgAAAAAAAAiUSAbHPlP4PCuwkZG5/JCgkbZ7BEpyHDarPp4zWlO70j4TOgDAAAAAAAAIlEgDBzmg1gYh2X/tSP4NO8AyefnLXBhmmiW1R8Y17zmONgAAAAAAAEBK9IEAAAAAAAAIlEgGxz5T+DwrsJGRufyQoJG2ewRKchw2qz6eM1pTu9I+EwBCEMBQewmfEmb4ocyHjnPLaG68IctXH7Bf9Nr8W4OXYaB+We9K0PwehdWbpQG+k+oTHw13w+wNyi8+6c9SxpkkakdsqCDAAEBK+cDAAAAAAAAIlEgGxz5T+DwrsJGRufyQoJG2ewRKchw2qz6eM1pTu9I+EwBCEMBQdRWgt/6a3bS9+M1J7IqtZaEkcgQFjeMGyHBnE1V4Lj46iawHQ/0I/RnSC8sjEFbwOYKONQlnYkL5X5+j2XvvueDAAAA";
+        // next, buyer create the transaction
+        let errorMsg = "";
+
+        let buyerUTXOs = [
+            // {
+            //     tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
+            //     tx_output_n: 2,
+            //     value: 1000,
+            // },
+            {
+                tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
+                tx_output_n: 0,
+                value: 2000, // inscription
+            },
+            // {
+            //     tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
+            //     tx_output_n: 1,
+            //     value: 501, // normal
+            // },
+            // {
+            //     tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+            //     tx_output_n: 2,
+            //     value: 502, // normal
+            // },
+            // {
+            //     tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+            //     tx_output_n: 3,
+            //     value: 503, // normal
+            // },
+            // {
+            //     tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+            //     tx_output_n: 4,
+            //     value: 504, // normal
+            // },
+            // {
+            //     tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+            //     tx_output_n: 5,
+            //     value: 505, // normal
+            // },
+            // {
+            //     tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+            //     tx_output_n: 6,
+            //     value: 1504, // normal
+            // },
+            // {
+            //     tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+            //     tx_output_n: 7,
+            //     value: 502, // normal
+            // },
+            {
+                tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+                tx_output_n: 8,
+                value: 7505, // normal
+            },
+            {
+                tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
+                tx_output_n: 9,
+                value: 10505, // normal
+            }
+        ];
+        // try {
+        const { tx, txID, txHex, fee, selectedUTXOs: selectedUTXOsBuyer, splitTxID, splitUTXOs } = await reqBuyInscription({
+            sellerSignedPsbtB64: base64Psbt,
+            buyerPrivateKey: buyerPrivateKey,
+            receiverInscriptionAddress: buyerAddress,
+            price: price,
+            utxos: buyerUTXOs,
+            inscriptions: buyerInscriptions,
+            feeRatePerByte,
+        });
+        console.log("tx: ", tx);
+        console.log("selectedUTXOsBuyer: ", selectedUTXOsBuyer);
+        // } catch (e) {
+        //     errorMsg = e?.toString() || "";
+        // }
+        // assert.notEqual(errorMsg, "");
+        // assert.notEqual(errorMsg, undefined);
+        // console.log("errorMsg: ", errorMsg);
     });
 });
 
