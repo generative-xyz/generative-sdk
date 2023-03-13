@@ -69,7 +69,6 @@ const estimateNumInOutputs = (inscriptionID: string, sendAmount: number, isUseIn
     return { numIns, numOuts };
 };
 
-
 /**
 * estimateNumInOutputs estimates number of inputs and outputs by parameters: 
 * @param inscriptionID id of inscription to send (if any)
@@ -78,10 +77,12 @@ const estimateNumInOutputs = (inscriptionID: string, sendAmount: number, isUseIn
 * @returns returns the estimated number of inputs and outputs in the transaction
 */
 const estimateNumInOutputsForBuyInscription = (
+    estNumInputsFromBuyer: number,
+    estNumOutputsFromBuyer: number,
     sellerSignedPsbt: Psbt,
 ): { numIns: number, numOuts: number } => {
-    const numIns = 1 + sellerSignedPsbt.txInputs.length + 2;
-    const numOuts = 1 + sellerSignedPsbt.txOutputs.length + 1 + 1;
+    const numIns = sellerSignedPsbt.txInputs.length + estNumInputsFromBuyer;
+    const numOuts = sellerSignedPsbt.txOutputs.length + estNumOutputsFromBuyer;
     return { numIns, numOuts };
 };
 

@@ -41,7 +41,7 @@ declare const estimateNumInOutputs: (inscriptionID: string, sendAmount: number, 
 * @param isUseInscriptionPayFee use inscription output coin to pay fee or not
 * @returns returns the estimated number of inputs and outputs in the transaction
 */
-declare const estimateNumInOutputsForBuyInscription: (sellerSignedPsbt: Psbt) => {
+declare const estimateNumInOutputsForBuyInscription: (estNumInputsFromBuyer: number, estNumOutputsFromBuyer: number, sellerSignedPsbt: Psbt) => {
     numIns: number;
     numOuts: number;
 };
