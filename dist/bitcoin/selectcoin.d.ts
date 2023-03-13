@@ -1,4 +1,5 @@
 import { Inscription, UTXO } from "./types";
+import BigNumber from "bignumber.js";
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
 * if sending inscription, the first selected UTXO is always the UTXO contain inscription.
@@ -15,12 +16,12 @@ import { Inscription, UTXO } from "./types";
 */
 declare const selectUTXOs: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, sendInscriptionID: string, sendAmount: number, feeRatePerByte: number, isUseInscriptionPayFee: boolean) => {
+}, sendInscriptionID: string, sendAmount: BigNumber, feeRatePerByte: number, isUseInscriptionPayFee: boolean) => {
     selectedUTXOs: UTXO[];
     isUseInscriptionPayFee: boolean;
-    valueOutInscription: number;
-    changeAmount: number;
-    fee: number;
+    valueOutInscription: BigNumber;
+    changeAmount: BigNumber;
+    fee: BigNumber;
 };
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
@@ -51,7 +52,7 @@ declare const selectInscriptionUTXO: (utxos: UTXO[], inscriptions: {
 */
 declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, sendAmount: number) => {
+}, sendAmount: BigNumber) => {
     selectedUTXOs: UTXO[];
 };
 /**

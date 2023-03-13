@@ -1,5 +1,6 @@
 import { Psbt } from "bitcoinjs-lib";
 import { ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
+import BigNumber from "bignumber.js";
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -13,8 +14,8 @@ declare const createPSBTToSell: (params: {
     sellerPrivateKey: Buffer;
     receiverBTCAddress: string;
     inscriptionUTXO: UTXO;
-    amountPayToSeller: number;
-    feePayToCreator: number;
+    amountPayToSeller: BigNumber;
+    feePayToCreator: BigNumber;
     creatorAddress: string;
     dummyUTXO: UTXO;
 }) => string;
@@ -34,8 +35,8 @@ declare const createPSBTToBuy: (params: {
     sellerSignedPsbt: Psbt;
     buyerPrivateKey: Buffer;
     receiverInscriptionAddress: string;
-    valueInscription: number;
-    price: number;
+    valueInscription: BigNumber;
+    price: BigNumber;
     paymentUtxos: UTXO[];
     dummyUtxo: UTXO;
     feeRate: number;
@@ -62,8 +63,8 @@ declare const reqListForSaleInscription: (params: {
     };
     sellInscriptionID: string;
     receiverBTCAddress: string;
-    amountPayToSeller: number;
-    feePayToCreator: number;
+    amountPayToSeller: BigNumber;
+    feePayToCreator: BigNumber;
     creatorAddress: string;
     feeRatePerByte: number;
 }) => Promise<ICreateTxSellResp>;
@@ -83,7 +84,7 @@ declare const reqBuyInscription: (params: {
     sellerSignedPsbtB64: string;
     buyerPrivateKey: Buffer;
     receiverInscriptionAddress: string;
-    price: number;
+    price: BigNumber;
     utxos: UTXO[];
     inscriptions: {
         [key: string]: Inscription[];

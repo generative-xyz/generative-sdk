@@ -5,18 +5,18 @@ import {
 } from "bitcoinjs-lib";
 import axios, { AxiosResponse } from "axios";
 import { ICreateTxResp, Inscription, UTXO, ICreateTxSplitInscriptionResp } from "./types";
-import { BlockStreamURL, DummyUTXOValue, MinSats, network } from "./constants";
+import { BlockStreamURL, BNZero, DummyUTXOValue, MinSats, network } from "./constants";
 import {
     toXOnly,
     tweakSigner,
     ECPair,
     estimateTxFee,
-    estimateNumInOutputs,
     generateTaprootKeyPair,
     fromSat
 } from "./utils";
 import { selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
 import SDKError, { ERROR_CODE } from "../constants/error";
+import BigNumber from "bignumber.js";
 
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions). 
@@ -39,12 +39,12 @@ const createTx = (
     inscriptions: { [key: string]: Inscription[] },
     sendInscriptionID = "",
     receiverInsAddress: string,
-    sendAmount: number,
+    sendAmount: BigNumber,
     feeRatePerByte: number,
     isUseInscriptionPayFeeParam = true, // default is true
 ): ICreateTxResp => {
     // validation
-    if (sendAmount > 0 && sendAmount < MinSats) {
+    if (sendAmount.gt(BNZero) && sendAmount.lt(MinSats)) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
     // select UTXOs
@@ -60,7 +60,7 @@ const createTx = (
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
-            witnessUtxo: { value: input.value, script: p2pktr.output as Buffer },
+            witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey)
         });
     });
@@ -70,26 +70,26 @@ const createTx = (
         // add output inscription
         psbt.addOutput({
             address: receiverInsAddress,
-            value: valueOutInscription,
+            value: valueOutInscription.toNumber(),
         });
     }
     // add output send BTC
-    if (sendAmount > 0) {
+    if (sendAmount.gt(BNZero)) {
         psbt.addOutput({
             address: receiverInsAddress,
-            value: sendAmount,
+            value: sendAmount.toNumber(),
         });
     }
 
     // add change output
-    if (changeAmount > 0) {
-        if (changeAmount >= MinSats) {
+    if (changeAmount.gt(BNZero)) {
+        if (changeAmount.gte(MinSats)) {
             psbt.addOutput({
                 address: senderAddress,
-                value: changeAmount,
+                value: changeAmount.toNumber(),
             });
         } else {
-            feeRes += changeAmount;
+            feeRes = feeRes.plus(changeAmount);
         }
     }
 
@@ -127,11 +127,11 @@ const createTxWithSpecificUTXOs = (
     utxos: UTXO[],
     sendInscriptionID = "",
     receiverInsAddress: string,
-    sendAmount: number,
-    valueOutInscription: number,
-    changeAmount: number,
-    fee: number,
-): { txID: string, txHex: string, fee: number } => {
+    sendAmount: BigNumber,
+    valueOutInscription: BigNumber,
+    changeAmount: BigNumber,
+    fee: BigNumber,
+): { txID: string, txHex: string, fee: BigNumber } => {
     const network = networks.bitcoin;  // mainnet
 
     const selectedUTXOs = utxos;
@@ -157,7 +157,7 @@ const createTxWithSpecificUTXOs = (
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
-            witnessUtxo: { value: input.value, script: p2pktr.output as Buffer },
+            witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keypair.publicKey)
         });
     });
@@ -167,22 +167,22 @@ const createTxWithSpecificUTXOs = (
         // add output inscription
         psbt.addOutput({
             address: receiverInsAddress,
-            value: valueOutInscription,
+            value: valueOutInscription.toNumber(),
         });
     }
     // add output send BTC
-    if (sendAmount > 0) {
+    if (sendAmount.gt(BNZero)) {
         psbt.addOutput({
             address: receiverInsAddress,
-            value: sendAmount,
+            value: sendAmount.toNumber(),
         });
     }
 
     // add change output
-    if (changeAmount > 0) {
+    if (changeAmount.gt(BNZero)) {
         psbt.addOutput({
             address: senderAddress,
-            value: changeAmount,
+            value: changeAmount.toNumber(),
         });
     }
 
@@ -220,33 +220,33 @@ const createTxSplitFundFromOrdinalUTXO = (
     senderPrivateKey: Buffer,
     inscriptionUTXO: UTXO,
     inscriptionInfo: Inscription,
-    sendAmount: number,
+    sendAmount: BigNumber,
     feeRatePerByte: number,
 ): ICreateTxSplitInscriptionResp => {
     // validation
-    if (sendAmount > 0 && sendAmount < MinSats) {
+    if (sendAmount.gt(BNZero) && sendAmount.lt(MinSats)) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
 
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
 
-    const maxAmountInsSpend = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
+    const maxAmountInsSpend = inscriptionUTXO.value.minus(inscriptionInfo.offset).minus(1).minus(MinSats);
 
-    const fee = estimateTxFee(1, 2, feeRatePerByte);
+    const fee = new BigNumber(estimateTxFee(1, 2, feeRatePerByte));
 
-    const totalAmountSpend = sendAmount + fee;
-    if (totalAmountSpend > maxAmountInsSpend) {
+    const totalAmountSpend = sendAmount.plus(fee);
+    if (totalAmountSpend.gt(maxAmountInsSpend)) {
         throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_PAY_FEE);
     }
 
-    const newValueInscription = inscriptionUTXO.value - totalAmountSpend;
+    const newValueInscription = inscriptionUTXO.value.minus(totalAmountSpend);
 
     const psbt = new Psbt({ network });
     // add inputs
     psbt.addInput({
         hash: inscriptionUTXO.tx_hash,
         index: inscriptionUTXO.tx_output_n,
-        witnessUtxo: { value: inscriptionUTXO.value, script: p2pktr.output as Buffer },
+        witnessUtxo: { value: inscriptionUTXO.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: toXOnly(keyPair.publicKey)
     });
 
@@ -254,13 +254,13 @@ const createTxSplitFundFromOrdinalUTXO = (
     // add output inscription: must be at index 0
     psbt.addOutput({
         address: senderAddress,
-        value: newValueInscription,
+        value: newValueInscription.toNumber(),
     });
 
     // add output send BTC
     psbt.addOutput({
         address: senderAddress,
-        value: sendAmount,
+        value: sendAmount.toNumber(),
     });
 
     // sign tx
@@ -281,28 +281,28 @@ const createDummyUTXOFromCardinal = async (
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
     feeRatePerByte: number,
-): Promise<{ dummyUTXO: UTXO, splitTxID: string, selectedUTXOs: UTXO[], newUTXO: any, fee: number, txHex: string }> => {
+): Promise<{ dummyUTXO: UTXO, splitTxID: string, selectedUTXOs: UTXO[], newUTXO: any, fee: BigNumber, txHex: string }> => {
 
     // create dummy UTXO from cardinal UTXOs
     let dummyUTXO;
     let newUTXO = null;
     const smallestUTXO = selectTheSmallestUTXO(utxos, inscriptions);
-    if (smallestUTXO.value <= DummyUTXOValue) {
+    if (smallestUTXO.value.lte(DummyUTXOValue)) {
         dummyUTXO = smallestUTXO;
-        return { dummyUTXO: dummyUTXO, splitTxID: "", selectedUTXOs: [], newUTXO: newUTXO, fee: 0, txHex: "" };
+        return { dummyUTXO: dummyUTXO, splitTxID: "", selectedUTXOs: [], newUTXO: newUTXO, fee: BNZero, txHex: "" };
     } else {
         const { senderAddress } = generateTaprootKeyPair(senderPrivateKey);
 
-        const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, DummyUTXOValue, feeRatePerByte, false);
+        const { txID, txHex, fee, selectedUTXOs, changeAmount } = createTx(senderPrivateKey, utxos, inscriptions, "", senderAddress, new BigNumber(DummyUTXOValue), feeRatePerByte, false);
 
         // init dummy UTXO rely on the result of the split tx
         dummyUTXO = {
             tx_hash: txID,
             tx_output_n: 0,
-            value: DummyUTXOValue,
+            value: new BigNumber(DummyUTXOValue),
         };
 
-        if (changeAmount > 0) {
+        if (changeAmount.gt(BNZero)) {
             newUTXO = {
                 tx_hash: txID,
                 tx_output_n: 1,
