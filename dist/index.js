@@ -2987,9 +2987,9 @@ const estimateNumInOutputs = (inscriptionID, sendAmount, isUseInscriptionPayFee)
 * @param isUseInscriptionPayFee use inscription output coin to pay fee or not
 * @returns returns the estimated number of inputs and outputs in the transaction
 */
-const estimateNumInOutputsForBuyInscription = (sellerSignedPsbt) => {
-    const numIns = 1 + sellerSignedPsbt.txInputs.length + 2;
-    const numOuts = 1 + sellerSignedPsbt.txOutputs.length + 1 + 1;
+const estimateNumInOutputsForBuyInscription = (estNumInputsFromBuyer, estNumOutputsFromBuyer, sellerSignedPsbt) => {
+    const numIns = sellerSignedPsbt.txInputs.length + estNumInputsFromBuyer;
+    const numOuts = sellerSignedPsbt.txOutputs.length + estNumOutputsFromBuyer;
     return { numIns, numOuts };
 };
 function toXOnly(pubkey) {
@@ -3290,6 +3290,7 @@ const selectInscriptionUTXO = (utxos, inscriptions, inscriptionID) => {
 const selectCardinalUTXOs = (utxos, inscriptions, sendAmount) => {
     const resultUTXOs = [];
     let normalUTXOs = [];
+    let remainUTXOs = [];
     // filter normal UTXO and inscription UTXO to send
     utxos.forEach(utxo => {
         // txIDKey = tx_hash:tx_output_n
@@ -3312,6 +3313,7 @@ const selectCardinalUTXOs = (utxos, inscriptions, sendAmount) => {
         return 0;
     });
     let totalInputAmount = BNZero;
+    const cloneUTXOs = [...normalUTXOs];
     const totalSendAmount = sendAmount;
     if (totalSendAmount.gt(BNZero)) {
         if (normalUTXOs.length === 0) {
@@ -3321,6 +3323,7 @@ const selectCardinalUTXOs = (utxos, inscriptions, sendAmount) => {
             // select the smallest utxo
             resultUTXOs.push(normalUTXOs[normalUTXOs.length - 1]);
             totalInputAmount = normalUTXOs[normalUTXOs.length - 1].value;
+            remainUTXOs = cloneUTXOs.splice(0, normalUTXOs.length - 1);
         }
         else if (normalUTXOs[0].value.lt(totalSendAmount)) {
             // select multiple UTXOs
@@ -3329,6 +3332,7 @@ const selectCardinalUTXOs = (utxos, inscriptions, sendAmount) => {
                 resultUTXOs.push(utxo);
                 totalInputAmount = totalInputAmount.plus(utxo.value);
                 if (totalInputAmount.gte(totalSendAmount)) {
+                    remainUTXOs = cloneUTXOs.splice(i + 1, normalUTXOs.length - i - 1);
                     break;
                 }
             }
@@ -3339,17 +3343,38 @@ const selectCardinalUTXOs = (utxos, inscriptions, sendAmount) => {
         else {
             // select the nearest UTXO
             let selectedUTXO = normalUTXOs[0];
+            let selectedIndex = 0;
             for (let i = 1; i < normalUTXOs.length; i++) {
                 if (normalUTXOs[i].value.lt(totalSendAmount)) {
                     resultUTXOs.push(selectedUTXO);
                     totalInputAmount = selectedUTXO.value;
+                    remainUTXOs = [...cloneUTXOs];
+                    remainUTXOs.splice(selectedIndex, 1);
                     break;
                 }
                 selectedUTXO = normalUTXOs[i];
+                selectedIndex = i;
             }
         }
     }
-    return { selectedUTXOs: resultUTXOs };
+    return { selectedUTXOs: resultUTXOs, remainUTXOs, totalInputAmount };
+};
+const selectUTXOsToCreateBuyTx = (params) => {
+    const { sellerSignedPsbt, price, utxos, inscriptions, feeRate } = params;
+    // estimate network fee
+    const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(3, 3, sellerSignedPsbt);
+    const estTotalPaymentAmount = price.plus(new BigNumber(estimateTxFee(numIns, numOuts, feeRate)));
+    const { selectedUTXOs, remainUTXOs, totalInputAmount } = selectCardinalUTXOs(utxos, inscriptions, estTotalPaymentAmount);
+    let paymentUTXOs = selectedUTXOs;
+    // re-estimate network fee
+    const { numIns: finalNumIns, numOuts: finalNumOuts } = estimateNumInOutputsForBuyInscription(paymentUTXOs.length, 3, sellerSignedPsbt);
+    const finalTotalPaymentAmount = price.plus(new BigNumber(estimateTxFee(finalNumIns, finalNumOuts, feeRate)));
+    if (finalTotalPaymentAmount > totalInputAmount) {
+        // need to select extra UTXOs
+        const { selectedUTXOs: extraUTXOs } = selectCardinalUTXOs(remainUTXOs, {}, finalTotalPaymentAmount.minus(totalInputAmount));
+        paymentUTXOs = paymentUTXOs.concat(extraUTXOs);
+    }
+    return { selectedUTXOs: paymentUTXOs };
 };
 /**
 * selectTheSmallestUTXO selects the most reasonable UTXOs to create the transaction.
@@ -3414,7 +3439,6 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     // select UTXOs
     const { selectedUTXOs, valueOutInscription, changeAmount, fee } = selectUTXOs(utxos, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
     let feeRes = fee;
-    console.log("HHH selectedUTXOs: ", selectedUTXOs);
     // init key pair and tweakedSigner from senderPrivateKey
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
     const psbt = new bitcoinjsLib.Psbt({ network });
@@ -3633,7 +3657,6 @@ const broadcastTx = async (txHex) => {
     const response = await blockstream.post("/tx", txHex);
     const { status, data } = response;
     if (status !== 200) {
-        console.log("status ", status);
         throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
     }
     return response.data;
@@ -3778,6 +3801,12 @@ const createPSBTToBuy = (params) => {
         totalValue = totalValue.plus(utxo.value);
     }
     let fee = new BigNumber(estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate));
+    if (fee.plus(price).gt(totalValue)) {
+        fee = totalValue.minus(price); // maximum fee can paid
+        if (fee.lt(BNZero)) {
+            throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_PAY_FEE);
+        }
+    }
     let changeValue = totalValue.minus(price).minus(fee);
     if (changeValue.gte(DummyUTXOValue)) {
         // Create a new dummy utxo output for the next purchase
@@ -3901,7 +3930,6 @@ const reqListForSaleInscription = async (params) => {
             splitTxRaw = res.txHex;
         }
         catch (e) {
-            console.log("HHH Split fund from cardinal UTXO err: ", e);
             // create dummy UTXO from inscription UTXO
             const { txID, txHex, newValueInscription } = createTxSplitFundFromOrdinalUTXO(sellerPrivateKey, inscriptionUTXO, inscriptionInfo, new BigNumber(DummyUTXOValue), feeRatePerByte);
             splitTxID = txID;
@@ -3980,9 +4008,8 @@ const reqBuyInscription = async (params) => {
     }
     console.log("buy newUTXOs: ", newUTXOs);
     // select cardinal UTXOs to payment
-    const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(sellerSignedPsbt);
-    const estTotalPaymentAmount = price.plus(DummyUTXOValue + estimateTxFee(numIns, numOuts, feeRatePerByte));
-    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, estTotalPaymentAmount);
+    const { selectedUTXOs: paymentUTXOs } = selectUTXOsToCreateBuyTx({ sellerSignedPsbt: sellerSignedPsbt, price: price, utxos: newUTXOs, inscriptions, feeRate: feeRatePerByte });
+    console.log("selected UTXOs to buy paymentUTXOs: ", paymentUTXOs);
     // create PBTS from the seller's one
     const res = createPSBTToBuy({
         sellerSignedPsbt: sellerSignedPsbt,
@@ -4039,6 +4066,7 @@ exports.selectCardinalUTXOs = selectCardinalUTXOs;
 exports.selectInscriptionUTXO = selectInscriptionUTXO;
 exports.selectTheSmallestUTXO = selectTheSmallestUTXO;
 exports.selectUTXOs = selectUTXOs;
+exports.selectUTXOsToCreateBuyTx = selectUTXOsToCreateBuyTx;
 exports.tapTweakHash = tapTweakHash;
 exports.toXOnly = toXOnly;
 exports.tweakSigner = tweakSigner;
