@@ -1,5 +1,5 @@
 import { Psbt } from "bitcoinjs-lib";
-import { ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
+import { BuyReqInfo, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
 import BigNumber from "bignumber.js";
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
@@ -91,4 +91,25 @@ declare const reqBuyInscription: (params: {
     };
     feeRatePerByte: number;
 }) => Promise<ICreateTxBuyResp>;
-export { createPSBTToSell, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, };
+/**
+* reqBuyInscription creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbtB64 buffer private key of the buyer
+* @param buyerPrivateKey buffer private key of the buyer
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
+* @returns the base64 encode Psbt
+*/
+declare const reqBuyMultiInscriptions: (params: {
+    buyReqInfos: BuyReqInfo[];
+    buyerPrivateKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+}) => Promise<ICreateTxBuyResp>;
+export { createPSBTToSell, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, reqBuyMultiInscriptions, };

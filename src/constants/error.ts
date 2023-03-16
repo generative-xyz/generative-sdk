@@ -1,4 +1,5 @@
 export const ERROR_CODE = {
+    INVALID_CODE: "0",
     INVALID_PARAMS: "-1",
     NOT_SUPPORT_SEND: "-2",
     NOT_FOUND_INSCRIPTION: "-3",
@@ -6,10 +7,16 @@ export const ERROR_CODE = {
     NOT_ENOUGH_BTC_TO_PAY_FEE: "-5",
     ERR_BROADCAST_TX: "-6",
     INVALID_SIG: "-7",
-    INVALID_VALIDATOR_LABEL: "-8"
+    INVALID_VALIDATOR_LABEL: "-8",
+    NOT_FOUND_UTXO: "-9",
+    NOT_FOUND_DUMMY_UTXO: "-10",
 };
 
 export const ERROR_MESSAGE = {
+    [ERROR_CODE.INVALID_CODE]: {
+        message: "Something went wrong.",
+        desc: "Something went wrong.",
+    },
     [ERROR_CODE.INVALID_PARAMS]: {
         message: "Invalid input params.",
         desc: "Invalid input params.",
@@ -41,6 +48,14 @@ export const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_VALIDATOR_LABEL]: {
         message: "Missing or invalid label.",
         desc: "Missing or invalid label.",
+    },
+    [ERROR_CODE.NOT_FOUND_UTXO]: {
+        message: "Can not find UTXO with exact value.",
+        desc: "Can not find UTXO with exact value.",
+    },
+    [ERROR_CODE.NOT_FOUND_DUMMY_UTXO]: {
+        message: "Can not find dummy UTXO in your wallet.",
+        desc: "Can not find dummy UTXO in your wallet.",
     },
 };
 
