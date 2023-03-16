@@ -8,11 +8,10 @@ import {
     toXOnly,
     estimateTxFee,
     generateTaprootKeyPair,
-    estimateNumInOutputsForBuyInscription,
     fromSat,
 } from "./utils";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
-import { selectCardinalUTXOs, selectInscriptionUTXO } from "./selectcoin";
+import { selectInscriptionUTXO, selectUTXOsToCreateBuyTx } from "./selectcoin";
 import { createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO } from "./tx";
 import SDKError, { ERROR_CODE } from "../constants/error";
 import BigNumber from "bignumber.js";
@@ -172,7 +171,6 @@ const createPSBTToBuy = (
         });
     }
 
-
     // Add payment utxo inputs
     for (const utxo of paymentUtxos) {
         psbt.addInput({
@@ -186,6 +184,12 @@ const createPSBTToBuy = (
     }
 
     let fee = new BigNumber(estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate));
+    if (fee.plus(price).gt(totalValue)) {
+        fee = totalValue.minus(price);   // maximum fee can paid
+        if (fee.lt(BNZero)) {
+            throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_PAY_FEE);
+        }
+    }
     let changeValue = totalValue.minus(price).minus(fee);
 
     if (changeValue.gte(DummyUTXOValue)) {
@@ -450,11 +454,9 @@ const reqBuyInscription = async (
     console.log("buy newUTXOs: ", newUTXOs);
 
     // select cardinal UTXOs to payment
-    const { numIns, numOuts } = estimateNumInOutputsForBuyInscription(sellerSignedPsbt);
-    const estTotalPaymentAmount = price.plus(DummyUTXOValue + estimateTxFee(numIns, numOuts, feeRatePerByte));
+    const { selectedUTXOs: paymentUTXOs } = selectUTXOsToCreateBuyTx({ sellerSignedPsbt: sellerSignedPsbt, price: price, utxos: newUTXOs, inscriptions, feeRate: feeRatePerByte });
 
-    const { selectedUTXOs: paymentUTXOs } = selectCardinalUTXOs(newUTXOs, inscriptions, estTotalPaymentAmount);
-
+    console.log("selected UTXOs to buy paymentUTXOs: ", paymentUTXOs);
 
     // create PBTS from the seller's one
     const res = createPSBTToBuy({

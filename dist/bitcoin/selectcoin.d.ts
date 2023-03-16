@@ -1,5 +1,6 @@
 import { Inscription, UTXO } from "./types";
 import BigNumber from "bignumber.js";
+import { Psbt } from "bitcoinjs-lib";
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
 * if sending inscription, the first selected UTXO is always the UTXO contain inscription.
@@ -54,6 +55,19 @@ declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }, sendAmount: BigNumber) => {
     selectedUTXOs: UTXO[];
+    remainUTXOs: UTXO[];
+    totalInputAmount: BigNumber;
+};
+declare const selectUTXOsToCreateBuyTx: (params: {
+    sellerSignedPsbt: Psbt;
+    price: BigNumber;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRate: number;
+}) => {
+    selectedUTXOs: UTXO[];
 };
 /**
 * selectTheSmallestUTXO selects the most reasonable UTXOs to create the transaction.
@@ -69,4 +83,4 @@ declare const selectCardinalUTXOs: (utxos: UTXO[], inscriptions: {
 declare const selectTheSmallestUTXO: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }) => UTXO;
-export { selectUTXOs, selectInscriptionUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, };
+export { selectUTXOs, selectInscriptionUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, selectUTXOsToCreateBuyTx, };
