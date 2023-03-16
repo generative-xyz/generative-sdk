@@ -407,10 +407,80 @@ const selectTheSmallestUTXO = (
     return normalUTXOs[normalUTXOs.length - 1];
 };
 
+/**
+* filterCardinalUTXOs filter cardinal utxos and inscription utxos.
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @returns the list of cardinal UTXOs
+* @returns the list of inscription UTXOs
+* @returns total amount of cardinal UTXOs
+*/
+const filterCardinalUTXOs = (
+    utxos: UTXO[],
+    inscriptions: { [key: string]: Inscription[] },
+): { cardinalUTXOs: UTXO[], inscriptionUTXOs: UTXO[], totalCardinalAmount: BigNumber } => {
+    let cardinalUTXOs: UTXO[] = [];
+    const inscriptionUTXOs: UTXO[] = [];
+    let totalCardinalAmount = BNZero;
+
+    // filter normal UTXO and inscription UTXO to send
+    utxos.forEach(utxo => {
+        // txIDKey = tx_hash:tx_output_n
+        let txIDKey = utxo.tx_hash.concat(":");
+        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
+
+        // try to get inscriptionInfos
+        const inscriptionInfos = inscriptions[txIDKey];
+
+        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
+            // normal UTXO
+            cardinalUTXOs.push(utxo);
+            totalCardinalAmount = totalCardinalAmount.plus(utxo.value);
+        } else {
+            inscriptionUTXOs.push(utxo);
+        }
+    });
+
+    cardinalUTXOs = cardinalUTXOs.sort(
+        (a: UTXO, b: UTXO): number => {
+            if (a.value.gt(b.value)) {
+                return -1;
+            }
+            if (a.value.lt(b.value)) {
+                return 1;
+            }
+            return 0;
+        }
+    );
+
+    return { cardinalUTXOs, inscriptionUTXOs, totalCardinalAmount };
+};
+
+/**
+* findExactValueUTXO returns the cardinal utxos with exact value.
+* @param cardinalUTXOs list of utxos (only non-inscription  utxos)
+* @param value value of utxo 
+* @returns the cardinal UTXO
+*/
+const findExactValueUTXO = (
+    cardinalUTXOs: UTXO[],
+    value: BigNumber,
+): { utxo: UTXO } => {
+    cardinalUTXOs.forEach(utxo => {
+        if (utxo.value.eq(value)) {
+            return { utxo };
+        }
+    });
+
+    throw new SDKError(ERROR_CODE.NOT_FOUND_UTXO, value.toString());
+};
+
 export {
     selectUTXOs,
     selectInscriptionUTXO,
     selectCardinalUTXOs,
     selectTheSmallestUTXO,
     selectUTXOsToCreateBuyTx,
+    findExactValueUTXO,
+    filterCardinalUTXOs,
 };

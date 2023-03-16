@@ -1,5 +1,5 @@
 import SDKError, { ERROR_CODE } from "../constants/error";
-import { ECPair, network, toXOnly, tweakSigner } from "@root/src";
+import { ECPair, network, toXOnly, tweakSigner } from "../bitcoin";
 import { payments } from "bitcoinjs-lib";
 
 function isPrivateKey(privateKey: Buffer) {
@@ -39,8 +39,7 @@ class Validator {
 
     _throwError(message: string) {
         throw new Error(
-            `Validating "${this.label}" failed: ${message}. Found ${
-                this.value
+            `Validating "${this.label}" failed: ${message}. Found ${this.value
             } (type of ${typeof this.value})`
         );
     }
