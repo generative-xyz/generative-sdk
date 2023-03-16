@@ -6,6 +6,7 @@ export const ERROR_CODE = {
     NOT_ENOUGH_BTC_TO_PAY_FEE: "-5",
     ERR_BROADCAST_TX: "-6",
     INVALID_SIG: "-7",
+    INVALID_VALIDATOR_LABEL: "-8"
 };
 
 export const ERROR_MESSAGE = {
@@ -36,6 +37,10 @@ export const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_SIG]: {
         message: "Signature is invalid in the partially signed bitcoin transaction.",
         desc: "Signature is invalid in the partially signed bitcoin transaction.",
+    },
+    [ERROR_CODE.INVALID_VALIDATOR_LABEL]: {
+        message: "Missing or invalid label.",
+        desc: "Missing or invalid label.",
     },
 };
 

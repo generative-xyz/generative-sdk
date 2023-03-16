@@ -365,6 +365,7 @@ declare const ERROR_CODE: {
     NOT_ENOUGH_BTC_TO_PAY_FEE: string;
     ERR_BROADCAST_TX: string;
     INVALID_SIG: string;
+    INVALID_VALIDATOR_LABEL: string;
 };
 declare const ERROR_MESSAGE: {
     [x: string]: {
@@ -380,4 +381,22 @@ declare class SDKError extends Error {
     getMessage(): string;
 }
 
-export { BNZero, BlockStreamURL, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, SDKError, UTXO, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, fromSat, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, tapTweakHash, toXOnly, tweakSigner };
+declare class Validator {
+    value: any;
+    label: string;
+    isRequired: boolean;
+    constructor(label: string, value: any);
+    _throwError(message: string): void;
+    _isDefined(): boolean;
+    _onCondition(condition: () => any, message: string): this;
+    required(message?: string): this;
+    string(message?: string): this;
+    buffer(message?: string): this;
+    function(message?: string): this;
+    boolean(message?: string): this;
+    number(message?: string): this;
+    array(message?: string): this;
+    privateKey(message?: string): this;
+}
+
+export { BNZero, BlockStreamURL, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, SDKError, UTXO, Validator, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, fromSat, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, reqBuyInscription, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, tapTweakHash, toXOnly, tweakSigner };
