@@ -1,15 +1,17 @@
+import { BNZero } from "./constants";
 import { Inscription, UTXO } from "./types";
+import BigNumber from "bignumber.js";
 
 const getBTCBalance = (
     params: {
         utxos: UTXO[],
         inscriptions: { [key: string]: Inscription[] },
     }
-): number => {
+): BigNumber => {
     const normalUTXOs: UTXO[] = [];
-    let btcBalance = 0;
-    
-    const {utxos, inscriptions} = params;
+    let btcBalance = BNZero;
+
+    const { utxos, inscriptions } = params;
 
     // filter normal UTXO and inscription UTXO to send
     utxos.forEach(utxo => {
@@ -23,7 +25,7 @@ const getBTCBalance = (
         if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
             // normal UTXO
             normalUTXOs.push(utxo);
-            btcBalance+= utxo.value;
+            btcBalance = btcBalance.plus(utxo.value);
         }
     });
 

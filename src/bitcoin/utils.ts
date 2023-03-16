@@ -5,11 +5,12 @@ import {
     payments,
     Signer
 } from "bitcoinjs-lib";
-import { network } from "./constants";
+import { network, BNZero } from "./constants";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { Inscription, UTXO } from "./types";
 import { Psbt } from "bitcoinjs-lib";
+import BigNumber from "bignumber.js";
 initEccLib(ecc);
 const ECPair: ECPairAPI = ECPairFactory(ecc);
 
@@ -51,18 +52,18 @@ const estimateTxFee = (numIns: number, numOuts: number, feeRatePerByte: number):
 * @param isUseInscriptionPayFee use inscription output coin to pay fee or not
 * @returns returns the estimated number of inputs and outputs in the transaction
 */
-const estimateNumInOutputs = (inscriptionID: string, sendAmount: number, isUseInscriptionPayFee: boolean): { numIns: number, numOuts: number } => {
+const estimateNumInOutputs = (inscriptionID: string, sendAmount: BigNumber, isUseInscriptionPayFee: boolean): { numIns: number, numOuts: number } => {
     let numOuts = 0;
     let numIns = 0;
     if (inscriptionID !== "") {
         numOuts++;
         numIns++;
     }
-    if (sendAmount > 0) {
+    if (sendAmount.gt(BNZero)) {
         numOuts++;
     }
 
-    if (sendAmount > 0 || !isUseInscriptionPayFee) {
+    if (sendAmount.gt(BNZero) || !isUseInscriptionPayFee) {
         numIns++;
         numOuts++; // for change BTC output
     }
