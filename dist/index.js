@@ -2920,7 +2920,7 @@ var BigNumber = clone();
 
 const BlockStreamURL = "https://blockstream.info/api";
 const MinSats = 1000;
-const network = bitcoinjsLib.networks.bitcoin; // mainnet
+const network$1 = bitcoinjsLib.networks.bitcoin; // mainnet
 const DummyUTXOValue = 1000;
 const InputSize = 68;
 const OutputSize = 43;
@@ -2928,7 +2928,7 @@ const BNZero = new BigNumber(0);
 
 const wif = require("wif");
 bitcoinjsLib.initEccLib(ecc__namespace);
-const ECPair = ecpair.ECPairFactory(ecc__namespace);
+const ECPair$1 = ecpair.ECPairFactory(ecc__namespace);
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
 * @param bytes buffer private key
@@ -2992,10 +2992,10 @@ const estimateNumInOutputsForBuyInscription = (estNumInputsFromBuyer, estNumOutp
     const numOuts = sellerSignedPsbt.txOutputs.length + estNumOutputsFromBuyer;
     return { numIns, numOuts };
 };
-function toXOnly(pubkey) {
+function toXOnly$1(pubkey) {
     return pubkey.subarray(1, 33);
 }
-function tweakSigner(signer, opts = {}) {
+function tweakSigner$1(signer, opts = {}) {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     let privateKey = signer.privateKey;
@@ -3005,20 +3005,20 @@ function tweakSigner(signer, opts = {}) {
     if (signer.publicKey[0] === 3) {
         privateKey = ecc__namespace.privateNegate(privateKey);
     }
-    const tweakedPrivateKey = ecc__namespace.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
+    const tweakedPrivateKey = ecc__namespace.privateAdd(privateKey, tapTweakHash$1(toXOnly$1(signer.publicKey), opts.tweakHash));
     if (!tweakedPrivateKey) {
         throw new Error("Invalid tweaked private key!");
     }
-    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
+    return ECPair$1.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
         network: opts.network,
     });
 }
-function tapTweakHash(pubKey, h) {
+function tapTweakHash$1(pubKey, h) {
     return bitcoinjsLib.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
 }
 const generateTaprootAddress = (privateKey) => {
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    const internalPubkey = toXOnly(keyPair.publicKey);
+    const keyPair = ECPair$1.fromPrivateKey(privateKey);
+    const internalPubkey = toXOnly$1(keyPair.publicKey);
     const { address } = bitcoinjsLib.payments.p2tr({
         internalPubkey,
     });
@@ -3026,13 +3026,13 @@ const generateTaprootAddress = (privateKey) => {
 };
 const generateTaprootKeyPair = (privateKey) => {
     // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair$1.fromPrivateKey(privateKey);
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keyPair, { network });
+    const tweakedSigner = tweakSigner$1(keyPair, { network: network$1 });
     // Generate an address from the tweaked public key
     const p2pktr = bitcoinjsLib.payments.p2tr({
-        pubkey: toXOnly(tweakedSigner.publicKey),
-        network
+        pubkey: toXOnly$1(tweakedSigner.publicKey),
+        network: network$1
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
@@ -3052,6 +3052,7 @@ const ERROR_CODE = {
     NOT_ENOUGH_BTC_TO_PAY_FEE: "-5",
     ERR_BROADCAST_TX: "-6",
     INVALID_SIG: "-7",
+    INVALID_VALIDATOR_LABEL: "-8"
 };
 const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_PARAMS]: {
@@ -3081,6 +3082,10 @@ const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_SIG]: {
         message: "Signature is invalid in the partially signed bitcoin transaction.",
         desc: "Signature is invalid in the partially signed bitcoin transaction.",
+    },
+    [ERROR_CODE.INVALID_VALIDATOR_LABEL]: {
+        message: "Missing or invalid label.",
+        desc: "Missing or invalid label.",
     },
 };
 class SDKError extends Error {
@@ -3441,14 +3446,14 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     let feeRes = fee;
     // init key pair and tweakedSigner from senderPrivateKey
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: network$1 });
     // add inputs
     selectedUTXOs.forEach((input) => {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
-            tapInternalKey: toXOnly(keyPair.publicKey)
+            tapInternalKey: toXOnly$1(keyPair.publicKey)
         });
     });
     // add outputs
@@ -3509,12 +3514,12 @@ const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = 
     const network = bitcoinjsLib.networks.bitcoin; // mainnet
     const selectedUTXOs = utxos;
     // init key pair from senderPrivateKey
-    const keypair = ECPair.fromPrivateKey(senderPrivateKey);
+    const keypair = ECPair$1.fromPrivateKey(senderPrivateKey);
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner$1(keypair, { network });
     // Generate an address from the tweaked public key
     const p2pktr = bitcoinjsLib.payments.p2tr({
-        pubkey: toXOnly(tweakedSigner.publicKey),
+        pubkey: toXOnly$1(tweakedSigner.publicKey),
         network
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
@@ -3528,7 +3533,7 @@ const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = 
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
-            tapInternalKey: toXOnly(keypair.publicKey)
+            tapInternalKey: toXOnly$1(keypair.publicKey)
         });
     });
     // add outputs
@@ -3592,13 +3597,13 @@ const createTxSplitFundFromOrdinalUTXO = (senderPrivateKey, inscriptionUTXO, ins
         throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_PAY_FEE);
     }
     const newValueInscription = inscriptionUTXO.value.minus(totalAmountSpend);
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: network$1 });
     // add inputs
     psbt.addInput({
         hash: inscriptionUTXO.tx_hash,
         index: inscriptionUTXO.tx_output_n,
         witnessUtxo: { value: inscriptionUTXO.value.toNumber(), script: p2pktr.output },
-        tapInternalKey: toXOnly(keyPair.publicKey)
+        tapInternalKey: toXOnly$1(keyPair.publicKey)
     });
     // add outputs
     // add output inscription: must be at index 0
@@ -3689,7 +3694,7 @@ const getBTCBalance = (params) => {
 * @returns the encoded base64 partially signed transaction
 */
 const createPSBTToSell = (params) => {
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: network$1 });
     const { inscriptionUTXO: ordinalInput, amountPayToSeller, receiverBTCAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator } = params;
     const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(sellerPrivateKey);
     // add ordinal input into the first input coins with 
@@ -3698,7 +3703,7 @@ const createPSBTToSell = (params) => {
         hash: ordinalInput.tx_hash,
         index: ordinalInput.tx_output_n,
         witnessUtxo: { value: ordinalInput.value.toNumber(), script: p2pktr.output },
-        tapInternalKey: toXOnly(keyPair.publicKey),
+        tapInternalKey: toXOnly$1(keyPair.publicKey),
         sighashType: bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY,
     });
     if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.value.gt(BNZero)) {
@@ -3720,7 +3725,7 @@ const createPSBTToSell = (params) => {
             hash: dummyUTXO.tx_hash,
             index: dummyUTXO.tx_output_n,
             witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output },
-            tapInternalKey: toXOnly(keyPair.publicKey),
+            tapInternalKey: toXOnly$1(keyPair.publicKey),
             sighashType: bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY,
         });
         psbt.addOutput({
@@ -3758,7 +3763,7 @@ const createPSBTToSell = (params) => {
 * @returns the encoded base64 partially signed transaction
 */
 const createPSBTToBuy = (params) => {
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: network$1 });
     const { sellerSignedPsbt, buyerPrivateKey, price, receiverInscriptionAddress, valueInscription, paymentUtxos, dummyUtxo, feeRate } = params;
     let totalValue = BNZero;
     const { keyPair, tweakedSigner, p2pktr, senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
@@ -3767,7 +3772,7 @@ const createPSBTToBuy = (params) => {
         hash: dummyUtxo.tx_hash,
         index: dummyUtxo.tx_output_n,
         witnessUtxo: { value: dummyUtxo.value.toNumber(), script: p2pktr.output },
-        tapInternalKey: toXOnly(keyPair.publicKey),
+        tapInternalKey: toXOnly$1(keyPair.publicKey),
     });
     // Add inscription output
     // the frist output coin has value equal to the sum of dummy value and value inscription
@@ -3796,7 +3801,7 @@ const createPSBTToBuy = (params) => {
             hash: utxo.tx_hash,
             index: utxo.tx_output_n,
             witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output },
-            tapInternalKey: toXOnly(keyPair.publicKey),
+            tapInternalKey: toXOnly$1(keyPair.publicKey),
         });
         totalValue = totalValue.plus(utxo.value);
     }
@@ -3976,7 +3981,7 @@ const reqBuyInscription = async (params) => {
     var _a;
     const { sellerSignedPsbtB64, buyerPrivateKey, receiverInscriptionAddress, price, utxos, inscriptions, feeRatePerByte } = params;
     // decode seller's signed PSBT
-    const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+    const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network: network$1 });
     const sellerInputs = sellerSignedPsbt.data.inputs;
     if (sellerInputs.length === 0) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
@@ -4033,16 +4038,117 @@ const reqBuyInscription = async (params) => {
     };
 };
 
+const network = bitcoinjsLib.networks.bitcoin; // mainnet
+new BigNumber(0);
+
+require("wif");
+bitcoinjsLib.initEccLib(ecc__namespace);
+const ECPair = ecpair.ECPairFactory(ecc__namespace);
+function toXOnly(pubkey) {
+    return pubkey.subarray(1, 33);
+}
+function tweakSigner(signer, opts = {}) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    let privateKey = signer.privateKey;
+    if (!privateKey) {
+        throw new Error("Private key is required for tweaking signer!");
+    }
+    if (signer.publicKey[0] === 3) {
+        privateKey = ecc__namespace.privateNegate(privateKey);
+    }
+    const tweakedPrivateKey = ecc__namespace.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
+    if (!tweakedPrivateKey) {
+        throw new Error("Invalid tweaked private key!");
+    }
+    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
+        network: opts.network,
+    });
+}
+function tapTweakHash(pubKey, h) {
+    return bitcoinjsLib.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
+}
+
+function isPrivateKey(privateKey) {
+    let isValid = false;
+    try {
+        // init key pair from senderPrivateKey
+        const keyPair = ECPair.fromPrivateKey(privateKey);
+        // Tweak the original keypair
+        const tweakedSigner = tweakSigner(keyPair, { network });
+        // Generate an address from the tweaked public key
+        const p2pktr = bitcoinjsLib.payments.p2tr({
+            pubkey: toXOnly(tweakedSigner.publicKey),
+            network
+        });
+        const senderAddress = p2pktr.address ? p2pktr.address : "";
+        isValid = senderAddress !== "";
+    }
+    catch (e) {
+        isValid = false;
+    }
+    return isValid;
+}
+class Validator {
+    constructor(label, value) {
+        if (!label && typeof label !== "string") {
+            throw new SDKError(ERROR_CODE.INVALID_VALIDATOR_LABEL);
+        }
+        this.value = value;
+        this.label = label;
+        this.isRequired = false;
+    }
+    _throwError(message) {
+        throw new Error(`Validating "${this.label}" failed: ${message}. Found ${this.value} (type of ${typeof this.value})`);
+    }
+    _isDefined() {
+        return this.value !== null && this.value !== undefined;
+    }
+    _onCondition(condition, message) {
+        if (((!this.isRequired && this._isDefined()) || this.isRequired) &&
+            !condition()) {
+            this._throwError(message);
+        }
+        return this;
+    }
+    required(message = "Required") {
+        this.isRequired = true;
+        return this._onCondition(() => this._isDefined(), message);
+    }
+    string(message = "Must be string") {
+        return this._onCondition(() => typeof this.value === "string", message);
+    }
+    buffer(message = "Must be buffer") {
+        return this._onCondition(() => Buffer.isBuffer(this.value), message);
+    }
+    function(message = "Must be a function") {
+        return this._onCondition(() => typeof this.value === "function", message);
+    }
+    boolean(message = "Must be boolean") {
+        return this._onCondition(() => typeof this.value === "boolean", message);
+    }
+    number(message = "Must be number") {
+        return this._onCondition(() => Number.isFinite(this.value), message);
+    }
+    array(message = "Must be array") {
+        return this._onCondition(() => this.value instanceof Array, message);
+    }
+    privateKey(message = "Invalid private key") {
+        return this._onCondition(() => this.buffer() && isPrivateKey(this.value), message);
+    }
+}
+
 exports.BNZero = BNZero;
 exports.BlockStreamURL = BlockStreamURL;
 exports.DummyUTXOValue = DummyUTXOValue;
-exports.ECPair = ECPair;
+exports.ECPair = ECPair$1;
 exports.ERROR_CODE = ERROR_CODE;
 exports.ERROR_MESSAGE = ERROR_MESSAGE;
 exports.InputSize = InputSize;
 exports.MinSats = MinSats;
 exports.OutputSize = OutputSize;
 exports.SDKError = SDKError;
+exports.Validator = Validator;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.convertPrivateKeyFromStr = convertPrivateKeyFromStr;
@@ -4059,7 +4165,7 @@ exports.fromSat = fromSat;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;
-exports.network = network;
+exports.network = network$1;
 exports.reqBuyInscription = reqBuyInscription;
 exports.reqListForSaleInscription = reqListForSaleInscription;
 exports.selectCardinalUTXOs = selectCardinalUTXOs;
@@ -4067,7 +4173,7 @@ exports.selectInscriptionUTXO = selectInscriptionUTXO;
 exports.selectTheSmallestUTXO = selectTheSmallestUTXO;
 exports.selectUTXOs = selectUTXOs;
 exports.selectUTXOsToCreateBuyTx = selectUTXOsToCreateBuyTx;
-exports.tapTweakHash = tapTweakHash;
-exports.toXOnly = toXOnly;
-exports.tweakSigner = tweakSigner;
+exports.tapTweakHash = tapTweakHash$1;
+exports.toXOnly = toXOnly$1;
+exports.tweakSigner = tweakSigner$1;
 //# sourceMappingURL=index.js.map

@@ -6,6 +6,7 @@ export declare const ERROR_CODE: {
     NOT_ENOUGH_BTC_TO_PAY_FEE: string;
     ERR_BROADCAST_TX: string;
     INVALID_SIG: string;
+    INVALID_VALIDATOR_LABEL: string;
 };
 export declare const ERROR_MESSAGE: {
     [x: string]: {
