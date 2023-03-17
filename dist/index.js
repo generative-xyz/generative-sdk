@@ -3149,37 +3149,18 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         isUseInscriptionPayFee = false;
     }
     // filter normal UTXO and inscription UTXO to send
-    utxos.forEach(utxo => {
-        // txIDKey = tx_hash:tx_output_n
-        let txIDKey = utxo.tx_hash.concat(":");
-        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
-        // try to get inscriptionInfos
-        const inscriptionInfos = inscriptions[txIDKey];
-        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
-            // normal UTXO
-            normalUTXOs.push(utxo);
-        }
-        else {
-            // inscription UTXO
-            if (sendInscriptionID !== "") {
-                const inscription = inscriptionInfos.find(ins => ins.id === sendInscriptionID);
-                if (inscription !== undefined) {
-                    // don't support send tx with outcoin that includes more than one inscription
-                    if (inscriptionInfos.length > 1) {
-                        throw new SDKError(ERROR_CODE.NOT_SUPPORT_SEND);
-                    }
-                    inscriptionUTXO = utxo;
-                    inscriptionInfo = inscription;
-                    // maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
-                    maxAmountInsTransfer = maxAmountInsTransfer.
-                        plus(inscriptionUTXO.value).
-                        minus(inscriptionInfo.offset).
-                        minus(1).minus(MinSats);
-                    console.log("maxAmountInsTransfer: ", maxAmountInsTransfer.toNumber());
-                }
-            }
-        }
-    });
+    const { cardinalUTXOs, inscriptionUTXOs } = filterAndSortCardinalUTXOs(utxos, inscriptions);
+    normalUTXOs = cardinalUTXOs;
+    if (sendInscriptionID !== "") {
+        const res = selectInscriptionUTXO(inscriptionUTXOs, inscriptions, sendInscriptionID);
+        inscriptionUTXO = res.inscriptionUTXO;
+        inscriptionInfo = res.inscriptionInfo;
+        // maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
+        maxAmountInsTransfer = inscriptionUTXO.value.
+            minus(inscriptionInfo.offset).
+            minus(1).minus(MinSats);
+        console.log("maxAmountInsTransfer: ", maxAmountInsTransfer.toNumber());
+    }
     if (sendInscriptionID !== "") {
         if (inscriptionUTXO === null || inscriptionInfo == null) {
             throw new SDKError(ERROR_CODE.NOT_FOUND_INSCRIPTION);
@@ -3201,15 +3182,6 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         if (normalUTXOs.length === 0) {
             throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
         }
-        normalUTXOs = normalUTXOs.sort((a, b) => {
-            if (a.value.gt(b.value)) {
-                return -1;
-            }
-            if (a.value.lt(b.value)) {
-                return 1;
-            }
-            return 0;
-        });
         if (normalUTXOs[normalUTXOs.length - 1].value.gte(totalSendAmount)) {
             // select the smallest utxo
             resultUTXOs.push(normalUTXOs[normalUTXOs.length - 1]);
@@ -3309,29 +3281,9 @@ const selectInscriptionUTXO = (utxos, inscriptions, inscriptionID) => {
 */
 const selectCardinalUTXOs = (utxos, inscriptions, sendAmount) => {
     const resultUTXOs = [];
-    let normalUTXOs = [];
     let remainUTXOs = [];
     // filter normal UTXO and inscription UTXO to send
-    utxos.forEach(utxo => {
-        // txIDKey = tx_hash:tx_output_n
-        let txIDKey = utxo.tx_hash.concat(":");
-        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
-        // try to get inscriptionInfos
-        const inscriptionInfos = inscriptions[txIDKey];
-        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
-            // normal UTXO
-            normalUTXOs.push(utxo);
-        }
-    });
-    normalUTXOs = normalUTXOs.sort((a, b) => {
-        if (a.value.gt(b.value)) {
-            return -1;
-        }
-        if (a.value.lt(b.value)) {
-            return 1;
-        }
-        return 0;
-    });
+    const { cardinalUTXOs: normalUTXOs } = filterAndSortCardinalUTXOs(utxos, inscriptions);
     let totalInputAmount = BNZero;
     const cloneUTXOs = [...normalUTXOs];
     const totalSendAmount = sendAmount;
@@ -3408,47 +3360,26 @@ const selectUTXOsToCreateBuyTx = (params) => {
 * @returns the network fee
 */
 const selectTheSmallestUTXO = (utxos, inscriptions) => {
-    let normalUTXOs = [];
-    // filter normal UTXO and inscription UTXO 
-    utxos.forEach(utxo => {
-        // txIDKey = tx_hash:tx_output_n
-        let txIDKey = utxo.tx_hash.concat(":");
-        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
-        // try to get inscriptionInfos
-        const inscriptionInfos = inscriptions[txIDKey];
-        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
-            // normal UTXO
-            normalUTXOs.push(utxo);
-        }
-    });
-    if (normalUTXOs.length === 0) {
+    const { cardinalUTXOs } = filterAndSortCardinalUTXOs(utxos, inscriptions);
+    if (cardinalUTXOs.length === 0) {
         throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
     }
-    normalUTXOs = normalUTXOs.sort((a, b) => {
-        if (a.value.gt(b.value)) {
-            return -1;
-        }
-        if (a.value.lt(b.value)) {
-            return 1;
-        }
-        return 0;
-    });
-    return normalUTXOs[normalUTXOs.length - 1];
+    return cardinalUTXOs[cardinalUTXOs.length - 1];
 };
 /**
-* filterCardinalUTXOs filter cardinal utxos and inscription utxos.
+* filterAndSortCardinalUTXOs filter cardinal utxos and inscription utxos.
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
-* @returns the list of cardinal UTXOs
+* @returns the list of cardinal UTXOs which is sorted descending by value
 * @returns the list of inscription UTXOs
 * @returns total amount of cardinal UTXOs
 */
-const filterCardinalUTXOs = (utxos, inscriptions) => {
+const filterAndSortCardinalUTXOs = (utxos, inscriptions) => {
     let cardinalUTXOs = [];
     const inscriptionUTXOs = [];
     let totalCardinalAmount = BNZero;
     // filter normal UTXO and inscription UTXO to send
-    utxos.forEach(utxo => {
+    for (const utxo of utxos) {
         // txIDKey = tx_hash:tx_output_n
         let txIDKey = utxo.tx_hash.concat(":");
         txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
@@ -3462,7 +3393,7 @@ const filterCardinalUTXOs = (utxos, inscriptions) => {
         else {
             inscriptionUTXOs.push(utxo);
         }
-    });
+    }
     cardinalUTXOs = cardinalUTXOs.sort((a, b) => {
         if (a.value.gt(b.value)) {
             return -1;
@@ -3516,14 +3447,14 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
     const psbt = new bitcoinjsLib.Psbt({ network });
     // add inputs
-    selectedUTXOs.forEach((input) => {
+    for (const input of selectedUTXOs) {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
             tapInternalKey: toXOnly(keyPair.publicKey)
         });
-    });
+    }
     // add outputs
     if (sendInscriptionID !== "") {
         // add output inscription
@@ -3552,9 +3483,9 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
         }
     }
     // sign tx
-    selectedUTXOs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
     // get tx hex
     const tx = psbt.extractTransaction();
@@ -3580,12 +3511,12 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
 const createTxSendBTC = ({ senderPrivateKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }) => {
     // validation
     let totalPaymentAmount = BNZero;
-    paymentInfos.forEach(info => {
+    for (const info of paymentInfos) {
         if (info.amount.gt(BNZero) && info.amount.lt(MinSats)) {
             throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
         }
         totalPaymentAmount = totalPaymentAmount.plus(info.amount);
-    });
+    }
     // select UTXOs
     const { selectedUTXOs, changeAmount, fee } = selectUTXOs(utxos, inscriptions, "", totalPaymentAmount, feeRatePerByte, false);
     let feeRes = fee;
@@ -3593,21 +3524,21 @@ const createTxSendBTC = ({ senderPrivateKey, utxos, inscriptions, paymentInfos, 
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
     const psbt = new bitcoinjsLib.Psbt({ network });
     // add inputs
-    selectedUTXOs.forEach((input) => {
+    for (const input of selectedUTXOs) {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
             tapInternalKey: toXOnly(keyPair.publicKey)
         });
-    });
+    }
     // add outputs send BTC
-    paymentInfos.forEach((info) => {
+    for (const info of paymentInfos) {
         psbt.addOutput({
             address: info.address,
             value: info.amount.toNumber(),
         });
-    });
+    }
     // add change output
     if (changeAmount.gt(BNZero)) {
         if (changeAmount.gte(MinSats)) {
@@ -3621,9 +3552,9 @@ const createTxSendBTC = ({ senderPrivateKey, utxos, inscriptions, paymentInfos, 
         }
     }
     // sign tx
-    selectedUTXOs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
     // get tx hex
     const tx = psbt.extractTransaction();
@@ -3665,14 +3596,14 @@ const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = 
     }
     const psbt = new bitcoinjsLib.Psbt({ network });
     // add inputs
-    selectedUTXOs.forEach((input) => {
+    for (const input of selectedUTXOs) {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
             tapInternalKey: toXOnly(keypair.publicKey)
         });
-    });
+    }
     // add outputs
     if (sendInscriptionID !== "") {
         // add output inscription
@@ -3696,9 +3627,9 @@ const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = 
         });
     }
     // sign tx
-    selectedUTXOs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
     // get tx hex
     const tx = psbt.extractTransaction();
@@ -3754,9 +3685,9 @@ const createTxSplitFundFromOrdinalUTXO = (senderPrivateKey, inscriptionUTXO, ins
         value: sendAmount.toNumber(),
     });
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
     // get tx hex
     const tx = psbt.extractTransaction();
@@ -3807,7 +3738,7 @@ const prepareUTXOsToBuyMultiInscriptions = ({ privateKey, address, utxos, inscri
     let selectedUTXOs = [];
     let fee = BNZero;
     // filter to get cardinal utxos
-    const { cardinalUTXOs, totalCardinalAmount } = filterCardinalUTXOs(utxos, inscriptions);
+    const { cardinalUTXOs, totalCardinalAmount } = filterAndSortCardinalUTXOs(utxos, inscriptions);
     // select dummy utxo
     let needCreateDummyUTXO = false;
     try {
@@ -3952,11 +3883,11 @@ const createPSBTToSell = (params) => {
         });
     }
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner, [bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY]);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        psbt.signInput(i, tweakedSigner, [bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY]);
         let isValid = true;
         try {
-            isValid = psbt.validateSignaturesOfInput(index, ecc.verifySchnorr, tweakedSigner.publicKey);
+            isValid = psbt.validateSignaturesOfInput(i, ecc.verifySchnorr, tweakedSigner.publicKey);
         }
         catch (e) {
             isValid = false;
@@ -3964,7 +3895,7 @@ const createPSBTToSell = (params) => {
         if (!isValid) {
             throw new SDKError(ERROR_CODE.INVALID_SIG);
         }
-    });
+    }
     psbt.finalizeAllInputs();
     return psbt.toBase64();
 };
@@ -4060,25 +3991,25 @@ const createPSBTToBuy = (params) => {
         }
     }
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        if (index === 0 || index > sellerSignedPsbt.txInputs.length) {
-            psbt.signInput(index, tweakedSigner);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (i === 0 || i > sellerSignedPsbt.txInputs.length) {
+            psbt.signInput(i, tweakedSigner);
         }
-    });
-    psbt.txInputs.forEach((utxo, index) => {
-        if (index === 0 || index > sellerSignedPsbt.txInputs.length) {
-            psbt.finalizeInput(index);
+    }
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (i === 0 || i > sellerSignedPsbt.txInputs.length) {
+            psbt.finalizeInput(i);
             try {
-                const isValid = psbt.validateSignaturesOfInput(index, ecc.verifySchnorr, tweakedSigner.publicKey);
+                const isValid = psbt.validateSignaturesOfInput(i, ecc.verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    console.log("Tx signature is invalid " + index);
+                    console.log("Tx signature is invalid " + i);
                 }
             }
             catch (e) {
-                console.log("Tx signature is invalid " + index);
+                console.log("Tx signature is invalid " + i);
             }
         }
-    });
+    }
     // get tx hex
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
@@ -4207,25 +4138,25 @@ const createPSBTToBuyMultiInscriptions = ({ buyReqFullInfos, buyerPrivateKey, fe
     }
     console.log("indexInputNeedToSign: ", indexInputNeedToSign);
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        if (indexInputNeedToSign.findIndex(value => value === index) !== -1) {
-            psbt.signInput(index, tweakedSigner);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (indexInputNeedToSign.findIndex(value => value === i) !== -1) {
+            psbt.signInput(i, tweakedSigner);
         }
-    });
-    psbt.txInputs.forEach((utxo, index) => {
-        if (indexInputNeedToSign.findIndex(value => value === index) !== -1) {
-            psbt.finalizeInput(index);
+    }
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (indexInputNeedToSign.findIndex(value => value === i) !== -1) {
+            psbt.finalizeInput(i);
             try {
-                const isValid = psbt.validateSignaturesOfInput(index, ecc.verifySchnorr, tweakedSigner.publicKey);
+                const isValid = psbt.validateSignaturesOfInput(i, ecc.verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    console.log("Tx signature is invalid " + index);
+                    console.log("Tx signature is invalid " + i);
                 }
             }
             catch (e) {
-                console.log("Tx signature is invalid " + index);
+                console.log("Tx signature is invalid " + i);
             }
         }
-    });
+    }
     // get tx hex
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
@@ -4592,7 +4523,7 @@ exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
 exports.estimateNumInOutputs = estimateNumInOutputs;
 exports.estimateNumInOutputsForBuyInscription = estimateNumInOutputsForBuyInscription;
 exports.estimateTxFee = estimateTxFee;
-exports.filterCardinalUTXOs = filterCardinalUTXOs;
+exports.filterAndSortCardinalUTXOs = filterAndSortCardinalUTXOs;
 exports.findExactValueUTXO = findExactValueUTXO;
 exports.fromSat = fromSat;
 exports.generateTaprootAddress = generateTaprootAddress;

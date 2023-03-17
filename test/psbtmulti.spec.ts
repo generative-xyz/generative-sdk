@@ -151,8 +151,6 @@ let buyerPrivateKey = convertPrivateKeyFromStr(buyerPrivateKeyWIF);
 describe("Buy multi inscriptions in one PSBT", () => {
     it("happy case", async () => {
         // first, seller create the transaction
-
-
         const sellInscriptionIDs: string[] = [
             "81a8890668180996fe94fb4b893a40c77c28b898683d9459c99d3dfc048782e1i0",
             "8f93fc0dbe146b84bc2c5275ffb803aedb8cc60c641c794fba06cd125676c47ei0",
