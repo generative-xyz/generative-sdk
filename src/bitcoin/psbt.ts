@@ -562,7 +562,12 @@ const reqListForSaleInscription = async (
         feePayToCreator: feePayToCreator,
     });
 
-    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
+    const inscriptionUTXOs = [inscriptionUTXO];
+    if (dummyUTXORes !== null) {
+        inscriptionUTXOs.push(dummyUTXORes);
+    }
+
+    return { base64Psbt, selectedUTXOs: inscriptionUTXOs, splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
 };
 
 /**
@@ -722,7 +727,7 @@ const reqBuyMultiInscriptions = (
         });
     }
 
-    const newUTXOs = utxos;
+    const newUTXOs = [...utxos];
 
     // need to split UTXOs correspond to list of prices to payment
     // and only one dummy UTXO for multiple inscriptions

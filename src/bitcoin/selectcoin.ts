@@ -381,11 +381,11 @@ const findExactValueUTXO = (
     cardinalUTXOs: UTXO[],
     value: BigNumber,
 ): { utxo: UTXO } => {
-    cardinalUTXOs.forEach(utxo => {
+    for (const utxo of cardinalUTXOs) {
         if (utxo.value.eq(value)) {
             return { utxo };
         }
-    });
+    }
 
     throw new SDKError(ERROR_CODE.NOT_FOUND_UTXO, value.toString());
 };

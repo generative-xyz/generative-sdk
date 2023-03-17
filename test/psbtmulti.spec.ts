@@ -6,7 +6,7 @@ import {
     convertPrivateKey,
     reqListForSaleInscription,
     reqBuyInscription, DummyUTXOValue, broadcastTx,
-    BuyReqInfo, reqBuyMultiInscriptions
+    BuyReqInfo, reqBuyMultiInscriptions, findExactValueUTXO
 } from "../src/index";
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
@@ -36,7 +36,6 @@ let sellerInsciptions = {
         {
             id: "b4e20295fa3c738490cf1d8a542a9a1354affa649f601866b12c092a956de1c3i0",
             offset: new BigNumber(1000),
-            sat: 1277661004849427
         }
     ],
 }
@@ -56,6 +55,11 @@ let sellerUTXOs2 = [
     {
         tx_hash: "e33ba42aba8127e6f531941b3b5e4ba29202c2f6a7376a1bc384c88852abb90e",
         tx_output_n: 2,
+        value: new BigNumber(1000),
+    },
+    {
+        tx_hash: "e33ba42aba8127e6f531941b3b5e4ba29202c2f6a7376a1bc384c88852abb90e",
+        tx_output_n: 3,
         value: new BigNumber(1000),
     },
 ];
@@ -80,6 +84,26 @@ let buyerUTXOs = [
         tx_hash: "541372eeed02266920038467388a8ea0d132923f37e3b710a8e6d4ff7ac8836e",
         tx_output_n: 1,
         value: new BigNumber(21646), // normal
+    },
+    {
+        tx_hash: "541372eeed02266920038467388a8ea0d132923f37e3b710a8e6d4ff7ac8836e",
+        tx_output_n: 2,
+        value: new BigNumber(2101), // normal
+    },
+    {
+        tx_hash: "541372eeed02266920038467388a8ea0d132923f37e3b710a8e6d4ff7ac8836e",
+        tx_output_n: 3,
+        value: new BigNumber(2202), // normal
+    },
+    {
+        tx_hash: "541372eeed02266920038467388a8ea0d132923f37e3b710a8e6d4ff7ac8836e",
+        tx_output_n: 4,
+        value: new BigNumber(2303), // normal
+    },
+    {
+        tx_hash: "541372eeed02266920038467388a8ea0d132923f37e3b710a8e6d4ff7ac8836e",
+        tx_output_n: 5,
+        value: new BigNumber(1000), // normal
     },
 ];
 
@@ -307,6 +331,17 @@ describe("Buy multi inscriptions in one PSBT", () => {
                 feeRatePerByte,
             });
 
+            // remove split utxos to create next txs
+            let tmpSelectedUTXOsSeller = [...selectedUTXOsSeller, ...splitUTXOs];
+            if (tmpSelectedUTXOsSeller.length > 0) {
+                for (const selectedUtxo of tmpSelectedUTXOsSeller) {
+                    const index = UTXOs[i].findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
+                    UTXOs[i].splice(index, 1);
+                }
+            }
+
+            console.log("HHH UTXOs[i]: ", UTXOs[i]);
+
             console.log("SELL: base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs : ", i, base64Psbt, selectedUTXOsSeller, splitTxID, splitUTXOs);
 
             console.log("Add buyReqInfos: ", buyReqInfos);
@@ -334,21 +369,18 @@ describe("Buy multi inscriptions in one PSBT", () => {
         console.log("BUY fee: ", res.fee);
         console.log("BUY Tx: ", res.tx);
 
-
-
-
-
-
-
         // console.log("PBST no fee for creator: ", base64Psbt);
 
-        assert.notEqual(res.splitTxID, "");
-        assert.notEqual(res.splitTxRaw, "");
-        assert.equal(res.splitUTXOs.length, 1);
+        assert.equal(res.splitTxID, "");
+        assert.equal(res.splitTxRaw, "");
+        assert.equal(res.splitUTXOs.length, 0);
 
         assert.notEqual(res.txID, "");
         assert.notEqual(res.txHex, "");
         assert.equal(res.selectedUTXOs.length, 5);
+
+        const paymentUTXO = findExactValueUTXO(buyerUTXOs, new BigNumber(2303));
+        console.log("paymentUTXO");
 
 
         // const psbt = Psbt.fromBase64(base64Psbt);

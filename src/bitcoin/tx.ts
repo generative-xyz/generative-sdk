@@ -464,13 +464,14 @@ const prepareUTXOsToBuyMultiInscriptions = ({
     for (let i = 0; i < buyReqFullInfos.length; i++) {
         const info = buyReqFullInfos[i];
         try {
-            const paymentUTXO = findExactValueUTXO(cardinalUTXOs, info.price);
-            buyReqFullInfos[i].paymentUTXO = paymentUTXO;
-
+            const { utxo } = findExactValueUTXO(cardinalUTXOs, info.price);
+            buyReqFullInfos[i].paymentUTXO = utxo;
         } catch (e) {
             needPaymentUTXOs.push({ buyInfoIndex: i, amount: info.price });
         }
     }
+
+    console.log("buyReqFullInfos: ", buyReqFullInfos);
 
     // create split tx to create enough payment uxtos (if needed)
     if (needPaymentUTXOs.length > 0 || needCreateDummyUTXO) {
