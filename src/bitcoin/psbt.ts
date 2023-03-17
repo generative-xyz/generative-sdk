@@ -740,7 +740,7 @@ const reqBuyMultiInscriptions = (
 
 
     // remove selected utxo, payment utxo, dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT
-    const tmpSelectedUTXOs = selectedUTXOs;
+    const tmpSelectedUTXOs = [...selectedUTXOs];
     for (const info of buyReqFullInfos) {
         tmpSelectedUTXOs.push(info.paymentUTXO);
     }
@@ -769,6 +769,7 @@ const reqBuyMultiInscriptions = (
 
     let fee = new BigNumber(estimateTxFee(numIns, numOuts, feeRatePerByte));
     // select cardinal UTXOs to pay fee
+    console.log("BUY Fee estimate: ", fee.toNumber());
     const { selectedUTXOs: feeSelectedUTXOs, totalInputAmount } = selectCardinalUTXOs(newUTXOs, {}, fee);
 
     // create PBTS from the seller's one

@@ -66,24 +66,24 @@ let sellerUTXOs = [
     // real
 
     // {
-    //     tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
-    //     tx_output_n: 1,
+    //     tx_hash: "b8764464f68d7303edd71cf9d73a58c5dc60315df64f0174b375945be58350fc",
+    //     tx_output_n: 0,
     //     value: 1078, // normal
     // },
     {
-        tx_hash: "1bdb522dc035d83fd4c837e2cef53d12de348aa2602f1ad9bd5102f8e9d200c9",
-        tx_output_n: 0,
-        value: new BigNumber(1234),
+        tx_hash: "08f7f0b3f60630c8308833e56d7d66c3a3edc99f70fc71fdb2ad19855005874b",
+        tx_output_n: 1,
+        value: new BigNumber(1000),
     },
     {
-        tx_hash: "300ec1c7401199c356072efa4b38387d38211dad8b0970372772ba5f4164d3f3",
-        tx_output_n: 0,
-        value: new BigNumber(2345),
+        tx_hash: "c89a0e66b28124d6f2906023bf4d5ee9f123586b211999b0ebb823e2203ab51c",
+        tx_output_n: 1,
+        value: new BigNumber(1000),
     },
     {
-        tx_hash: "b475e4fef1a1095c1cc48ebc1f7b502fce62c2f7e403b6bed12b02fe1652028f",
+        tx_hash: "b8764464f68d7303edd71cf9d73a58c5dc60315df64f0174b375945be58350fc",
         tx_output_n: 0,
-        value: new BigNumber(5678),
+        value: new BigNumber(8890), // insc
     },
     // {
     //     tx_hash: "da7d8f7d7234d65ce8876475ba75e7ab60f6ea807fc0b248270f640db2d0189f",
@@ -98,25 +98,10 @@ let sellerUTXOs = [
 ];
 
 let sellerInsciptions = {
-    "1bdb522dc035d83fd4c837e2cef53d12de348aa2602f1ad9bd5102f8e9d200c9:0": [
+    "b8764464f68d7303edd71cf9d73a58c5dc60315df64f0174b375945be58350fc:0": [
         {
-            id: "73168fb8c16f6990eaf54122492cd5768a17f3801a32d01712e22869094a94fci0",
+            id: "81a8890668180996fe94fb4b893a40c77c28b898683d9459c99d3dfc048782e1i0",
             offset: new BigNumber(0),
-            sat: 1277661004849427
-        }
-    ],
-    "300ec1c7401199c356072efa4b38387d38211dad8b0970372772ba5f4164d3f3:0": [
-        {
-            id: "b4e20295fa3c738490cf1d8a542a9a1354affa649f601866b12c092a956de1c3i0",
-            offset: new BigNumber(0),
-            sat: 1392873619146836
-        }
-    ],
-    "b475e4fef1a1095c1cc48ebc1f7b502fce62c2f7e403b6bed12b02fe1652028f:0": [
-        {
-            id: "8f93fc0dbe146b84bc2c5275ffb803aedb8cc60c641c794fba06cd125676c47ei0",
-            offset: new BigNumber(0),
-            sat: 1277661004899817
         }
     ]
 }
@@ -126,26 +111,30 @@ let buyerUTXOs = [
     {
         tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
         tx_output_n: 0,
-        value: new BigNumber(2000), // normal
+        value: new BigNumber(1390), // ins
     },
     {
-        tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
+        tx_hash: "08f7f0b3f60630c8308833e56d7d66c3a3edc99f70fc71fdb2ad19855005874b",
+        tx_output_n: 2,
+        value: new BigNumber(1000), // normal
+    },
+    {
+        tx_hash: "e25533f18f5818ad784c0b6c6a94570857b9e544bf869d2f13adf0de8f827b8d",
         tx_output_n: 1,
-        value: new BigNumber(2000), // normal
+        value: new BigNumber(97460), // normal
     },
-    {
-        tx_hash: "3edce14398749454d105241212d46aad8a513f41dd38d84ebef452000b28c777",
-        tx_output_n: 0,
-        value: new BigNumber(10000), // normal
-    }
+    // {
+    //     tx_hash: "e25533f18f5818ad784c0b6c6a94570857b9e544bf869d2f13adf0de8f827b8d",
+    //     tx_output_n: 0,
+    //     value: new BigNumber(1000), // normal
+    // }
 ];
 
 let buyerInscriptions = {
     "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee:0": [
         {
-            id: "a22ed5f4e741519e91f51280d2af4377b72f29c52f693955f370d6a1025c35aei0",
+            id: "8f93fc0dbe146b84bc2c5275ffb803aedb8cc60c641c794fba06cd125676c47ei0",
             offset: new BigNumber(1000),
-            sat: 486840414210370
         }
     ]
 }
@@ -159,22 +148,24 @@ let buyerPrivateKeyWIF = process.env.PRIV_KEY_2 || "";
 let buyerAddress = process.env.ADDRESS_2 || "";
 let buyerPrivateKey = convertPrivateKeyFromStr(buyerPrivateKeyWIF);
 
-const feeRatePerByte = 6;
-
-
 describe("Buy multi inscriptions in one PSBT", () => {
     it("happy case", async () => {
         // first, seller create the transaction
 
 
         const sellInscriptionIDs: string[] = [
-            "b4e20295fa3c738490cf1d8a542a9a1354affa649f601866b12c092a956de1c3i0",
+            "81a8890668180996fe94fb4b893a40c77c28b898683d9459c99d3dfc048782e1i0",
             "8f93fc0dbe146b84bc2c5275ffb803aedb8cc60c641c794fba06cd125676c47ei0",
         ];
+
+        const sellerPrivateKeys: Buffer[] = [
+            sellerPrivateKey,
+            buyerPrivateKey
+        ]
         const amountPayToSeller: BigNumber[] = [new BigNumber(1100), new BigNumber(1200)];
         const feePayToCreator: BigNumber[] = [new BigNumber(0), new BigNumber(1001)];
 
-        const creatorAddress = buyerAddress;
+        const creatorAddresses: string[] = [buyerAddress, sellerAddress];
 
         const buyReqInfos: BuyReqInfo[] = [];
         const receiverAddresses = [
@@ -182,23 +173,30 @@ describe("Buy multi inscriptions in one PSBT", () => {
             buyerAddress,
         ];
 
+        const receiverBTCAddresses = [sellerAddress, buyerAddress];
+
+        const UTXOs = [sellerUTXOs, buyerUTXOs];
+        const inscriptions = [sellerInsciptions, buyerInscriptions];
+
+        const feeRatePerByte = 10;
+
 
         for (let i = 0; i < sellInscriptionIDs.length; i++) {
             const inscriptionID = sellInscriptionIDs[i];
             console.log("feePayToCreator ", i, feePayToCreator[i]);
             const { base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs } = await reqListForSaleInscription({
-                sellerPrivateKey: sellerPrivateKey,
-                utxos: sellerUTXOs,
-                inscriptions: sellerInsciptions,
+                sellerPrivateKey: sellerPrivateKeys[i],
+                utxos: UTXOs[i],
+                inscriptions: inscriptions[i],
                 sellInscriptionID: inscriptionID,
-                receiverBTCAddress: sellerAddress,
+                receiverBTCAddress: receiverBTCAddresses[i],
                 amountPayToSeller: amountPayToSeller[i],
                 feePayToCreator: feePayToCreator[i],
-                creatorAddress,
-                feeRatePerByte: 4,
+                creatorAddress: creatorAddresses[i],
+                feeRatePerByte,
             });
 
-            console.log("SELL: base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs : ", base64Psbt, selectedUTXOsSeller, splitTxID, splitUTXOs);
+            console.log("SELL: base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs : ", i, base64Psbt, selectedUTXOsSeller, splitTxID, splitUTXOs);
 
             console.log("Add buyReqInfos: ", buyReqInfos);
             buyReqInfos.push({
@@ -208,12 +206,23 @@ describe("Buy multi inscriptions in one PSBT", () => {
             });
         }
 
+        buyerUTXOs.splice(1, 1);
+
         console.log("Param buyReqInfos: ", buyReqInfos);
 
         // create tx buy
 
         const res = reqBuyMultiInscriptions({ buyReqInfos, buyerPrivateKey, utxos: buyerUTXOs, inscriptions: buyerInscriptions, feeRatePerByte });
         console.log("res: ", res);
+        console.log("BUY splitTxID: ", res.splitTxID);
+        console.log("BUY splitTxRaw: ", res.splitTxRaw);
+        console.log("BUY splitUTXOs: ", res.splitUTXOs);
+        console.log("BUY txID: ", res.txID);
+        console.log("BUY txHex: ", res.txHex);
+        console.log("BUY selectedUTXOs: ", res.selectedUTXOs);
+        console.log("BUY fee: ", res.fee);
+        console.log("BUY Tx: ", res.tx);
+
 
 
 

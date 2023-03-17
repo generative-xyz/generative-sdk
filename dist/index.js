@@ -3818,21 +3818,22 @@ const prepareUTXOsToBuyMultiInscriptions = ({ privateKey, address, utxos, inscri
         needCreateDummyUTXO = true;
     }
     const needPaymentUTXOs = [];
-    buyReqFullInfos.forEach((info, index) => {
+    for (let i = 0; i < buyReqFullInfos.length; i++) {
+        const info = buyReqFullInfos[i];
         try {
             const paymentUTXO = findExactValueUTXO(cardinalUTXOs, info.price);
-            buyReqFullInfos[index].paymentUTXO = paymentUTXO;
+            buyReqFullInfos[i].paymentUTXO = paymentUTXO;
         }
         catch (e) {
-            needPaymentUTXOs.push({ buyInfoIndex: index, amount: info.price });
+            needPaymentUTXOs.push({ buyInfoIndex: i, amount: info.price });
         }
-    });
+    }
     // create split tx to create enough payment uxtos (if needed)
     if (needPaymentUTXOs.length > 0 || needCreateDummyUTXO) {
         const paymentInfos = [];
-        needPaymentUTXOs.forEach(info => {
+        for (const info of needPaymentUTXOs) {
             paymentInfos.push({ address: address, amount: info.amount });
-        });
+        }
         if (needCreateDummyUTXO) {
             paymentInfos.push({ address: address, amount: new BigNumber(DummyUTXOValue) });
         }
@@ -3841,18 +3842,19 @@ const prepareUTXOsToBuyMultiInscriptions = ({ privateKey, address, utxos, inscri
         splitTxHex = res.txHex;
         selectedUTXOs = res.selectedUTXOs;
         fee = res.fee;
-        needPaymentUTXOs.forEach((info, index) => {
+        for (let i = 0; i < needPaymentUTXOs.length; i++) {
+            const info = needPaymentUTXOs[i];
             const buyInfoIndex = info.buyInfoIndex;
             if (buyReqFullInfos[buyInfoIndex].paymentUTXO != null) {
                 throw new SDKError(ERROR_CODE.INVALID_CODE);
             }
             const newUTXO = {
                 tx_hash: splitTxID,
-                tx_output_n: index,
+                tx_output_n: i,
                 value: info.amount,
             };
             buyReqFullInfos[buyInfoIndex].paymentUTXO = newUTXO;
-        });
+        }
         if (needCreateDummyUTXO) {
             dummyUTXO = {
                 tx_hash: splitTxID,
@@ -3865,7 +3867,7 @@ const prepareUTXOsToBuyMultiInscriptions = ({ privateKey, address, utxos, inscri
             newUTXO = {
                 tx_hash: splitTxID,
                 tx_output_n: indexChangeUTXO,
-                value: new BigNumber(DummyUTXOValue),
+                value: res.changeAmount,
             };
         }
     }
@@ -4449,7 +4451,7 @@ const reqBuyMultiInscriptions = (params) => {
     console.log("buy selectedUTXOs for split: ", selectedUTXOs);
     console.log("buy newUTXO: ", newUTXO);
     // remove selected utxo, payment utxo, dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT
-    const tmpSelectedUTXOs = selectedUTXOs;
+    const tmpSelectedUTXOs = [...selectedUTXOs];
     for (const info of buyReqFullInfos) {
         tmpSelectedUTXOs.push(info.paymentUTXO);
     }
@@ -4473,6 +4475,7 @@ const reqBuyMultiInscriptions = (params) => {
     }
     let fee = new BigNumber(estimateTxFee(numIns, numOuts, feeRatePerByte));
     // select cardinal UTXOs to pay fee
+    console.log("BUY Fee estimate: ", fee.toNumber());
     const { selectedUTXOs: feeSelectedUTXOs, totalInputAmount } = selectCardinalUTXOs(newUTXOs, {}, fee);
     // create PBTS from the seller's one
     const res = createPSBTToBuyMultiInscriptions({
