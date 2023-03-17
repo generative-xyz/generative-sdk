@@ -3412,11 +3412,11 @@ const filterAndSortCardinalUTXOs = (utxos, inscriptions) => {
 * @returns the cardinal UTXO
 */
 const findExactValueUTXO = (cardinalUTXOs, value) => {
-    cardinalUTXOs.forEach(utxo => {
+    for (const utxo of cardinalUTXOs) {
         if (utxo.value.eq(value)) {
             return { utxo };
         }
-    });
+    }
     throw new SDKError(ERROR_CODE.NOT_FOUND_UTXO, value.toString());
 };
 
@@ -3752,13 +3752,14 @@ const prepareUTXOsToBuyMultiInscriptions = ({ privateKey, address, utxos, inscri
     for (let i = 0; i < buyReqFullInfos.length; i++) {
         const info = buyReqFullInfos[i];
         try {
-            const paymentUTXO = findExactValueUTXO(cardinalUTXOs, info.price);
-            buyReqFullInfos[i].paymentUTXO = paymentUTXO;
+            const { utxo } = findExactValueUTXO(cardinalUTXOs, info.price);
+            buyReqFullInfos[i].paymentUTXO = utxo;
         }
         catch (e) {
             needPaymentUTXOs.push({ buyInfoIndex: i, amount: info.price });
         }
     }
+    console.log("buyReqFullInfos: ", buyReqFullInfos);
     // create split tx to create enough payment uxtos (if needed)
     if (needPaymentUTXOs.length > 0 || needCreateDummyUTXO) {
         const paymentInfos = [];
@@ -4259,7 +4260,11 @@ const reqListForSaleInscription = async (params) => {
         creatorAddress: creatorAddress,
         feePayToCreator: feePayToCreator,
     });
-    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
+    const inscriptionUTXOs = [inscriptionUTXO];
+    if (dummyUTXORes !== null) {
+        inscriptionUTXOs.push(dummyUTXORes);
+    }
+    return { base64Psbt, selectedUTXOs: inscriptionUTXOs, splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
 };
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
@@ -4370,7 +4375,7 @@ const reqBuyMultiInscriptions = (params) => {
             paymentUTXO: null,
         });
     }
-    const newUTXOs = utxos;
+    const newUTXOs = [...utxos];
     // need to split UTXOs correspond to list of prices to payment
     // and only one dummy UTXO for multiple inscriptions
     const { buyReqFullInfos: buyReqFullInfosRes, dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO, splitTxHex } = prepareUTXOsToBuyMultiInscriptions({ privateKey: buyerPrivateKey, address: buyerAddress, utxos, inscriptions, feeRatePerByte, buyReqFullInfos });
