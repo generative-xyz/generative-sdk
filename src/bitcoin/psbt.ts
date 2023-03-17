@@ -2,7 +2,7 @@ import {
     Psbt,
     Transaction
 } from "bitcoinjs-lib";
-import { ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
+import { BuyReqFullInfo, BuyReqInfo, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
 import { network, DummyUTXOValue, MinSats, OutputSize, BNZero } from "./constants";
 import {
     toXOnly,
@@ -11,8 +11,8 @@ import {
     fromSat,
 } from "./utils";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
-import { selectInscriptionUTXO, selectUTXOsToCreateBuyTx } from "./selectcoin";
-import { createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO } from "./tx";
+import { selectCardinalUTXOs, selectInscriptionUTXO, selectUTXOsToCreateBuyTx } from "./selectcoin";
+import { createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO, prepareUTXOsToBuyMultiInscriptions } from "./tx";
 import SDKError, { ERROR_CODE } from "../constants/error";
 import BigNumber from "bignumber.js";
 
@@ -83,18 +83,19 @@ const createPSBTToSell = (
     }
 
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner, [Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY]);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        psbt.signInput(i, tweakedSigner, [Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY]);
         let isValid = true;
         try {
-            isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
+            isValid = psbt.validateSignaturesOfInput(i, verifySchnorr, tweakedSigner.publicKey);
         } catch (e) {
             isValid = false;
         }
         if (!isValid) {
             throw new SDKError(ERROR_CODE.INVALID_SIG);
         }
-    });
+    }
+
     psbt.finalizeAllInputs();
 
     return psbt.toBase64();
@@ -224,31 +225,214 @@ const createPSBTToBuy = (
     }
 
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        if (index === 0 || index > sellerSignedPsbt.txInputs.length) {
-            psbt.signInput(index, tweakedSigner);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (i === 0 || i > sellerSignedPsbt.txInputs.length) {
+            psbt.signInput(i, tweakedSigner);
         }
-    });
+    }
 
-    psbt.txInputs.forEach((utxo, index) => {
-        if (index === 0 || index > sellerSignedPsbt.txInputs.length) {
-            psbt.finalizeInput(index);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (i === 0 || i > sellerSignedPsbt.txInputs.length) {
+            psbt.finalizeInput(i);
             try {
-                const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
+                const isValid = psbt.validateSignaturesOfInput(i, verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    console.log("Tx signature is invalid " + index);
+                    console.log("Tx signature is invalid " + i);
                 }
             } catch (e) {
-                console.log("Tx signature is invalid " + index);
+                console.log("Tx signature is invalid " + i);
             }
         }
-    });
+    }
 
     // get tx hex
     const tx = psbt.extractTransaction();
     console.log("Transaction : ", tx);
     const txHex = tx.toHex();
     return { txID: tx.getId(), txHex, fee, selectedUTXOs: [...paymentUtxos, dummyUtxo], changeAmount: changeValue, tx };
+};
+
+/**
+* createPSBTToBuy creates the partially signed bitcoin transaction to buy the inscription. 
+* NOTE: Currently, the function only supports sending from Taproot address. 
+* @param sellerSignedPsbt PSBT from seller
+* @param buyerPrivateKey buffer private key of the buyer
+* @param buyerAddress payment address of the buy to receive inscription
+* @param valueInscription value in inscription
+* @param price price of the inscription that the seller wants to sell (in satoshi)
+* @param paymentUtxos cardinal input coins to payment
+* @param dummyUtxo cardinal dummy input coin
+* @returns the encoded base64 partially signed transaction
+*/
+const createPSBTToBuyMultiInscriptions = (
+    {
+        buyReqFullInfos,
+        buyerPrivateKey,
+        feeUTXOs,
+        fee,
+        dummyUTXO,
+        feeRatePerByte,
+
+    }: {
+        buyReqFullInfos: BuyReqFullInfo[],
+        buyerPrivateKey: Buffer,
+        feeUTXOs: UTXO[],
+        fee: BigNumber,
+        dummyUTXO: UTXO,
+        feeRatePerByte: number,
+    }
+): ICreateTxResp => {
+
+    // validation
+    if (buyReqFullInfos.length === 0) {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "buyReqFullInfos is empty");
+    }
+
+    const psbt = new Psbt({ network });
+    const indexInputNeedToSign: number[] = [];
+    const selectedUTXOs: UTXO[] = [];
+
+    const { keyPair, tweakedSigner, p2pktr, senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
+
+    // Add dummy utxo to the first input coin
+    psbt.addInput({
+        hash: dummyUTXO.tx_hash,
+        index: dummyUTXO.tx_output_n,
+        witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output as Buffer },
+        tapInternalKey: toXOnly(keyPair.publicKey),
+    });
+    indexInputNeedToSign.push(0);
+    selectedUTXOs.push(dummyUTXO);
+
+    // Add the first inscription output
+    // the frist output coin has value equal to the sum of dummy value and value inscription
+    // this makes sure the first output coin is inscription outcoin 
+    const theFirstBuyReq = buyReqFullInfos[0];
+    psbt.addOutput({
+        address: theFirstBuyReq.receiverInscriptionAddress,
+        value: dummyUTXO.value.plus(theFirstBuyReq.valueInscription).toNumber(),
+    });
+
+    for (let i = 0; i < buyReqFullInfos.length; i++) {
+        const info = buyReqFullInfos[i];
+        const sellerSignedPsbt = info.sellerSignedPsbt;
+        const paymentUTXO = info.paymentUTXO;
+        if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
+            throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Length of inputs and outputs in seller psbt must not be different.");
+        }
+
+        for (let i = 0; i < sellerSignedPsbt.txInputs.length; i++) {
+            // Add seller signed input
+            psbt.addInput({
+                ...sellerSignedPsbt.txInputs[i],
+                ...sellerSignedPsbt.data.inputs[i]
+            });
+            // Add seller output
+            psbt.addOutput({
+                ...sellerSignedPsbt.txOutputs[i],
+            });
+        }
+
+        // add payment utxo input
+        psbt.addInput({
+            hash: paymentUTXO.tx_hash,
+            index: paymentUTXO.tx_output_n,
+            witnessUtxo: { value: paymentUTXO.value.toNumber(), script: p2pktr.output as Buffer },
+            tapInternalKey: toXOnly(keyPair.publicKey),
+        });
+        indexInputNeedToSign.push(psbt.txInputs.length - 1);
+        selectedUTXOs.push(paymentUTXO);
+
+        // add receiver next inscription output
+        if (i < buyReqFullInfos.length - 1) {
+            const theNextBuyReq = buyReqFullInfos[i + 1];
+            psbt.addOutput({
+                address: theNextBuyReq.receiverInscriptionAddress,
+                value: theNextBuyReq.valueInscription.toNumber(),
+            });
+        }
+    }
+
+    // add utxo for pay fee
+    let totalAmountFeeUTXOs = BNZero;
+    for (const utxo of feeUTXOs) {
+        psbt.addInput({
+            hash: utxo.tx_hash,
+            index: utxo.tx_output_n,
+            witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output as Buffer },
+            tapInternalKey: toXOnly(keyPair.publicKey),
+        });
+        indexInputNeedToSign.push(psbt.txInputs.length - 1);
+        totalAmountFeeUTXOs = totalAmountFeeUTXOs.plus(utxo.value);
+    }
+    selectedUTXOs.push(...feeUTXOs);
+
+    // let fee = new BigNumber(estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate));
+
+    if (fee.gt(totalAmountFeeUTXOs)) {
+        fee = totalAmountFeeUTXOs;   // maximum fee can paid
+    }
+    let changeValue = totalAmountFeeUTXOs.minus(fee);
+
+    if (changeValue.gte(DummyUTXOValue)) {
+        // Create a new dummy utxo output for the next purchase
+        psbt.addOutput({
+            address: buyerAddress,
+            value: DummyUTXOValue,
+        });
+        changeValue = changeValue.minus(DummyUTXOValue);
+
+        const extraFee = new BigNumber(OutputSize * feeRatePerByte);
+        if (changeValue.gte(extraFee)) {
+            changeValue = changeValue.minus(extraFee);
+            fee = fee.plus(extraFee);
+        }
+    }
+
+    if (changeValue.lt(BNZero)) {
+        throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
+    }
+
+    // Change utxo
+    if (changeValue.gt(BNZero)) {
+        if (changeValue.gte(MinSats)) {
+            psbt.addOutput({
+                address: buyerAddress,
+                value: changeValue.toNumber(),
+            });
+        } else {
+            fee = fee.plus(changeValue);
+        }
+    }
+
+    console.log("indexInputNeedToSign: ", indexInputNeedToSign);
+
+    // sign tx
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (indexInputNeedToSign.findIndex(value => value === i) !== -1) {
+            psbt.signInput(i, tweakedSigner);
+        }
+    }
+
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (indexInputNeedToSign.findIndex(value => value === i) !== -1) {
+            psbt.finalizeInput(i);
+            try {
+                const isValid = psbt.validateSignaturesOfInput(i, verifySchnorr, tweakedSigner.publicKey);
+                if (!isValid) {
+                    console.log("Tx signature is invalid " + i);
+                }
+            } catch (e) {
+                console.log("Tx signature is invalid " + i);
+            }
+        }
+    }
+
+    // get tx hex
+    const tx = psbt.extractTransaction();
+    console.log("Transaction : ", tx);
+    const txHex = tx.toHex();
+    return { txID: tx.getId(), txHex, fee, selectedUTXOs, changeAmount: changeValue, tx, };
 };
 
 /**
@@ -378,7 +562,12 @@ const reqListForSaleInscription = async (
         feePayToCreator: feePayToCreator,
     });
 
-    return { base64Psbt, selectedUTXOs: [inscriptionUTXO], splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
+    const inscriptionUTXOs = [inscriptionUTXO];
+    if (dummyUTXORes !== null) {
+        inscriptionUTXOs.push(dummyUTXORes);
+    }
+
+    return { base64Psbt, selectedUTXOs: inscriptionUTXOs, splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
 };
 
 /**
@@ -438,10 +627,10 @@ const reqBuyInscription = async (
 
     // remove selected utxo or dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT 
     if (selectedUTXOs.length > 0) {
-        selectedUTXOs.forEach((selectedUtxo) => {
+        for (const selectedUtxo of selectedUTXOs) {
             const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
             newUTXOs.splice(index, 1);
-        });
+        }
     } else {
         const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === dummyUTXO.tx_hash && utxo.tx_output_n === dummyUTXO.tx_output_n);
         newUTXOs.splice(index, 1);
@@ -482,9 +671,140 @@ const reqBuyInscription = async (
     };
 };
 
+
+/**
+* reqBuyInscription creates the PSBT of the seller to list for sale inscription. 
+* NOTE: Currently, the function only supports sending from Taproot address. 
+* @param sellerSignedPsbtB64 buffer private key of the buyer
+* @param buyerPrivateKey buffer private key of the buyer
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
+* @returns the base64 encode Psbt
+*/
+const reqBuyMultiInscriptions = (
+    params: {
+        buyReqInfos: BuyReqInfo[],
+        buyerPrivateKey: Buffer,
+        utxos: UTXO[],
+        inscriptions: { [key: string]: Inscription[] },
+        feeRatePerByte: number,
+    }
+): ICreateTxBuyResp => {
+    const {
+        buyReqInfos,
+        buyerPrivateKey,
+        utxos,
+        inscriptions,
+        feeRatePerByte
+    } = params;
+
+    // 
+    const { senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
+
+    // decode list of seller's signed PSBT
+    let buyReqFullInfos: BuyReqFullInfo[] = [];
+
+    for (let i = 0; i < buyReqInfos.length; i++) {
+        const sellerSignedPsbtB64 = buyReqInfos[i].sellerSignedPsbtB64;
+        const sellerSignedPsbt = Psbt.fromBase64(sellerSignedPsbtB64, { network });
+        const sellerInputs = sellerSignedPsbt.data.inputs;
+        if (sellerInputs.length === 0) {
+            throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
+        }
+        const valueInscription = sellerInputs[0].witnessUtxo?.value;
+        if (valueInscription === undefined || valueInscription === 0) {
+            throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid value inscription in seller's PSBT.");
+        }
+
+        buyReqFullInfos.push({
+            ...buyReqInfos[i],
+            sellerSignedPsbt,
+            valueInscription: new BigNumber(valueInscription),
+            paymentUTXO: null,
+        });
+    }
+
+    const newUTXOs = [...utxos];
+
+    // need to split UTXOs correspond to list of prices to payment
+    // and only one dummy UTXO for multiple inscriptions
+    const { buyReqFullInfos: buyReqFullInfosRes, dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee: feeSplitUTXO, splitTxHex } = prepareUTXOsToBuyMultiInscriptions(
+        { privateKey: buyerPrivateKey, address: buyerAddress, utxos, inscriptions, feeRatePerByte, buyReqFullInfos });
+
+    buyReqFullInfos = buyReqFullInfosRes;
+
+    console.log("buyReqFullInfos: ", buyReqFullInfos);
+    console.log("buyReqInfos: ", buyReqInfos);
+
+    console.log("buy dummyUTXO: ", dummyUTXO);
+    console.log("buy splitTxID: ", splitTxID);
+    console.log("buy selectedUTXOs for split: ", selectedUTXOs);
+    console.log("buy newUTXO: ", newUTXO);
+
+
+    // remove selected utxo, payment utxo, dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT
+    const tmpSelectedUTXOs = [...selectedUTXOs];
+    for (const info of buyReqFullInfos) {
+        tmpSelectedUTXOs.push(info.paymentUTXO);
+    }
+    tmpSelectedUTXOs.push(dummyUTXO);
+    for (const selectedUtxo of tmpSelectedUTXOs) {
+        const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
+        if (index !== -1) {
+            newUTXOs.splice(index, 1);
+        }
+    }
+
+    if (newUTXO !== undefined && newUTXO !== null) {
+        newUTXOs.push(newUTXO);
+    }
+
+    console.log("buy newUTXOs: ", newUTXOs);
+
+    // estimate fee
+
+    let numIns = 2 + buyReqFullInfos.length; // one for dummy utxo, one for network fee
+    let numOuts = 2 + buyReqFullInfos.length; // one for new dummy utxo, one for change value
+    for (const info of buyReqFullInfos) {
+        numIns += info.sellerSignedPsbt.txInputs.length;
+        numOuts += info.sellerSignedPsbt.txOutputs.length;
+    }
+
+    let fee = new BigNumber(estimateTxFee(numIns, numOuts, feeRatePerByte));
+    // select cardinal UTXOs to pay fee
+    console.log("BUY Fee estimate: ", fee.toNumber());
+    const { selectedUTXOs: feeSelectedUTXOs, totalInputAmount } = selectCardinalUTXOs(newUTXOs, {}, fee);
+
+    // create PBTS from the seller's one
+    const res = createPSBTToBuyMultiInscriptions({
+        buyReqFullInfos,
+        buyerPrivateKey: buyerPrivateKey,
+        feeUTXOs: feeSelectedUTXOs,
+        fee,
+        dummyUTXO,
+        feeRatePerByte,
+    });
+    fee = res.fee;
+
+    return {
+        tx: res.tx,
+        txID: res?.txID,
+        txHex: res?.txHex,
+        fee: res?.fee.plus(feeSplitUTXO),
+        selectedUTXOs: res.selectedUTXOs,
+        splitTxID,
+        splitUTXOs: [...selectedUTXOs],
+        splitTxRaw: splitTxHex,
+    };
+};
+
 export {
     createPSBTToSell,
     createPSBTToBuy,
     reqListForSaleInscription,
     reqBuyInscription,
+    reqBuyMultiInscriptions,
 };

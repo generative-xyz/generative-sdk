@@ -1,4 +1,4 @@
-import { ICreateTxResp, Inscription, UTXO, ICreateTxSplitInscriptionResp } from "./types";
+import { ICreateTxResp, Inscription, UTXO, ICreateTxSplitInscriptionResp, PaymentInfo, BuyReqFullInfo } from "./types";
 import { selectUTXOs } from "./selectcoin";
 import BigNumber from "bignumber.js";
 /**
@@ -19,6 +19,30 @@ import BigNumber from "bignumber.js";
 declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }, sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: BigNumber, feeRatePerByte: number, isUseInscriptionPayFeeParam?: boolean) => ICreateTxResp;
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }: {
+    senderPrivateKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    paymentInfos: PaymentInfo[];
+    feeRatePerByte: number;
+}) => ICreateTxResp;
 /**
 * createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -66,5 +90,23 @@ declare const createDummyUTXOFromCardinal: (senderPrivateKey: Buffer, utxos: UTX
     fee: BigNumber;
     txHex: string;
 }>;
+declare const prepareUTXOsToBuyMultiInscriptions: ({ privateKey, address, utxos, inscriptions, feeRatePerByte, buyReqFullInfos, }: {
+    privateKey: Buffer;
+    address: string;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+    buyReqFullInfos: BuyReqFullInfo[];
+}) => {
+    buyReqFullInfos: BuyReqFullInfo[];
+    dummyUTXO: any;
+    splitTxID: string;
+    selectedUTXOs: UTXO[];
+    newUTXO: any;
+    fee: BigNumber;
+    splitTxHex: string;
+};
 declare const broadcastTx: (txHex: string) => Promise<string>;
-export { selectUTXOs, createTx, broadcastTx, createTxWithSpecificUTXOs, createTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, };
+export { selectUTXOs, createTx, broadcastTx, createTxWithSpecificUTXOs, createTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createTxSendBTC, prepareUTXOsToBuyMultiInscriptions, };

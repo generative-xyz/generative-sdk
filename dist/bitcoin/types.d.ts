@@ -1,4 +1,4 @@
-import { Transaction } from "bitcoinjs-lib";
+import { Transaction, Psbt } from "bitcoinjs-lib";
 import BigNumber from "bignumber.js";
 interface UTXO {
     tx_hash: string;
@@ -41,4 +41,18 @@ interface ICreateTxSplitInscriptionResp {
     selectedUTXOs: UTXO[];
     newValueInscription: BigNumber;
 }
-export { UTXO, Inscription, ICreateTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, };
+interface BuyReqInfo {
+    sellerSignedPsbtB64: string;
+    receiverInscriptionAddress: string;
+    price: BigNumber;
+}
+interface BuyReqFullInfo extends BuyReqInfo {
+    sellerSignedPsbt: Psbt;
+    valueInscription: BigNumber;
+    paymentUTXO: any;
+}
+interface PaymentInfo {
+    address: string;
+    amount: BigNumber;
+}
+export { UTXO, Inscription, ICreateTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, BuyReqInfo, PaymentInfo, BuyReqFullInfo, };
