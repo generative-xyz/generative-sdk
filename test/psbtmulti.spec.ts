@@ -170,12 +170,11 @@ describe("Buy multi inscriptions in one PSBT", () => {
         const sellInscriptionIDs: string[] = [
             "b4e20295fa3c738490cf1d8a542a9a1354affa649f601866b12c092a956de1c3i0",
             "8f93fc0dbe146b84bc2c5275ffb803aedb8cc60c641c794fba06cd125676c47ei0",
-
         ];
         const amountPayToSeller: BigNumber[] = [new BigNumber(1100), new BigNumber(1200)];
         const feePayToCreator: BigNumber[] = [new BigNumber(0), new BigNumber(1001)];
 
-        const creatorAddress = "bc1prvw0jnlq7zhvy3jxuley9qjxm8kpz2wgwrd2e7nce455am6glpxqavdcc9";
+        const creatorAddress = buyerAddress;
 
         const buyReqInfos: BuyReqInfo[] = [];
         const receiverAddresses = [
@@ -183,30 +182,31 @@ describe("Buy multi inscriptions in one PSBT", () => {
             buyerAddress,
         ];
 
-        await sellInscriptionIDs.forEach(async (inscriptionID, index) => {
+
+        for (let i = 0; i < sellInscriptionIDs.length; i++) {
+            const inscriptionID = sellInscriptionIDs[i];
+            console.log("feePayToCreator ", i, feePayToCreator[i]);
             const { base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs } = await reqListForSaleInscription({
                 sellerPrivateKey: sellerPrivateKey,
                 utxos: sellerUTXOs,
                 inscriptions: sellerInsciptions,
                 sellInscriptionID: inscriptionID,
                 receiverBTCAddress: sellerAddress,
-                amountPayToSeller: amountPayToSeller[index],
-                feePayToCreator: feePayToCreator[index],
+                amountPayToSeller: amountPayToSeller[i],
+                feePayToCreator: feePayToCreator[i],
                 creatorAddress,
                 feeRatePerByte: 4,
             });
-
-
 
             console.log("SELL: base64Psbt, selectedUTXOs: selectedUTXOsSeller, splitTxID, splitUTXOs : ", base64Psbt, selectedUTXOsSeller, splitTxID, splitUTXOs);
 
             console.log("Add buyReqInfos: ", buyReqInfos);
             buyReqInfos.push({
                 sellerSignedPsbtB64: base64Psbt,
-                price: amountPayToSeller[index].plus(feePayToCreator[index]),
-                receiverInscriptionAddress: receiverAddresses[index],
+                price: amountPayToSeller[i].plus(feePayToCreator[i]),
+                receiverInscriptionAddress: receiverAddresses[i],
             });
-        });
+        }
 
         console.log("Param buyReqInfos: ", buyReqInfos);
 

@@ -111,5 +111,5 @@ declare const reqBuyMultiInscriptions: (params: {
         [key: string]: Inscription[];
     };
     feeRatePerByte: number;
-}) => Promise<ICreateTxBuyResp>;
+}) => ICreateTxBuyResp;
 export { createPSBTToSell, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, reqBuyMultiInscriptions, };

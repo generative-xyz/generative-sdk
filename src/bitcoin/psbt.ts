@@ -280,7 +280,6 @@ const createPSBTToBuyMultiInscriptions = (
         dummyUTXO: UTXO,
         feeRatePerByte: number,
     }
-
 ): ICreateTxResp => {
 
     // validation
@@ -313,7 +312,8 @@ const createPSBTToBuyMultiInscriptions = (
         value: dummyUTXO.value.plus(theFirstBuyReq.valueInscription).toNumber(),
     });
 
-    buyReqFullInfos.forEach((info, index) => {
+    for (let i = 0; i < buyReqFullInfos.length; i++) {
+        const info = buyReqFullInfos[i];
         const sellerSignedPsbt = info.sellerSignedPsbt;
         const paymentUTXO = info.paymentUTXO;
         if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
@@ -343,18 +343,18 @@ const createPSBTToBuyMultiInscriptions = (
         selectedUTXOs.push(paymentUTXO);
 
         // add receiver next inscription output
-        if (index < buyReqFullInfos.length - 1) {
-            const theNextBuyReq = buyReqFullInfos[index + 1];
+        if (i < buyReqFullInfos.length - 1) {
+            const theNextBuyReq = buyReqFullInfos[i + 1];
             psbt.addOutput({
                 address: theNextBuyReq.receiverInscriptionAddress,
                 value: theNextBuyReq.valueInscription.toNumber(),
             });
         }
-    });
+    }
 
     // add utxo for pay fee
     let totalAmountFeeUTXOs = BNZero;
-    feeUTXOs.forEach(utxo => {
+    for (const utxo of feeUTXOs) {
         psbt.addInput({
             hash: utxo.tx_hash,
             index: utxo.tx_output_n,
@@ -363,7 +363,7 @@ const createPSBTToBuyMultiInscriptions = (
         });
         indexInputNeedToSign.push(psbt.txInputs.length - 1);
         totalAmountFeeUTXOs = totalAmountFeeUTXOs.plus(utxo.value);
-    });
+    }
     selectedUTXOs.push(...feeUTXOs);
 
     // let fee = new BigNumber(estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate));
@@ -408,13 +408,13 @@ const createPSBTToBuyMultiInscriptions = (
 
     // sign tx
     psbt.txInputs.forEach((utxo, index) => {
-        if (indexInputNeedToSign.findIndex(value => value === index)) {
+        if (indexInputNeedToSign.findIndex(value => value === index) !== -1) {
             psbt.signInput(index, tweakedSigner);
         }
     });
 
     psbt.txInputs.forEach((utxo, index) => {
-        if (indexInputNeedToSign.findIndex(value => value === index)) {
+        if (indexInputNeedToSign.findIndex(value => value === index) !== -1) {
             psbt.finalizeInput(index);
             try {
                 const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
@@ -621,10 +621,10 @@ const reqBuyInscription = async (
 
     // remove selected utxo or dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT 
     if (selectedUTXOs.length > 0) {
-        selectedUTXOs.forEach((selectedUtxo) => {
+        for (const selectedUtxo of selectedUTXOs) {
             const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
             newUTXOs.splice(index, 1);
-        });
+        }
     } else {
         const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === dummyUTXO.tx_hash && utxo.tx_output_n === dummyUTXO.tx_output_n);
         newUTXOs.splice(index, 1);
@@ -678,7 +678,7 @@ const reqBuyInscription = async (
 * @param price  = amount pay to seller + fee pay to creator
 * @returns the base64 encode Psbt
 */
-const reqBuyMultiInscriptions = async (
+const reqBuyMultiInscriptions = (
     params: {
         buyReqInfos: BuyReqInfo[],
         buyerPrivateKey: Buffer,
@@ -686,7 +686,7 @@ const reqBuyMultiInscriptions = async (
         inscriptions: { [key: string]: Inscription[] },
         feeRatePerByte: number,
     }
-): Promise<ICreateTxBuyResp> => {
+): ICreateTxBuyResp => {
     const {
         buyReqInfos,
         buyerPrivateKey,
@@ -741,17 +741,16 @@ const reqBuyMultiInscriptions = async (
 
     // remove selected utxo, payment utxo, dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT
     const tmpSelectedUTXOs = selectedUTXOs;
-    buyReqFullInfos.forEach((info) => {
+    for (const info of buyReqFullInfos) {
         tmpSelectedUTXOs.push(info.paymentUTXO);
-    });
+    }
     tmpSelectedUTXOs.push(dummyUTXO);
-
-    tmpSelectedUTXOs.forEach((selectedUtxo) => {
+    for (const selectedUtxo of tmpSelectedUTXOs) {
         const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
         if (index !== -1) {
             newUTXOs.splice(index, 1);
         }
-    });
+    }
 
     if (newUTXO !== undefined && newUTXO !== null) {
         newUTXOs.push(newUTXO);
@@ -763,10 +762,11 @@ const reqBuyMultiInscriptions = async (
 
     let numIns = 2 + buyReqFullInfos.length; // one for dummy utxo, one for network fee
     let numOuts = 2 + buyReqFullInfos.length; // one for new dummy utxo, one for change value
-    await buyReqFullInfos.forEach(info => {
+    for (const info of buyReqFullInfos) {
         numIns += info.sellerSignedPsbt.txInputs.length;
         numOuts += info.sellerSignedPsbt.txOutputs.length;
-    });
+    }
+
     let fee = new BigNumber(estimateTxFee(numIns, numOuts, feeRatePerByte));
     // select cardinal UTXOs to pay fee
     const { selectedUTXOs: feeSelectedUTXOs, totalInputAmount } = selectCardinalUTXOs(newUTXOs, {}, fee);
