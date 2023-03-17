@@ -84,14 +84,14 @@ declare const selectTheSmallestUTXO: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }) => UTXO;
 /**
-* filterCardinalUTXOs filter cardinal utxos and inscription utxos.
+* filterAndSortCardinalUTXOs filter cardinal utxos and inscription utxos.
 * @param utxos list of utxos (include non-inscription and inscription utxos)
 * @param inscriptions list of inscription infos of the sender
-* @returns the list of cardinal UTXOs
+* @returns the list of cardinal UTXOs which is sorted descending by value
 * @returns the list of inscription UTXOs
 * @returns total amount of cardinal UTXOs
 */
-declare const filterCardinalUTXOs: (utxos: UTXO[], inscriptions: {
+declare const filterAndSortCardinalUTXOs: (utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }) => {
     cardinalUTXOs: UTXO[];
@@ -107,4 +107,4 @@ declare const filterCardinalUTXOs: (utxos: UTXO[], inscriptions: {
 declare const findExactValueUTXO: (cardinalUTXOs: UTXO[], value: BigNumber) => {
     utxo: UTXO;
 };
-export { selectUTXOs, selectInscriptionUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, selectUTXOsToCreateBuyTx, findExactValueUTXO, filterCardinalUTXOs, };
+export { selectUTXOs, selectInscriptionUTXO, selectCardinalUTXOs, selectTheSmallestUTXO, selectUTXOsToCreateBuyTx, findExactValueUTXO, filterAndSortCardinalUTXOs, };

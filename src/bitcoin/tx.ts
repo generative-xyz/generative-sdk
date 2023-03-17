@@ -14,7 +14,7 @@ import {
     generateTaprootKeyPair,
     fromSat
 } from "./utils";
-import { filterCardinalUTXOs, findExactValueUTXO, selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
+import { filterAndSortCardinalUTXOs, findExactValueUTXO, selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
 import SDKError, { ERROR_CODE } from "../constants/error";
 import BigNumber from "bignumber.js";
 import { ERROR_MESSAGE } from "../constants/error";
@@ -57,14 +57,14 @@ const createTx = (
 
     const psbt = new Psbt({ network });
     // add inputs
-    selectedUTXOs.forEach((input) => {
+    for (const input of selectedUTXOs) {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey)
         });
-    });
+    }
 
     // add outputs
     if (sendInscriptionID !== "") {
@@ -95,9 +95,9 @@ const createTx = (
     }
 
     // sign tx
-    selectedUTXOs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
 
     // get tx hex
@@ -139,12 +139,13 @@ const createTxSendBTC = (
 ): ICreateTxResp => {
     // validation
     let totalPaymentAmount = BNZero;
-    paymentInfos.forEach(info => {
+
+    for (const info of paymentInfos) {
         if (info.amount.gt(BNZero) && info.amount.lt(MinSats)) {
             throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
         }
         totalPaymentAmount = totalPaymentAmount.plus(info.amount);
-    });
+    }
 
     // select UTXOs
     const { selectedUTXOs, changeAmount, fee } = selectUTXOs(utxos, inscriptions, "", totalPaymentAmount, feeRatePerByte, false);
@@ -155,22 +156,25 @@ const createTxSendBTC = (
 
     const psbt = new Psbt({ network });
     // add inputs
-    selectedUTXOs.forEach((input) => {
+
+    for (const input of selectedUTXOs) {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey)
         });
-    });
+    }
+
 
     // add outputs send BTC
-    paymentInfos.forEach((info) => {
+
+    for (const info of paymentInfos) {
         psbt.addOutput({
             address: info.address,
             value: info.amount.toNumber(),
         });
-    });
+    }
 
     // add change output
     if (changeAmount.gt(BNZero)) {
@@ -185,9 +189,10 @@ const createTxSendBTC = (
     }
 
     // sign tx
-    selectedUTXOs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
+
     psbt.finalizeAllInputs();
 
     // get tx hex
@@ -244,14 +249,15 @@ const createTxWithSpecificUTXOs = (
 
     const psbt = new Psbt({ network });
     // add inputs
-    selectedUTXOs.forEach((input) => {
+
+    for (const input of selectedUTXOs) {
         psbt.addInput({
             hash: input.tx_hash,
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keypair.publicKey)
         });
-    });
+    }
 
     // add outputs
     if (sendInscriptionID !== "") {
@@ -278,9 +284,9 @@ const createTxWithSpecificUTXOs = (
     }
 
     // sign tx
-    selectedUTXOs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < selectedUTXOs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
 
     // get tx hex
@@ -355,9 +361,9 @@ const createTxSplitFundFromOrdinalUTXO = (
     });
 
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner);
-    });
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        psbt.signInput(i, tweakedSigner);
+    }
     psbt.finalizeAllInputs();
 
     // get tx hex
@@ -439,7 +445,7 @@ const prepareUTXOsToBuyMultiInscriptions = ({
     let fee = BNZero;
 
     // filter to get cardinal utxos
-    const { cardinalUTXOs, totalCardinalAmount } = filterCardinalUTXOs(utxos, inscriptions);
+    const { cardinalUTXOs, totalCardinalAmount } = filterAndSortCardinalUTXOs(utxos, inscriptions);
 
     // select dummy utxo
     let needCreateDummyUTXO = false;

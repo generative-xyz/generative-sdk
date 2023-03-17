@@ -83,18 +83,19 @@ const createPSBTToSell = (
     }
 
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        psbt.signInput(index, tweakedSigner, [Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY]);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        psbt.signInput(i, tweakedSigner, [Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY]);
         let isValid = true;
         try {
-            isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
+            isValid = psbt.validateSignaturesOfInput(i, verifySchnorr, tweakedSigner.publicKey);
         } catch (e) {
             isValid = false;
         }
         if (!isValid) {
             throw new SDKError(ERROR_CODE.INVALID_SIG);
         }
-    });
+    }
+
     psbt.finalizeAllInputs();
 
     return psbt.toBase64();
@@ -224,25 +225,25 @@ const createPSBTToBuy = (
     }
 
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        if (index === 0 || index > sellerSignedPsbt.txInputs.length) {
-            psbt.signInput(index, tweakedSigner);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (i === 0 || i > sellerSignedPsbt.txInputs.length) {
+            psbt.signInput(i, tweakedSigner);
         }
-    });
+    }
 
-    psbt.txInputs.forEach((utxo, index) => {
-        if (index === 0 || index > sellerSignedPsbt.txInputs.length) {
-            psbt.finalizeInput(index);
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (i === 0 || i > sellerSignedPsbt.txInputs.length) {
+            psbt.finalizeInput(i);
             try {
-                const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
+                const isValid = psbt.validateSignaturesOfInput(i, verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    console.log("Tx signature is invalid " + index);
+                    console.log("Tx signature is invalid " + i);
                 }
             } catch (e) {
-                console.log("Tx signature is invalid " + index);
+                console.log("Tx signature is invalid " + i);
             }
         }
-    });
+    }
 
     // get tx hex
     const tx = psbt.extractTransaction();
@@ -407,25 +408,27 @@ const createPSBTToBuyMultiInscriptions = (
     console.log("indexInputNeedToSign: ", indexInputNeedToSign);
 
     // sign tx
-    psbt.txInputs.forEach((utxo, index) => {
-        if (indexInputNeedToSign.findIndex(value => value === index) !== -1) {
-            psbt.signInput(index, tweakedSigner);
-        }
-    });
 
-    psbt.txInputs.forEach((utxo, index) => {
-        if (indexInputNeedToSign.findIndex(value => value === index) !== -1) {
-            psbt.finalizeInput(index);
+
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (indexInputNeedToSign.findIndex(value => value === i) !== -1) {
+            psbt.signInput(i, tweakedSigner);
+        }
+    }
+
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        if (indexInputNeedToSign.findIndex(value => value === i) !== -1) {
+            psbt.finalizeInput(i);
             try {
-                const isValid = psbt.validateSignaturesOfInput(index, verifySchnorr, tweakedSigner.publicKey);
+                const isValid = psbt.validateSignaturesOfInput(i, verifySchnorr, tweakedSigner.publicKey);
                 if (!isValid) {
-                    console.log("Tx signature is invalid " + index);
+                    console.log("Tx signature is invalid " + i);
                 }
             } catch (e) {
-                console.log("Tx signature is invalid " + index);
+                console.log("Tx signature is invalid " + i);
             }
         }
-    });
+    }
 
     // get tx hex
     const tx = psbt.extractTransaction();
