@@ -63,7 +63,6 @@ const createTx = (
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
-            sequence: feeRatePerByte,
         });
     }
 
@@ -164,7 +163,6 @@ const createTxSendBTC = (
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
-            sequence: feeRatePerByte,
         });
     }
 
@@ -256,7 +254,6 @@ const createTxWithSpecificUTXOs = (
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keypair.publicKey),
-            sequence: fee.toNumber(),
         });
     }
 
@@ -346,7 +343,6 @@ const createTxSplitFundFromOrdinalUTXO = (
         index: inscriptionUTXO.tx_output_n,
         witnessUtxo: { value: inscriptionUTXO.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: toXOnly(keyPair.publicKey),
-        sequence: feeRatePerByte,
     });
 
     // add outputs
