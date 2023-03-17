@@ -1,4 +1,5 @@
 export declare const ERROR_CODE: {
+    INVALID_CODE: string;
     INVALID_PARAMS: string;
     NOT_SUPPORT_SEND: string;
     NOT_FOUND_INSCRIPTION: string;
@@ -6,6 +7,9 @@ export declare const ERROR_CODE: {
     NOT_ENOUGH_BTC_TO_PAY_FEE: string;
     ERR_BROADCAST_TX: string;
     INVALID_SIG: string;
+    INVALID_VALIDATOR_LABEL: string;
+    NOT_FOUND_UTXO: string;
+    NOT_FOUND_DUMMY_UTXO: string;
 };
 export declare const ERROR_MESSAGE: {
     [x: string]: {
