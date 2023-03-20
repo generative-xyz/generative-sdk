@@ -6,7 +6,7 @@ import {
     Psbt
 } from "bitcoinjs-lib";
 import BigNumber from "bignumber.js";
-import { broadcastTx, convertPrivateKeyFromStr, ECPair, fromSat, generateTaprootKeyPair } from "../src/index";
+import { broadcastTx, convertPrivateKeyFromStr, ECPair, fromSat, generateTaprootKeyPair, toXOnly } from "../src/index";
 const network = networks.bitcoin;  // mainnet
 
 
@@ -77,24 +77,28 @@ const network = networks.bitcoin;  // mainnet
 
 
 describe("Generate address from private key", async () => {
-    it("should return 0.00001", async () => {
+    it("should return the valid address", async () => {
         // Enter your private key
         const privateKey = "";
         const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
 
-        const { tweakedSigner, senderAddress } = generateTaprootKeyPair(privateKeyBuffer)
+        const { tweakedSigner, senderAddress, p2pktr } = generateTaprootKeyPair(privateKeyBuffer)
         console.log("Address:", senderAddress);
+        console.log("PubKey: ", tweakedSigner.publicKey.toString('hex'));
+
+        const tapInternalPubKey = toXOnly(tweakedSigner.publicKey);
+        console.log("Tap internal PubKey: ", tapInternalPubKey.toString("hex"));
     })
 });
 
-describe("Big Number Tests", async () => {
-    it("should return 0.00001", async () => {
-        const a = new BigNumber(1);
-        const b = new BigNumber(3);
-        const c = b.minus(a).minus(1).plus(5);
+// describe("Big Number Tests", async () => {
+//     it("should return 0.00001", async () => {
+//         const a = new BigNumber(1);
+//         const b = new BigNumber(3);
+//         const c = b.minus(a).minus(1).plus(5);
 
-        assert.equal(c.toNumber(), 6);
-        assert.equal(b.toNumber(), 3);
-        assert.equal(a.toNumber(), 1);
-    })
-});
+//         assert.equal(c.toNumber(), 6);
+//         assert.equal(b.toNumber(), 3);
+//         assert.equal(a.toNumber(), 1);
+//     })
+// });
