@@ -4404,7 +4404,7 @@ const reqBuyMultiInscriptions = (params) => {
     console.log("buy newUTXOs: ", newUTXOs);
     // estimate fee
     let numIns = 2 + buyReqFullInfos.length; // one for dummy utxo, one for network fee
-    let numOuts = 2 + buyReqFullInfos.length; // one for new dummy utxo, one for change value
+    let numOuts = 1 + buyReqFullInfos.length; // one for change value
     for (const info of buyReqFullInfos) {
         numIns += info.sellerSignedPsbt.txInputs.length;
         numOuts += info.sellerSignedPsbt.txOutputs.length;
