@@ -6,6 +6,9 @@ var bitcoinjsLib = require('bitcoinjs-lib');
 var axios = require('axios');
 var ecpair = require('ecpair');
 var ecc = require('@bitcoinerlab/secp256k1');
+var ethers = require('ethers');
+var cryptoJs = require('crypto-js');
+var jsSha3 = require('js-sha3');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -3833,6 +3836,49 @@ const getBTCBalance = (params) => {
     });
     return btcBalance;
 };
+const importBTCPrivateKey = (wifPrivKey) => {
+    const privKeyBuffer = convertPrivateKeyFromStr(wifPrivKey);
+    const { senderAddress } = generateTaprootKeyPair(privKeyBuffer);
+    return {
+        privKeyBuffer: privKeyBuffer,
+        taprootAddress: senderAddress,
+    };
+};
+const getBitcoinKeySignContent = (message) => {
+    return Buffer.from(message);
+};
+/**
+* derivePasswordWallet derive the password from ONE SPECIFIC evm address.
+* This password is used to encrypt and decrypt the imported BTC wallet.
+* NOTE: The client should save the corresponding evm address to retrieve the same BTC wallet.
+* @param provider ETH provider
+* @param evmAddress evm address is chosen to create the valid signature on IMPORT_MESSAGE
+* @returns the password string
+*/
+const derivePasswordWallet = async (evmAddress, provider) => {
+    // sign message with first sign transaction
+    const IMPORT_MESSAGE = "Sign this message to import your Bitcoin wallet. This key will be used to encrypt your wallet.";
+    const toSign = "0x" + getBitcoinKeySignContent(IMPORT_MESSAGE).toString("hex");
+    const signature = await provider.send("personal_sign", [
+        toSign,
+        evmAddress.toString(),
+    ]);
+    // const signature = randomBytes(64);
+    const password = jsSha3.keccak256(ethers.utils.arrayify(signature));
+    return password;
+};
+const encryptWallet = (wallet, password) => {
+    // convert wallet to string
+    const walletStr = JSON.stringify(wallet);
+    const ciphertext = cryptoJs.AES.encrypt(walletStr, password).toString();
+    return ciphertext;
+};
+const decryptWallet = (ciphertext, password) => {
+    const plaintextBytes = cryptoJs.AES.decrypt(ciphertext, password);
+    // parse to wallet object
+    const wallet = JSON.parse(plaintextBytes.toString(cryptoJs.enc.Utf8));
+    return wallet;
+};
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
@@ -4525,6 +4571,9 @@ exports.createTx = createTx;
 exports.createTxSendBTC = createTxSendBTC;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
 exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
+exports.decryptWallet = decryptWallet;
+exports.derivePasswordWallet = derivePasswordWallet;
+exports.encryptWallet = encryptWallet;
 exports.estimateNumInOutputs = estimateNumInOutputs;
 exports.estimateNumInOutputsForBuyInscription = estimateNumInOutputsForBuyInscription;
 exports.estimateTxFee = estimateTxFee;
@@ -4534,6 +4583,7 @@ exports.fromSat = fromSat;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;
+exports.importBTCPrivateKey = importBTCPrivateKey;
 exports.network = network;
 exports.prepareUTXOsToBuyMultiInscriptions = prepareUTXOsToBuyMultiInscriptions;
 exports.reqBuyInscription = reqBuyInscription;
