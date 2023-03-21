@@ -2,10 +2,12 @@ import { BNZero } from "./constants";
 import BigNumber from "bignumber.js";
 import { Inscription, UTXO, Wallet } from "./types";
 import { ethers, utils } from "ethers";
-import { AES, enc } from "crypto-js";
-import { convertPrivateKeyFromStr, generateTaprootKeyPair } from "./utils";
-import { randomBytes } from "crypto";
+import { AES, SHA3, enc } from "crypto-js";
+import { convertPrivateKeyFromStr, generateP2PKHKeyFromRoot, generateTaprootKeyPair } from "./utils";
 import { keccak256 } from "js-sha3";
+import BIP32Factory from "bip32";
+import * as ecc from "@bitcoinerlab/secp256k1";
+const bip32 = BIP32Factory(ecc);
 
 const getBTCBalance = (
     params: {
@@ -37,13 +39,43 @@ const getBTCBalance = (
     return btcBalance;
 };
 
-const importBTCPrivateKey = (wifPrivKey: string): { privKeyBuffer: Buffer, taprootAddress: string } => {
+const importBTCPrivateKey = (
+    wifPrivKey: string
+): {
+    taprootPrivKeyBuffer: Buffer, taprootAddress: string,
+} => {
     const privKeyBuffer = convertPrivateKeyFromStr(wifPrivKey);
     const { senderAddress } = generateTaprootKeyPair(privKeyBuffer);
 
     return {
-        privKeyBuffer: privKeyBuffer,
+        taprootPrivKeyBuffer: privKeyBuffer,
         taprootAddress: senderAddress,
+    };
+};
+
+const deriveSegwitWallet = (privKeyTaproot: Buffer): { segwitPrivKeyBuffer: Buffer, segwitAddress: string } => {
+    const seedSegwit = ethers.utils.arrayify(
+        ethers.utils.keccak256(ethers.utils.arrayify(privKeyTaproot))
+    );
+    const root = bip32.fromSeed(Buffer.from(seedSegwit));
+
+    const { privateKey: segwitPrivKey, address: segwitAddress } = generateP2PKHKeyFromRoot(root);
+
+    return {
+        segwitPrivKeyBuffer: segwitPrivKey,
+        segwitAddress: segwitAddress,
+    };
+};
+
+const deriveETHWallet = (privKeyTaproot: Buffer): { ethPrivKey: string, ethAddress: string } => {
+    const seed = ethers.utils.arrayify(
+        ethers.utils.keccak256(ethers.utils.arrayify(privKeyTaproot))
+    );
+    const ethWallet = new ethers.Wallet(seed);
+
+    return {
+        ethPrivKey: ethWallet.privateKey,
+        ethAddress: ethWallet.address,
     };
 };
 
@@ -99,4 +131,6 @@ export {
     derivePasswordWallet,
     encryptWallet,
     decryptWallet,
+    deriveSegwitWallet,
+    deriveETHWallet,
 };

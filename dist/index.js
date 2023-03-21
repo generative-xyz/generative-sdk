@@ -9,6 +9,7 @@ var ecc = require('@bitcoinerlab/secp256k1');
 var ethers = require('ethers');
 var cryptoJs = require('crypto-js');
 var jsSha3 = require('js-sha3');
+var BIP32Factory = require('bip32');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -32,6 +33,7 @@ function _interopNamespace(e) {
 
 var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
 var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
+var BIP32Factory__default = /*#__PURE__*/_interopDefaultLegacy(BIP32Factory);
 
 /*
  *      bignumber.js v9.1.1
@@ -3043,6 +3045,26 @@ const generateTaprootKeyPair = (privateKey) => {
     }
     return { keyPair, senderAddress, tweakedSigner, p2pktr };
 };
+const generateP2PKHKeyPair = (privateKey) => {
+    // init key pair from senderPrivateKey
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    // Generate an address from the tweaked public key
+    const p2pkh = bitcoinjsLib.payments.p2pkh({
+        pubkey: keyPair.publicKey,
+        network
+    });
+    const address = p2pkh.address ? p2pkh.address : "";
+    if (address === "") {
+        throw new Error("Can not get sender address from private key");
+    }
+    return { keyPair, address, p2pkh: p2pkh, privateKey };
+};
+const generateP2PKHKeyFromRoot = (root) => {
+    const defaultPathSegwit = "m/84'/0'/0'/0/0";
+    const childSegwit = root.derivePath(defaultPathSegwit);
+    const privateKey = childSegwit.privateKey;
+    return generateP2PKHKeyPair(privateKey);
+};
 const fromSat = (sat) => {
     return sat / 1e8;
 };
@@ -3820,6 +3842,7 @@ const broadcastTx = async (txHex) => {
     return response.data;
 };
 
+const bip32 = BIP32Factory__default["default"](ecc__namespace);
 const getBTCBalance = (params) => {
     let btcBalance = BNZero;
     const { utxos, inscriptions } = params;
@@ -3840,8 +3863,25 @@ const importBTCPrivateKey = (wifPrivKey) => {
     const privKeyBuffer = convertPrivateKeyFromStr(wifPrivKey);
     const { senderAddress } = generateTaprootKeyPair(privKeyBuffer);
     return {
-        privKeyBuffer: privKeyBuffer,
+        taprootPrivKeyBuffer: privKeyBuffer,
         taprootAddress: senderAddress,
+    };
+};
+const deriveSegwitWallet = (privKeyTaproot) => {
+    const seedSegwit = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
+    const root = bip32.fromSeed(Buffer.from(seedSegwit));
+    const { privateKey: segwitPrivKey, address: segwitAddress } = generateP2PKHKeyFromRoot(root);
+    return {
+        segwitPrivKeyBuffer: segwitPrivKey,
+        segwitAddress: segwitAddress,
+    };
+};
+const deriveETHWallet = (privKeyTaproot) => {
+    const seed = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
+    const ethWallet = new ethers.ethers.Wallet(seed);
+    return {
+        ethPrivKey: ethWallet.privateKey,
+        ethAddress: ethWallet.address,
     };
 };
 const getBitcoinKeySignContent = (message) => {
@@ -4572,7 +4612,9 @@ exports.createTxSendBTC = createTxSendBTC;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
 exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
 exports.decryptWallet = decryptWallet;
+exports.deriveETHWallet = deriveETHWallet;
 exports.derivePasswordWallet = derivePasswordWallet;
+exports.deriveSegwitWallet = deriveSegwitWallet;
 exports.encryptWallet = encryptWallet;
 exports.estimateNumInOutputs = estimateNumInOutputs;
 exports.estimateNumInOutputsForBuyInscription = estimateNumInOutputsForBuyInscription;
@@ -4580,6 +4622,8 @@ exports.estimateTxFee = estimateTxFee;
 exports.filterAndSortCardinalUTXOs = filterAndSortCardinalUTXOs;
 exports.findExactValueUTXO = findExactValueUTXO;
 exports.fromSat = fromSat;
+exports.generateP2PKHKeyFromRoot = generateP2PKHKeyFromRoot;
+exports.generateP2PKHKeyPair = generateP2PKHKeyPair;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;

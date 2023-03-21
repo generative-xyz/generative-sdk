@@ -3,6 +3,7 @@ import { payments, Signer } from "bitcoinjs-lib";
 import { ECPairAPI } from "ecpair";
 import { Psbt } from "bitcoinjs-lib";
 import BigNumber from "bignumber.js";
+import { BIP32Interface } from "bip32";
 declare const ECPair: ECPairAPI;
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -56,5 +57,17 @@ declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     tweakedSigner: Signer;
     p2pktr: payments.Payment;
 };
+declare const generateP2PKHKeyPair: (privateKey: Buffer) => {
+    keyPair: import("ecpair").ECPairInterface;
+    address: string;
+    p2pkh: payments.Payment;
+    privateKey: Buffer;
+};
+declare const generateP2PKHKeyFromRoot: (root: BIP32Interface) => {
+    keyPair: import("ecpair").ECPairInterface;
+    address: string;
+    p2pkh: payments.Payment;
+    privateKey: Buffer;
+};
 declare const fromSat: (sat: number) => number;
-export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, fromSat, };
+export { convertPrivateKey, convertPrivateKeyFromStr, estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, toXOnly, tweakSigner, tapTweakHash, ECPair, generateTaprootAddress, generateTaprootKeyPair, generateP2PKHKeyPair, fromSat, generateP2PKHKeyFromRoot, };

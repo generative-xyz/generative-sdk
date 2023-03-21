@@ -8,8 +8,16 @@ declare const getBTCBalance: (params: {
     };
 }) => BigNumber;
 declare const importBTCPrivateKey: (wifPrivKey: string) => {
-    privKeyBuffer: Buffer;
+    taprootPrivKeyBuffer: Buffer;
     taprootAddress: string;
+};
+declare const deriveSegwitWallet: (privKeyTaproot: Buffer) => {
+    segwitPrivKeyBuffer: Buffer;
+    segwitAddress: string;
+};
+declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
+    ethPrivKey: string;
+    ethAddress: string;
 };
 /**
 * derivePasswordWallet derive the password from ONE SPECIFIC evm address.
@@ -22,4 +30,4 @@ declare const importBTCPrivateKey: (wifPrivKey: string) => {
 declare const derivePasswordWallet: (evmAddress: string, provider: ethers.providers.Web3Provider) => Promise<string>;
 declare const encryptWallet: (wallet: Wallet, password: string) => string;
 declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
-export { getBTCBalance, importBTCPrivateKey, derivePasswordWallet, encryptWallet, decryptWallet, };
+export { getBTCBalance, importBTCPrivateKey, derivePasswordWallet, encryptWallet, decryptWallet, deriveSegwitWallet, deriveETHWallet, };
