@@ -66,6 +66,10 @@ interface PaymentInfo {
     amount: BigNumber
 }
 
+interface Wallet {
+    privKey: string,
+}
+
 export {
     UTXO,
     Inscription,
@@ -76,4 +80,5 @@ export {
     BuyReqInfo,
     PaymentInfo,
     BuyReqFullInfo,
+    Wallet
 };
