@@ -55,4 +55,7 @@ interface PaymentInfo {
     address: string;
     amount: BigNumber;
 }
-export { UTXO, Inscription, ICreateTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, BuyReqInfo, PaymentInfo, BuyReqFullInfo, };
+interface Wallet {
+    privKey: string;
+}
+export { UTXO, Inscription, ICreateTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, BuyReqInfo, PaymentInfo, BuyReqFullInfo, Wallet };
