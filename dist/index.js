@@ -10,6 +10,7 @@ var ethers = require('ethers');
 var cryptoJs = require('crypto-js');
 var jsSha3 = require('js-sha3');
 var BIP32Factory = require('bip32');
+var Web3 = require('web3');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -34,6 +35,7 @@ function _interopNamespace(e) {
 var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
 var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
 var BIP32Factory__default = /*#__PURE__*/_interopDefaultLegacy(BIP32Factory);
+var Web3__default = /*#__PURE__*/_interopDefaultLegacy(Web3);
 
 /*
  *      bignumber.js v9.1.1
@@ -3919,6 +3921,13 @@ const decryptWallet = (ciphertext, password) => {
     const wallet = JSON.parse(plaintextBytes.toString(cryptoJs.enc.Utf8));
     return wallet;
 };
+const signByETHPrivKey = (ethPrivKey, data) => {
+    const web3 = new Web3__default["default"]();
+    const { message, signature, } = web3.eth.accounts.sign(data, ethPrivKey);
+    console.log("signByETHPrivKey message: ", message);
+    console.log("signByETHPrivKey signature: ", signature);
+    return signature;
+};
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
@@ -4627,6 +4636,7 @@ exports.generateP2PKHKeyPair = generateP2PKHKeyPair;
 exports.generateTaprootAddress = generateTaprootAddress;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;
+exports.getBitcoinKeySignContent = getBitcoinKeySignContent;
 exports.importBTCPrivateKey = importBTCPrivateKey;
 exports.network = network;
 exports.prepareUTXOsToBuyMultiInscriptions = prepareUTXOsToBuyMultiInscriptions;
@@ -4638,6 +4648,7 @@ exports.selectInscriptionUTXO = selectInscriptionUTXO;
 exports.selectTheSmallestUTXO = selectTheSmallestUTXO;
 exports.selectUTXOs = selectUTXOs;
 exports.selectUTXOsToCreateBuyTx = selectUTXOsToCreateBuyTx;
+exports.signByETHPrivKey = signByETHPrivKey;
 exports.tapTweakHash = tapTweakHash;
 exports.toXOnly = toXOnly;
 exports.tweakSigner = tweakSigner;

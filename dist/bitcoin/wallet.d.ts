@@ -19,6 +19,7 @@ declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
     ethPrivKey: string;
     ethAddress: string;
 };
+declare const getBitcoinKeySignContent: (message: string) => Buffer;
 /**
 * derivePasswordWallet derive the password from ONE SPECIFIC evm address.
 * This password is used to encrypt and decrypt the imported BTC wallet.
@@ -30,4 +31,5 @@ declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
 declare const derivePasswordWallet: (evmAddress: string, provider: ethers.providers.Web3Provider) => Promise<string>;
 declare const encryptWallet: (wallet: Wallet, password: string) => string;
 declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
-export { getBTCBalance, importBTCPrivateKey, derivePasswordWallet, encryptWallet, decryptWallet, deriveSegwitWallet, deriveETHWallet, };
+declare const signByETHPrivKey: (ethPrivKey: string, data: string) => string;
+export { getBTCBalance, importBTCPrivateKey, derivePasswordWallet, getBitcoinKeySignContent, encryptWallet, decryptWallet, deriveSegwitWallet, deriveETHWallet, signByETHPrivKey, };
