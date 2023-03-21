@@ -3,6 +3,7 @@ import { networks, Transaction, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
 import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
+import { BIP32Interface } from 'bip32';
 import { ethers } from 'ethers';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
@@ -341,6 +342,18 @@ declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     tweakedSigner: Signer;
     p2pktr: payments.Payment;
 };
+declare const generateP2PKHKeyPair: (privateKey: Buffer) => {
+    keyPair: ecpair.ECPairInterface;
+    address: string;
+    p2pkh: payments.Payment;
+    privateKey: Buffer;
+};
+declare const generateP2PKHKeyFromRoot: (root: BIP32Interface) => {
+    keyPair: ecpair.ECPairInterface;
+    address: string;
+    p2pkh: payments.Payment;
+    privateKey: Buffer;
+};
 declare const fromSat: (sat: number) => number;
 
 declare const getBTCBalance: (params: {
@@ -350,8 +363,16 @@ declare const getBTCBalance: (params: {
     };
 }) => BigNumber;
 declare const importBTCPrivateKey: (wifPrivKey: string) => {
-    privKeyBuffer: Buffer;
+    taprootPrivKeyBuffer: Buffer;
     taprootAddress: string;
+};
+declare const deriveSegwitWallet: (privKeyTaproot: Buffer) => {
+    segwitPrivKeyBuffer: Buffer;
+    segwitAddress: string;
+};
+declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
+    ethPrivKey: string;
+    ethAddress: string;
 };
 /**
 * derivePasswordWallet derive the password from ONE SPECIFIC evm address.
@@ -522,4 +543,4 @@ declare class Validator {
     privateKey(message?: string): this;
 }
 
-export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, derivePasswordWallet, encryptWallet, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, importBTCPrivateKey, network, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyMultiInscriptions, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, tapTweakHash, toXOnly, tweakSigner };
+export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateP2PKHKeyFromRoot, generateP2PKHKeyPair, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, importBTCPrivateKey, network, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyMultiInscriptions, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, tapTweakHash, toXOnly, tweakSigner };

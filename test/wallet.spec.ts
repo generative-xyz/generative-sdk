@@ -6,27 +6,23 @@ import {
     Psbt,
     Transaction
 } from "bitcoinjs-lib";
-import { decryptWallet, derivePasswordWallet, encryptWallet, importBTCPrivateKey, Wallet } from "../src/index";
+import { decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, importBTCPrivateKey, Wallet } from "../src/index";
 const network = networks.bitcoin;  // mainnet
+require("dotenv").config({ path: __dirname + "/.env" });
 
 
 describe("Import Wallet", async () => {
-    it("Derive password", async () => {
+    it("Import BTC private key - encrypt and decrypt wallet", async () => {
         // TODO: enter the private key
-        const privKeyStr = "";
-        const evmAddress = "";
-        const password = "";
-
-        // derive password from sig
-        // const password = await derivePasswordWallet(evmAddress, undefined);
-        // console.log("Password: ", password);
+        const privKeyStr = process.env.PRIV_KEY_1 || "";
+        const password = "hsbefjwkbfkw";
 
         const wallet: Wallet = {
             privKey: privKeyStr
         };
 
         // import btc private key
-        const { privKeyBuffer, taprootAddress } = importBTCPrivateKey(privKeyStr);
+        const { taprootPrivKeyBuffer, taprootAddress } = importBTCPrivateKey(privKeyStr);
         console.log("Taproot address: ", taprootAddress);
 
         // encrypt
@@ -37,5 +33,27 @@ describe("Import Wallet", async () => {
 
         assert.notEqual(decryptedWallet, undefined);
         assert.equal(decryptedWallet?.privKey, privKeyStr);
+    });
+
+    it("Import BTC private key - derive segwit wallet and eth wallet", async () => {
+        // TODO: enter the private key
+        const privKeyStr = process.env.PRIV_KEY_1 || "";
+        const password = "hsbefjwkbfkw";
+
+        const wallet: Wallet = {
+            privKey: privKeyStr
+        };
+
+        // import btc private key
+        const { taprootPrivKeyBuffer, taprootAddress } = importBTCPrivateKey(privKeyStr);
+        console.log("Taproot address: ", taprootAddress);
+
+        // derive segwit wallet
+        const { segwitPrivKeyBuffer, segwitAddress } = deriveSegwitWallet(taprootPrivKeyBuffer);
+        console.log("segwitPrivKeyBuffer, segwitAddress: ", segwitPrivKeyBuffer, segwitAddress);
+
+        // derive segwit wallet
+        const { ethPrivKey, ethAddress } = deriveETHWallet(taprootPrivKeyBuffer);
+        console.log("ethPrivKey, ethAddress: ", ethPrivKey, ethAddress);
     });
 });

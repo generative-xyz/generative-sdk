@@ -8,9 +8,9 @@ import {
 import { network, BNZero } from "./constants";
 import { ECPairFactory, ECPairAPI } from "ecpair";
 import * as ecc from "@bitcoinerlab/secp256k1";
-import { Inscription, UTXO } from "./types";
 import { Psbt } from "bitcoinjs-lib";
 import BigNumber from "bignumber.js";
+import { BIP32Interface } from "bip32";
 initEccLib(ecc);
 const ECPair: ECPairAPI = ECPairFactory(ecc);
 
@@ -153,6 +153,32 @@ const generateTaprootKeyPair = (privateKey: Buffer) => {
     return { keyPair, senderAddress, tweakedSigner, p2pktr };
 };
 
+const generateP2PKHKeyPair = (privateKey: Buffer) => {
+    // init key pair from senderPrivateKey
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+
+    // Generate an address from the tweaked public key
+    const p2pkh = payments.p2pkh({
+        pubkey: keyPair.publicKey,
+        network
+    });
+    const address = p2pkh.address ? p2pkh.address : "";
+    if (address === "") {
+        throw new Error("Can not get sender address from private key");
+    }
+
+    return { keyPair, address, p2pkh: p2pkh, privateKey };
+};
+
+const generateP2PKHKeyFromRoot = (root: BIP32Interface) => {
+    const defaultPathSegwit = "m/84'/0'/0'/0/0";
+
+    const childSegwit = root.derivePath(defaultPathSegwit);
+    const privateKey = childSegwit.privateKey as Buffer;
+
+    return generateP2PKHKeyPair(privateKey);
+};
+
 const fromSat = (sat: number): number => {
     return sat / 1e8;
 };
@@ -169,5 +195,7 @@ export {
     ECPair,
     generateTaprootAddress,
     generateTaprootKeyPair,
+    generateP2PKHKeyPair,
     fromSat,
+    generateP2PKHKeyFromRoot,
 };
