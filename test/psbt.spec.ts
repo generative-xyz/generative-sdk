@@ -150,8 +150,13 @@ let sellerAddress = process.env.ADDRESS_1 || "";
 let buyerPrivateKeyWIF = process.env.PRIV_KEY_2 || "";
 let buyerAddress = process.env.ADDRESS_2 || "";
 let buyerPrivateKey = convertPrivateKeyFromStr(buyerPrivateKeyWIF);
+console.log("buyerPrivateKeyWIF ", buyerPrivateKeyWIF);
+console.log("buyerAddress ", buyerAddress);
+
 
 const feeRatePerByte = 6;
+
+
 
 
 describe("Sell inscription with PSBT", () => {
