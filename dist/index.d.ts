@@ -374,6 +374,7 @@ declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
     ethPrivKey: string;
     ethAddress: string;
 };
+declare const getBitcoinKeySignContent: (message: string) => Buffer;
 /**
 * derivePasswordWallet derive the password from ONE SPECIFIC evm address.
 * This password is used to encrypt and decrypt the imported BTC wallet.
@@ -385,6 +386,7 @@ declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
 declare const derivePasswordWallet: (evmAddress: string, provider: ethers.providers.Web3Provider) => Promise<string>;
 declare const encryptWallet: (wallet: Wallet, password: string) => string;
 declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
+declare const signByETHPrivKey: (ethPrivKey: string, data: string) => string;
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
@@ -543,4 +545,4 @@ declare class Validator {
     privateKey(message?: string): this;
 }
 
-export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateP2PKHKeyFromRoot, generateP2PKHKeyPair, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, importBTCPrivateKey, network, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyMultiInscriptions, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, tapTweakHash, toXOnly, tweakSigner };
+export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateP2PKHKeyFromRoot, generateP2PKHKeyPair, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, getBitcoinKeySignContent, importBTCPrivateKey, network, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyMultiInscriptions, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, signByETHPrivKey, tapTweakHash, toXOnly, tweakSigner };

@@ -7,6 +7,7 @@ import { convertPrivateKeyFromStr, generateP2PKHKeyFromRoot, generateTaprootKeyP
 import { keccak256 } from "js-sha3";
 import BIP32Factory from "bip32";
 import * as ecc from "@bitcoinerlab/secp256k1";
+import Web3 from "web3";
 const bip32 = BIP32Factory(ecc);
 
 const getBTCBalance = (
@@ -124,13 +125,27 @@ const decryptWallet = (ciphertext: string, password: string): Wallet => {
     return wallet;
 };
 
+const signByETHPrivKey = (ethPrivKey: string, data: string) => {
+    const web3 = new Web3();
+    const {
+        message,
+        signature,
+    } = web3.eth.accounts.sign(data, ethPrivKey);
+    console.log("signByETHPrivKey message: ", message);
+    console.log("signByETHPrivKey signature: ", signature);
+
+    return signature;
+};
+
 
 export {
     getBTCBalance,
     importBTCPrivateKey,
     derivePasswordWallet,
+    getBitcoinKeySignContent,
     encryptWallet,
     decryptWallet,
     deriveSegwitWallet,
     deriveETHWallet,
+    signByETHPrivKey,
 };
