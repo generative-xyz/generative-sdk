@@ -1,23 +1,13 @@
-import {
-    networks,
-    payments,
-    Psbt
-} from "bitcoinjs-lib";
-import axios, { AxiosResponse } from "axios";
-import { ICreateTxResp, Inscription, UTXO, ICreateTxSplitInscriptionResp, BuyReqInfo, PaymentInfo, BuyReqFullInfo } from "./types";
-import { BlockStreamURL, BNZero, DummyUTXOValue, MinSats, network } from "./constants";
-import {
-    toXOnly,
-    tweakSigner,
-    ECPair,
-    estimateTxFee,
-    generateTaprootKeyPair,
-    fromSat
-} from "./utils";
-import { filterAndSortCardinalUTXOs, findExactValueUTXO, selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
+import { BNZero, BlockStreamURL, DummyUTXOValue, MinSats, network } from "./constants";
+import { BuyReqFullInfo, ICreateTxResp, ICreateTxSplitInscriptionResp, Inscription, PaymentInfo, UTXO } from "./types";
+import { ECPair, generateTaprootKeyPair, toXOnly, tweakSigner } from "./wallet";
+import { Psbt, networks, payments } from "bitcoinjs-lib";
 import SDKError, { ERROR_CODE } from "../constants/error";
+import axios, { AxiosResponse } from "axios";
+import { estimateTxFee, fromSat } from "./utils";
+import { filterAndSortCardinalUTXOs, findExactValueUTXO, selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
+
 import BigNumber from "bignumber.js";
-import { ERROR_MESSAGE } from "../constants/error";
 
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions). 

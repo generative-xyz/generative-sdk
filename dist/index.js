@@ -3,14 +3,16 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var bitcoinjsLib = require('bitcoinjs-lib');
-var axios = require('axios');
-var ecpair = require('ecpair');
 var ecc = require('@bitcoinerlab/secp256k1');
-var ethers = require('ethers');
 var cryptoJs = require('crypto-js');
-var jsSha3 = require('js-sha3');
+var ecpair = require('ecpair');
+var ethers = require('ethers');
 var BIP32Factory = require('bip32');
 var Web3 = require('web3');
+var ethereumjsWallet = require('ethereumjs-wallet');
+var jsSha3 = require('js-sha3');
+var wif = require('wif');
+var axios = require('axios');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -32,10 +34,11 @@ function _interopNamespace(e) {
   return Object.freeze(n);
 }
 
-var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
 var ecc__namespace = /*#__PURE__*/_interopNamespace(ecc);
 var BIP32Factory__default = /*#__PURE__*/_interopDefaultLegacy(BIP32Factory);
 var Web3__default = /*#__PURE__*/_interopDefaultLegacy(Web3);
+var wif__default = /*#__PURE__*/_interopDefaultLegacy(wif);
+var axios__default = /*#__PURE__*/_interopDefaultLegacy(axios);
 
 /*
  *      bignumber.js v9.1.1
@@ -2933,144 +2936,6 @@ const InputSize = 68;
 const OutputSize = 43;
 const BNZero = new BigNumber(0);
 
-const wif = require("wif");
-bitcoinjsLib.initEccLib(ecc__namespace);
-const ECPair = ecpair.ECPairFactory(ecc__namespace);
-/**
-* convertPrivateKey converts buffer private key to WIF private key string
-* @param bytes buffer private key
-* @returns the WIF private key string
-*/
-const convertPrivateKey = (bytes) => {
-    return wif.encode(128, bytes, true);
-};
-/**
-* convertPrivateKeyFromStr converts private key WIF string to Buffer
-* @param str private key string
-* @returns buffer private key
-*/
-const convertPrivateKeyFromStr = (str) => {
-    const res = wif.decode(str);
-    return res === null || res === void 0 ? void 0 : res.privateKey;
-};
-/**
-* estimateTxFee estimates the transaction fee
-* @param numIns number of inputs in the transaction
-* @param numOuts number of outputs in the transaction
-* @param feeRatePerByte fee rate per byte (in satoshi)
-* @returns returns the estimated transaction fee in satoshi
-*/
-const estimateTxFee = (numIns, numOuts, feeRatePerByte) => {
-    const fee = (68 * numIns + 43 * numOuts) * feeRatePerByte;
-    return fee;
-};
-/**
-* estimateNumInOutputs estimates number of inputs and outputs by parameters:
-* @param inscriptionID id of inscription to send (if any)
-* @param sendAmount satoshi amount need to send
-* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
-* @returns returns the estimated number of inputs and outputs in the transaction
-*/
-const estimateNumInOutputs = (inscriptionID, sendAmount, isUseInscriptionPayFee) => {
-    let numOuts = 0;
-    let numIns = 0;
-    if (inscriptionID !== "") {
-        numOuts++;
-        numIns++;
-    }
-    if (sendAmount.gt(BNZero)) {
-        numOuts++;
-    }
-    if (sendAmount.gt(BNZero) || !isUseInscriptionPayFee) {
-        numIns++;
-        numOuts++; // for change BTC output
-    }
-    return { numIns, numOuts };
-};
-/**
-* estimateNumInOutputs estimates number of inputs and outputs by parameters:
-* @param inscriptionID id of inscription to send (if any)
-* @param sendAmount satoshi amount need to send
-* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
-* @returns returns the estimated number of inputs and outputs in the transaction
-*/
-const estimateNumInOutputsForBuyInscription = (estNumInputsFromBuyer, estNumOutputsFromBuyer, sellerSignedPsbt) => {
-    const numIns = sellerSignedPsbt.txInputs.length + estNumInputsFromBuyer;
-    const numOuts = sellerSignedPsbt.txOutputs.length + estNumOutputsFromBuyer;
-    return { numIns, numOuts };
-};
-function toXOnly(pubkey) {
-    return pubkey.subarray(1, 33);
-}
-function tweakSigner(signer, opts = {}) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    let privateKey = signer.privateKey;
-    if (!privateKey) {
-        throw new Error("Private key is required for tweaking signer!");
-    }
-    if (signer.publicKey[0] === 3) {
-        privateKey = ecc__namespace.privateNegate(privateKey);
-    }
-    const tweakedPrivateKey = ecc__namespace.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
-    if (!tweakedPrivateKey) {
-        throw new Error("Invalid tweaked private key!");
-    }
-    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
-        network: opts.network,
-    });
-}
-function tapTweakHash(pubKey, h) {
-    return bitcoinjsLib.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
-}
-const generateTaprootAddress = (privateKey) => {
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    const internalPubkey = toXOnly(keyPair.publicKey);
-    const { address } = bitcoinjsLib.payments.p2tr({
-        internalPubkey,
-    });
-    return address ? address : "";
-};
-const generateTaprootKeyPair = (privateKey) => {
-    // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keyPair, { network });
-    // Generate an address from the tweaked public key
-    const p2pktr = bitcoinjsLib.payments.p2tr({
-        pubkey: toXOnly(tweakedSigner.publicKey),
-        network
-    });
-    const senderAddress = p2pktr.address ? p2pktr.address : "";
-    if (senderAddress === "") {
-        throw new Error("Can not get sender address from private key");
-    }
-    return { keyPair, senderAddress, tweakedSigner, p2pktr };
-};
-const generateP2PKHKeyPair = (privateKey) => {
-    // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    // Generate an address from the tweaked public key
-    const p2pkh = bitcoinjsLib.payments.p2pkh({
-        pubkey: keyPair.publicKey,
-        network
-    });
-    const address = p2pkh.address ? p2pkh.address : "";
-    if (address === "") {
-        throw new Error("Can not get sender address from private key");
-    }
-    return { keyPair, address, p2pkh: p2pkh, privateKey };
-};
-const generateP2PKHKeyFromRoot = (root) => {
-    const defaultPathSegwit = "m/84'/0'/0'/0/0";
-    const childSegwit = root.derivePath(defaultPathSegwit);
-    const privateKey = childSegwit.privateKey;
-    return generateP2PKHKeyPair(privateKey);
-};
-const fromSat = (sat) => {
-    return sat / 1e8;
-};
-
 const ERROR_CODE = {
     INVALID_CODE: "0",
     INVALID_PARAMS: "-1",
@@ -3142,6 +3007,56 @@ class SDKError extends Error {
         return this.message;
     }
 }
+
+/**
+* estimateTxFee estimates the transaction fee
+* @param numIns number of inputs in the transaction
+* @param numOuts number of outputs in the transaction
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @returns returns the estimated transaction fee in satoshi
+*/
+const estimateTxFee = (numIns, numOuts, feeRatePerByte) => {
+    const fee = (68 * numIns + 43 * numOuts) * feeRatePerByte;
+    return fee;
+};
+/**
+* estimateNumInOutputs estimates number of inputs and outputs by parameters:
+* @param inscriptionID id of inscription to send (if any)
+* @param sendAmount satoshi amount need to send
+* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
+* @returns returns the estimated number of inputs and outputs in the transaction
+*/
+const estimateNumInOutputs = (inscriptionID, sendAmount, isUseInscriptionPayFee) => {
+    let numOuts = 0;
+    let numIns = 0;
+    if (inscriptionID !== "") {
+        numOuts++;
+        numIns++;
+    }
+    if (sendAmount.gt(BNZero)) {
+        numOuts++;
+    }
+    if (sendAmount.gt(BNZero) || !isUseInscriptionPayFee) {
+        numIns++;
+        numOuts++; // for change BTC output
+    }
+    return { numIns, numOuts };
+};
+/**
+* estimateNumInOutputs estimates number of inputs and outputs by parameters:
+* @param inscriptionID id of inscription to send (if any)
+* @param sendAmount satoshi amount need to send
+* @param isUseInscriptionPayFee use inscription output coin to pay fee or not
+* @returns returns the estimated number of inputs and outputs in the transaction
+*/
+const estimateNumInOutputsForBuyInscription = (estNumInputsFromBuyer, estNumOutputsFromBuyer, sellerSignedPsbt) => {
+    const numIns = sellerSignedPsbt.txInputs.length + estNumInputsFromBuyer;
+    const numOuts = sellerSignedPsbt.txOutputs.length + estNumOutputsFromBuyer;
+    return { numIns, numOuts };
+};
+const fromSat = (sat) => {
+    return sat / 1e8;
+};
 
 /**
 * selectUTXOs selects the most reasonable UTXOs to create the transaction.
@@ -3445,6 +3360,201 @@ const findExactValueUTXO = (cardinalUTXOs, value) => {
         }
     }
     throw new SDKError(ERROR_CODE.NOT_FOUND_UTXO, value.toString());
+};
+
+bitcoinjsLib.initEccLib(ecc__namespace);
+const ECPair = ecpair.ECPairFactory(ecc__namespace);
+const bip32 = BIP32Factory__default["default"](ecc__namespace);
+const ETHWalletDefaultPath = "m/44'/60'/0'/0/0";
+const BTCSegwitWalletDefaultPath = "m/84'/0'/0'/0/0";
+/**
+* convertPrivateKey converts buffer private key to WIF private key string
+* @param bytes buffer private key
+* @returns the WIF private key string
+*/
+const convertPrivateKey = (bytes) => {
+    return wif__default["default"].encode(128, bytes, true);
+};
+/**
+* convertPrivateKeyFromStr converts private key WIF string to Buffer
+* @param str private key string
+* @returns buffer private key
+*/
+const convertPrivateKeyFromStr = (str) => {
+    const res = wif__default["default"].decode(str);
+    return res === null || res === void 0 ? void 0 : res.privateKey;
+};
+function toXOnly(pubkey) {
+    return pubkey.subarray(1, 33);
+}
+function tweakSigner(signer, opts = {}) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    let privateKey = signer.privateKey;
+    if (!privateKey) {
+        throw new Error("Private key is required for tweaking signer!");
+    }
+    if (signer.publicKey[0] === 3) {
+        privateKey = ecc__namespace.privateNegate(privateKey);
+    }
+    const tweakedPrivateKey = ecc__namespace.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
+    if (!tweakedPrivateKey) {
+        throw new Error("Invalid tweaked private key!");
+    }
+    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
+        network: opts.network,
+    });
+}
+function tapTweakHash(pubKey, h) {
+    return bitcoinjsLib.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
+}
+const generateTaprootAddress = (privateKey) => {
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const internalPubkey = toXOnly(keyPair.publicKey);
+    const { address } = bitcoinjsLib.payments.p2tr({
+        internalPubkey,
+    });
+    return address ? address : "";
+};
+const generateTaprootKeyPair = (privateKey) => {
+    // init key pair from senderPrivateKey
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    // Tweak the original keypair
+    const tweakedSigner = tweakSigner(keyPair, { network });
+    // Generate an address from the tweaked public key
+    const p2pktr = bitcoinjsLib.payments.p2tr({
+        pubkey: toXOnly(tweakedSigner.publicKey),
+        network
+    });
+    const senderAddress = p2pktr.address ? p2pktr.address : "";
+    if (senderAddress === "") {
+        throw new Error("Can not get sender address from private key");
+    }
+    return { keyPair, senderAddress, tweakedSigner, p2pktr };
+};
+const generateP2PKHKeyPair = (privateKey) => {
+    // init key pair from senderPrivateKey
+    const keyPair = ECPair.fromPrivateKey(privateKey);
+    // Generate an address from the tweaked public key
+    const p2pkh = bitcoinjsLib.payments.p2pkh({
+        pubkey: keyPair.publicKey,
+        network
+    });
+    const address = p2pkh.address ? p2pkh.address : "";
+    if (address === "") {
+        throw new Error("Can not get sender address from private key");
+    }
+    return { keyPair, address, p2pkh: p2pkh, privateKey };
+};
+const generateP2PKHKeyFromRoot = (root) => {
+    const childSegwit = root.derivePath(BTCSegwitWalletDefaultPath);
+    const privateKey = childSegwit.privateKey;
+    return generateP2PKHKeyPair(privateKey);
+};
+/**
+* getBTCBalance returns the Bitcoin balance from cardinal utxos.
+*/
+const getBTCBalance = (params) => {
+    const { utxos, inscriptions } = params;
+    const { totalCardinalAmount } = filterAndSortCardinalUTXOs(utxos, inscriptions);
+    return totalCardinalAmount;
+};
+/**
+* importBTCPrivateKey returns the bitcoin private key and the corresponding taproot address.
+*/
+const importBTCPrivateKey = (wifPrivKey) => {
+    const privKeyBuffer = convertPrivateKeyFromStr(wifPrivKey);
+    const { senderAddress } = generateTaprootKeyPair(privKeyBuffer);
+    return {
+        taprootPrivKeyBuffer: privKeyBuffer,
+        taprootAddress: senderAddress,
+    };
+};
+/**
+* deriveSegwitWallet derives bitcoin segwit wallet from private key taproot.
+* @param privKeyTaproot private key taproot is used to a seed to generate segwit wall
+* @returns the segwit private key and the segwit address
+*/
+const deriveSegwitWallet = (privKeyTaproot) => {
+    const seedSegwit = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
+    const root = bip32.fromSeed(Buffer.from(seedSegwit));
+    const { privateKey: segwitPrivKey, address: segwitAddress } = generateP2PKHKeyFromRoot(root);
+    return {
+        segwitPrivKeyBuffer: segwitPrivKey,
+        segwitAddress: segwitAddress,
+    };
+};
+/**
+* deriveETHWallet derives eth wallet from private key taproot.
+* @param privKeyTaproot private key taproot is used to a seed to generate eth wallet
+* @returns the eth private key and the eth address
+*/
+const deriveETHWallet = (privKeyTaproot) => {
+    const seed = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
+    const hdwallet = ethereumjsWallet.hdkey.fromMasterSeed(Buffer.from(seed));
+    const ethWallet = hdwallet.derivePath(ETHWalletDefaultPath).getWallet();
+    return {
+        ethPrivKey: ethWallet.getPrivateKeyString(),
+        ethAddress: ethWallet.getAddressString(),
+    };
+};
+/**
+* signByETHPrivKey creates the signature on the data by ethPrivKey.
+* @param ethPrivKey private key with either prefix "0x" or non-prefix
+* @param data data toSign is a hex string, MUST hash prefix "0x"
+* @returns the signature with prefix "0x"
+*/
+const signByETHPrivKey = (ethPrivKey, data) => {
+    const web3 = new Web3__default["default"]();
+    const { signature, } = web3.eth.accounts.sign(data, ethPrivKey);
+    return signature;
+};
+const getBitcoinKeySignContent = (message) => {
+    return Buffer.from(message);
+};
+/**
+* derivePasswordWallet derive the password from ONE SPECIFIC evm address.
+* This password is used to encrypt and decrypt the imported BTC wallet.
+* NOTE: The client should save the corresponding evm address to retrieve the same BTC wallet.
+* @param provider ETH provider
+* @param evmAddress evm address is chosen to create the valid signature on IMPORT_MESSAGE
+* @returns the password string
+*/
+const derivePasswordWallet = async (evmAddress, provider) => {
+    // sign message with first sign transaction
+    const IMPORT_MESSAGE = "Sign this message to import your Bitcoin wallet. This key will be used to encrypt your wallet.";
+    const toSign = "0x" + getBitcoinKeySignContent(IMPORT_MESSAGE).toString("hex");
+    const signature = await provider.send("personal_sign", [
+        toSign,
+        evmAddress.toString(),
+    ]);
+    // const signature = randomBytes(64);
+    const password = jsSha3.keccak256(ethers.utils.arrayify(signature));
+    return password;
+};
+/**
+* encryptWallet encrypts Wallet object by AES algorithm.
+* @param wallet includes the plaintext private key need to encrypt
+* @param password the password to encrypt
+* @returns the signature with prefix "0x"
+*/
+const encryptWallet = (wallet, password) => {
+    // convert wallet to string
+    const walletStr = JSON.stringify(wallet);
+    const ciphertext = cryptoJs.AES.encrypt(walletStr, password).toString();
+    return ciphertext;
+};
+/**
+* decryptWallet decrypts ciphertext to Wallet object by AES algorithm.
+* @param ciphertext ciphertext
+* @param password the password to decrypt
+* @returns the Wallet object
+*/
+const decryptWallet = (ciphertext, password) => {
+    const plaintextBytes = cryptoJs.AES.decrypt(ciphertext, password);
+    // parse to wallet object
+    const wallet = JSON.parse(plaintextBytes.toString(cryptoJs.enc.Utf8));
+    return wallet;
 };
 
 /**
@@ -3842,91 +3952,6 @@ const broadcastTx = async (txHex) => {
         throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
     }
     return response.data;
-};
-
-const bip32 = BIP32Factory__default["default"](ecc__namespace);
-const getBTCBalance = (params) => {
-    let btcBalance = BNZero;
-    const { utxos, inscriptions } = params;
-    // filter normal UTXO and inscription UTXO to send
-    utxos.forEach(utxo => {
-        // txIDKey = tx_hash:tx_output_n
-        let txIDKey = utxo.tx_hash.concat(":");
-        txIDKey = txIDKey.concat(utxo.tx_output_n.toString());
-        // try to get inscriptionInfos
-        const inscriptionInfos = inscriptions[txIDKey];
-        if (inscriptionInfos === undefined || inscriptionInfos === null || inscriptionInfos.length == 0) {
-            btcBalance = btcBalance.plus(utxo.value);
-        }
-    });
-    return btcBalance;
-};
-const importBTCPrivateKey = (wifPrivKey) => {
-    const privKeyBuffer = convertPrivateKeyFromStr(wifPrivKey);
-    const { senderAddress } = generateTaprootKeyPair(privKeyBuffer);
-    return {
-        taprootPrivKeyBuffer: privKeyBuffer,
-        taprootAddress: senderAddress,
-    };
-};
-const deriveSegwitWallet = (privKeyTaproot) => {
-    const seedSegwit = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
-    const root = bip32.fromSeed(Buffer.from(seedSegwit));
-    const { privateKey: segwitPrivKey, address: segwitAddress } = generateP2PKHKeyFromRoot(root);
-    return {
-        segwitPrivKeyBuffer: segwitPrivKey,
-        segwitAddress: segwitAddress,
-    };
-};
-const deriveETHWallet = (privKeyTaproot) => {
-    const seed = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
-    const ethWallet = new ethers.ethers.Wallet(seed);
-    return {
-        ethPrivKey: ethWallet.privateKey,
-        ethAddress: ethWallet.address,
-    };
-};
-const getBitcoinKeySignContent = (message) => {
-    return Buffer.from(message);
-};
-/**
-* derivePasswordWallet derive the password from ONE SPECIFIC evm address.
-* This password is used to encrypt and decrypt the imported BTC wallet.
-* NOTE: The client should save the corresponding evm address to retrieve the same BTC wallet.
-* @param provider ETH provider
-* @param evmAddress evm address is chosen to create the valid signature on IMPORT_MESSAGE
-* @returns the password string
-*/
-const derivePasswordWallet = async (evmAddress, provider) => {
-    // sign message with first sign transaction
-    const IMPORT_MESSAGE = "Sign this message to import your Bitcoin wallet. This key will be used to encrypt your wallet.";
-    const toSign = "0x" + getBitcoinKeySignContent(IMPORT_MESSAGE).toString("hex");
-    const signature = await provider.send("personal_sign", [
-        toSign,
-        evmAddress.toString(),
-    ]);
-    // const signature = randomBytes(64);
-    const password = jsSha3.keccak256(ethers.utils.arrayify(signature));
-    return password;
-};
-const encryptWallet = (wallet, password) => {
-    // convert wallet to string
-    const walletStr = JSON.stringify(wallet);
-    const ciphertext = cryptoJs.AES.encrypt(walletStr, password).toString();
-    return ciphertext;
-};
-const decryptWallet = (ciphertext, password) => {
-    const plaintextBytes = cryptoJs.AES.decrypt(ciphertext, password);
-    // parse to wallet object
-    const wallet = JSON.parse(plaintextBytes.toString(cryptoJs.enc.Utf8));
-    return wallet;
-};
-const signByETHPrivKey = (ethPrivKey, data) => {
-    const web3 = new Web3__default["default"]();
-    const { message, signature, } = web3.eth.accounts.sign(data, ethPrivKey);
-    console.log("signByETHPrivKey message: ", message);
-    console.log("signByETHPrivKey signature: ", signature);
-    return signature;
 };
 
 /**

@@ -1,5 +1,5 @@
-import { Psbt } from "bitcoinjs-lib";
 import { BuyReqInfo, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
+import { Psbt } from "bitcoinjs-lib";
 import BigNumber from "bignumber.js";
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.

@@ -1,20 +1,39 @@
+import { BNZero, DummyUTXOValue, MinSats, OutputSize, network } from "./constants";
+import {
+    BuyReqFullInfo,
+    BuyReqInfo,
+    ICreateTxBuyResp,
+    ICreateTxResp,
+    ICreateTxSellResp,
+    Inscription,
+    UTXO
+} from "./types";
 import {
     Psbt,
     Transaction
 } from "bitcoinjs-lib";
-import { BuyReqFullInfo, BuyReqInfo, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, Inscription, UTXO } from "./types";
-import { network, DummyUTXOValue, MinSats, OutputSize, BNZero } from "./constants";
+import SDKError, { ERROR_CODE } from "../constants/error";
 import {
-    toXOnly,
+    createDummyUTXOFromCardinal,
+    createTxSplitFundFromOrdinalUTXO,
+    prepareUTXOsToBuyMultiInscriptions
+} from "./tx";
+import {
     estimateTxFee,
-    generateTaprootKeyPair,
     fromSat,
 } from "./utils";
-import { verifySchnorr } from "@bitcoinerlab/secp256k1";
-import { selectCardinalUTXOs, selectInscriptionUTXO, selectUTXOsToCreateBuyTx } from "./selectcoin";
-import { createDummyUTXOFromCardinal, createTxSplitFundFromOrdinalUTXO, prepareUTXOsToBuyMultiInscriptions } from "./tx";
-import SDKError, { ERROR_CODE } from "../constants/error";
+import {
+    generateTaprootKeyPair,
+    toXOnly,
+} from "./wallet";
+import {
+    selectCardinalUTXOs,
+    selectInscriptionUTXO,
+    selectUTXOsToCreateBuyTx
+} from "./selectcoin";
+
 import BigNumber from "bignumber.js";
+import { verifySchnorr } from "@bitcoinerlab/secp256k1";
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription. 
