@@ -1,10 +1,10 @@
 /// <reference types="node" />
-import { networks, Transaction, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
+import { networks, Transaction, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
-import { BIP32Interface } from 'bip32';
 import { ethers } from 'ethers';
+import { BIP32Interface } from 'bip32';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
 declare const MinSats = 1000;
@@ -289,19 +289,6 @@ declare const prepareUTXOsToBuyMultiInscriptions: ({ privateKey, address, utxos,
 };
 declare const broadcastTx: (txHex: string) => Promise<string>;
 
-declare const ECPair: ECPairAPI;
-/**
-* convertPrivateKey converts buffer private key to WIF private key string
-* @param bytes buffer private key
-* @returns the WIF private key string
-*/
-declare const convertPrivateKey: (bytes: Buffer) => string;
-/**
-* convertPrivateKeyFromStr converts private key WIF string to Buffer
-* @param str private key string
-* @returns buffer private key
-*/
-declare const convertPrivateKeyFromStr: (str: string) => Buffer;
 /**
 * estimateTxFee estimates the transaction fee
 * @param numIns number of inputs in the transaction
@@ -332,6 +319,21 @@ declare const estimateNumInOutputsForBuyInscription: (estNumInputsFromBuyer: num
     numIns: number;
     numOuts: number;
 };
+declare const fromSat: (sat: number) => number;
+
+declare const ECPair: ECPairAPI;
+/**
+* convertPrivateKey converts buffer private key to WIF private key string
+* @param bytes buffer private key
+* @returns the WIF private key string
+*/
+declare const convertPrivateKey: (bytes: Buffer) => string;
+/**
+* convertPrivateKeyFromStr converts private key WIF string to Buffer
+* @param str private key string
+* @returns buffer private key
+*/
+declare const convertPrivateKeyFromStr: (str: string) => Buffer;
 declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
@@ -354,26 +356,47 @@ declare const generateP2PKHKeyFromRoot: (root: BIP32Interface) => {
     p2pkh: payments.Payment;
     privateKey: Buffer;
 };
-declare const fromSat: (sat: number) => number;
-
+/**
+* getBTCBalance returns the Bitcoin balance from cardinal utxos.
+*/
 declare const getBTCBalance: (params: {
     utxos: UTXO[];
     inscriptions: {
         [key: string]: Inscription[];
     };
 }) => BigNumber;
+/**
+* importBTCPrivateKey returns the bitcoin private key and the corresponding taproot address.
+*/
 declare const importBTCPrivateKey: (wifPrivKey: string) => {
     taprootPrivKeyBuffer: Buffer;
     taprootAddress: string;
 };
+/**
+* deriveSegwitWallet derives bitcoin segwit wallet from private key taproot.
+* @param privKeyTaproot private key taproot is used to a seed to generate segwit wall
+* @returns the segwit private key and the segwit address
+*/
 declare const deriveSegwitWallet: (privKeyTaproot: Buffer) => {
     segwitPrivKeyBuffer: Buffer;
     segwitAddress: string;
 };
+/**
+* deriveETHWallet derives eth wallet from private key taproot.
+* @param privKeyTaproot private key taproot is used to a seed to generate eth wallet
+* @returns the eth private key and the eth address
+*/
 declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
     ethPrivKey: string;
     ethAddress: string;
 };
+/**
+* signByETHPrivKey creates the signature on the data by ethPrivKey.
+* @param ethPrivKey private key with either prefix "0x" or non-prefix
+* @param data data toSign is a hex string, MUST hash prefix "0x"
+* @returns the signature with prefix "0x"
+*/
+declare const signByETHPrivKey: (ethPrivKey: string, data: string) => string;
 declare const getBitcoinKeySignContent: (message: string) => Buffer;
 /**
 * derivePasswordWallet derive the password from ONE SPECIFIC evm address.
@@ -384,9 +407,20 @@ declare const getBitcoinKeySignContent: (message: string) => Buffer;
 * @returns the password string
 */
 declare const derivePasswordWallet: (evmAddress: string, provider: ethers.providers.Web3Provider) => Promise<string>;
+/**
+* encryptWallet encrypts Wallet object by AES algorithm.
+* @param wallet includes the plaintext private key need to encrypt
+* @param password the password to encrypt
+* @returns the signature with prefix "0x"
+*/
 declare const encryptWallet: (wallet: Wallet, password: string) => string;
+/**
+* decryptWallet decrypts ciphertext to Wallet object by AES algorithm.
+* @param ciphertext ciphertext
+* @param password the password to decrypt
+* @returns the Wallet object
+*/
 declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
-declare const signByETHPrivKey: (ethPrivKey: string, data: string) => string;
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.

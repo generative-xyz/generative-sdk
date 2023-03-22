@@ -1,37 +1,6 @@
-const wif = require("wif");
-import {
-    initEccLib,
-    crypto,
-    payments,
-    Signer
-} from "bitcoinjs-lib";
-import { network, BNZero } from "./constants";
-import { ECPairFactory, ECPairAPI } from "ecpair";
-import * as ecc from "@bitcoinerlab/secp256k1";
-import { Psbt } from "bitcoinjs-lib";
+import { BNZero } from "./constants";
 import BigNumber from "bignumber.js";
-import { BIP32Interface } from "bip32";
-initEccLib(ecc);
-const ECPair: ECPairAPI = ECPairFactory(ecc);
-
-/**
-* convertPrivateKey converts buffer private key to WIF private key string
-* @param bytes buffer private key
-* @returns the WIF private key string
-*/
-const convertPrivateKey = (bytes: Buffer): string => {
-    return wif.encode(128, bytes, true);
-};
-
-/**
-* convertPrivateKeyFromStr converts private key WIF string to Buffer
-* @param str private key string
-* @returns buffer private key
-*/
-const convertPrivateKeyFromStr = (str: string): Buffer => {
-    const res = wif.decode(str);
-    return res?.privateKey;
-};
+import { Psbt } from "bitcoinjs-lib";
 
 /**
 * estimateTxFee estimates the transaction fee
@@ -87,115 +56,13 @@ const estimateNumInOutputsForBuyInscription = (
     return { numIns, numOuts };
 };
 
-function toXOnly(pubkey: Buffer): Buffer {
-    return pubkey.subarray(1, 33);
-}
-
-function tweakSigner(signer: Signer, opts: any = {}): Signer {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    let privateKey: Uint8Array | undefined = signer.privateKey!;
-    if (!privateKey) {
-        throw new Error("Private key is required for tweaking signer!");
-    }
-    if (signer.publicKey[0] === 3) {
-        privateKey = ecc.privateNegate(privateKey);
-    }
-
-    const tweakedPrivateKey = ecc.privateAdd(
-        privateKey,
-        tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash),
-    );
-
-    if (!tweakedPrivateKey) {
-        throw new Error("Invalid tweaked private key!");
-    }
-
-    return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
-        network: opts.network,
-    });
-}
-
-function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer {
-    return crypto.taggedHash(
-        "TapTweak",
-        Buffer.concat(h ? [pubKey, h] : [pubKey]),
-    );
-}
-
-const generateTaprootAddress = (privateKey: Buffer): string => {
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    const internalPubkey = toXOnly(keyPair.publicKey);
-
-    const { address } = payments.p2tr({
-        internalPubkey,
-    });
-
-    return address ? address : "";
-};
-
-const generateTaprootKeyPair = (privateKey: Buffer) => {
-    // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-    // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keyPair, { network });
-
-    // Generate an address from the tweaked public key
-    const p2pktr = payments.p2tr({
-        pubkey: toXOnly(tweakedSigner.publicKey),
-        network
-    });
-    const senderAddress = p2pktr.address ? p2pktr.address : "";
-    if (senderAddress === "") {
-        throw new Error("Can not get sender address from private key");
-    }
-
-    return { keyPair, senderAddress, tweakedSigner, p2pktr };
-};
-
-const generateP2PKHKeyPair = (privateKey: Buffer) => {
-    // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
-
-    // Generate an address from the tweaked public key
-    const p2pkh = payments.p2pkh({
-        pubkey: keyPair.publicKey,
-        network
-    });
-    const address = p2pkh.address ? p2pkh.address : "";
-    if (address === "") {
-        throw new Error("Can not get sender address from private key");
-    }
-
-    return { keyPair, address, p2pkh: p2pkh, privateKey };
-};
-
-const generateP2PKHKeyFromRoot = (root: BIP32Interface) => {
-    const defaultPathSegwit = "m/84'/0'/0'/0/0";
-
-    const childSegwit = root.derivePath(defaultPathSegwit);
-    const privateKey = childSegwit.privateKey as Buffer;
-
-    return generateP2PKHKeyPair(privateKey);
-};
-
 const fromSat = (sat: number): number => {
     return sat / 1e8;
 };
 
 export {
-    convertPrivateKey,
-    convertPrivateKeyFromStr,
     estimateTxFee,
     estimateNumInOutputs,
     estimateNumInOutputsForBuyInscription,
-    toXOnly,
-    tweakSigner,
-    tapTweakHash,
-    ECPair,
-    generateTaprootAddress,
-    generateTaprootKeyPair,
-    generateP2PKHKeyPair,
     fromSat,
-    generateP2PKHKeyFromRoot,
 };
