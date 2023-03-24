@@ -2953,7 +2953,8 @@ const ERROR_CODE = {
     INVALID_VALIDATOR_LABEL: "-8",
     NOT_FOUND_UTXO: "-9",
     NOT_FOUND_DUMMY_UTXO: "-10",
-    SIGN_XVERSE_ERROR: "-11",
+    WALLET_NOT_SUPPORT: "-11",
+    SIGN_XVERSE_ERROR: "-12",
 };
 const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_CODE]: {
@@ -3003,6 +3004,10 @@ const ERROR_MESSAGE = {
     [ERROR_CODE.SIGN_XVERSE_ERROR]: {
         message: "Can not sign with Xverse.",
         desc: "Can not sign with Xverse.",
+    },
+    [ERROR_CODE.WALLET_NOT_SUPPORT]: {
+        message: "Your wallet is not supported currently.",
+        desc: "Your wallet is not supported currently.",
     },
 };
 class SDKError extends Error {
@@ -4347,16 +4352,13 @@ const finalizeSignedPsbt = ({ signedRawPsbtB64, indicesToSign, }) => {
 /**
 * handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
 * extract to msgTx (if isGetMsgTx is true)
-* @param sellerPrivateKey buffer private key of the seller
-* @param utxos list of utxos (include non-inscription and inscription utxos)
-* @param inscriptions list of inscription infos of the seller
-* @param sellInscriptionID id of inscription to sell
-* @param receiverBTCAddress the seller's address to receive BTC
-* @param amountPayToSeller BTC amount to pay to seller
-* @param feePayToCreator BTC fee to pay to creator
-* @param isGetMsgTx address of creator
-* amountPayToSeller + feePayToCreator = price that is showed on UI
-* @returns the base64 encode Psbt
+* @param base64Psbt the base64 encoded psbt need to sign
+* @param indicesToSign indices of inputs need to sign
+* @param address address of signer
+* @param sigHashType default is SIGHASH_DEFAULT
+* @param isGetMsgTx flag used to extract to msgTx or not
+* @param cancelFn callback function for handling cancel signing
+* @returns the base64 encode signed Psbt
 */
 const handleSignPsbtWithXverse = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, cancelFn, }) => {
     let base64SignedPsbt = "";
@@ -4399,6 +4401,33 @@ const handleSignPsbtWithXverse = async ({ base64Psbt, indicesToSign, address, si
         msgTxHex,
         msgTxID
     };
+};
+/**
+* handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
+* extract to msgTx (if isGetMsgTx is true)
+* @param base64Psbt the base64 encoded psbt need to sign
+* @param indicesToSign indices of inputs need to sign
+* @param address address of signer
+* @param sigHashType default is SIGHASH_DEFAULT
+* @param isGetMsgTx flag used to extract to msgTx or not
+* @param cancelFn callback function for handling cancel signing
+* @returns the base64 encode signed Psbt
+*/
+const handleSignPsbtWithSpecificWallet = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, walletType = WalletType.Xverse, cancelFn, }) => {
+    switch (walletType) {
+        case WalletType.Xverse: {
+            return handleSignPsbtWithXverse({
+                base64Psbt, indicesToSign,
+                address,
+                sigHashType,
+                isGetMsgTx,
+                cancelFn,
+            });
+        }
+        default: {
+            throw new SDKError(ERROR_CODE.WALLET_NOT_SUPPORT);
+        }
+    }
 };
 
 const SigHashTypeForSale = bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY;
@@ -4963,11 +4992,12 @@ const reqListForSaleInscFromAnyWallet = async ({ pubKey, utxos, inscriptions, se
         else {
             // need to create split tx 
             // sign transaction 
-            const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithXverse({
+            const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithSpecificWallet({
                 base64Psbt: splitPsbtB64,
                 indicesToSign,
                 address,
                 isGetMsgTx: true,
+                walletType,
                 cancelFn
             });
             splitTxID = msgTxID;
@@ -5010,11 +5040,12 @@ const reqListForSaleInscFromAnyWallet = async ({ pubKey, utxos, inscriptions, se
         feePayToCreator: feePayToCreator,
     });
     // sign transaction 
-    const { base64SignedPsbt } = await handleSignPsbtWithXverse({
+    const { base64SignedPsbt } = await handleSignPsbtWithSpecificWallet({
         base64Psbt: rawPsbtRes.base64Psbt,
         indicesToSign: rawPsbtRes.indicesToSign,
         address,
         sigHashType: SigHashTypeForSale,
+        walletType,
         cancelFn
     });
     const inscriptionUTXOs = [inscriptionUTXO];

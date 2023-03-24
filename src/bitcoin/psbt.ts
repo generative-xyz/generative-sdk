@@ -36,7 +36,7 @@ import {
 } from "./selectcoin";
 
 import BigNumber from "bignumber.js";
-import { handleSignPsbtWithXverse } from "./xverse";
+import { handleSignPsbtWithSpecificWallet } from "./xverse";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
 
 const SigHashTypeForSale = Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY;
@@ -711,8 +711,6 @@ const reqListForSaleInscFromAnyWallet = async ({
     walletType?: number,
     cancelFn: () => void,
 }): Promise<ICreateTxSellResp> => {
-
-
     // validation
     if (feePayToCreator.gt(BNZero) && creatorAddress === "") {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Creator address must not be empty.");
@@ -778,11 +776,12 @@ const reqListForSaleInscFromAnyWallet = async ({
         } else {
             // need to create split tx 
             // sign transaction 
-            const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithXverse({
+            const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithSpecificWallet({
                 base64Psbt: splitPsbtB64,
                 indicesToSign,
                 address,
                 isGetMsgTx: true,
+                walletType,
                 cancelFn
             });
 
@@ -829,11 +828,12 @@ const reqListForSaleInscFromAnyWallet = async ({
     });
 
     // sign transaction 
-    const { base64SignedPsbt } = await handleSignPsbtWithXverse({
+    const { base64SignedPsbt } = await handleSignPsbtWithSpecificWallet({
         base64Psbt: rawPsbtRes.base64Psbt,
         indicesToSign: rawPsbtRes.indicesToSign,
         address,
         sigHashType: SigHashTypeForSale,
+        walletType,
         cancelFn
     });
 
