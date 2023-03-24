@@ -20,7 +20,7 @@ declare const signPSBT: ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType
     senderPrivateKey: Buffer;
     psbtB64: string;
     indicesToSign: number[];
-    sigHashType: number;
+    sigHashType?: number | undefined;
 }) => ISignPSBTResp;
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
@@ -37,12 +37,27 @@ declare const signPSBT: ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const signMsgTx: ({ senderPrivateKey, hexMsgTx, indicesToSign, sigHashType }: {
+declare const signPSBT2: ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType }: {
     senderPrivateKey: Buffer;
-    hexMsgTx: string;
-    indicesToSign?: number[] | undefined;
+    psbtB64: string;
+    indicesToSign: number[];
     sigHashType?: number | undefined;
-}) => ISignPSBTResp;
+}) => string;
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
 declare const createRawTxDummyUTXOForSale: ({ pubKey, utxos, inscriptions, sellInscriptionID, feeRatePerByte, }: {
     pubKey: Buffer;
     utxos: UTXO[];
@@ -301,4 +316,4 @@ declare const createRawTxToPrepareUTXOsToBuyMultiInscs: ({ pubKey, address, utxo
     indicesToSign: number[];
 };
 declare const broadcastTx: (txHex: string) => Promise<string>;
-export { selectUTXOs, createTx, createRawTx, createTxFromAnyWallet, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, signMsgTx, };
+export { selectUTXOs, createTx, createRawTx, createTxFromAnyWallet, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, signPSBT2, };

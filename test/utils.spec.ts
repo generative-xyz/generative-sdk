@@ -1,4 +1,4 @@
-import { ECPair, broadcastTx, convertPrivateKeyFromStr, fromSat, generateTaprootKeyPair, signMsgTx, toXOnly } from "../src/index";
+import { ECPair, broadcastTx, convertPrivateKeyFromStr, fromSat, generateTaprootKeyPair, signPSBT2, toXOnly } from "../src/index";
 import {
     Psbt,
     networks,
@@ -98,15 +98,24 @@ describe("Sign msg Tx", async () => {
         const privateKey = "";
         const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
         console.log("privateKeyBuffer: ", privateKeyBuffer);
-        const inputHexTx = "70736274ff0100fd060101000000038bd0d0c54e8543f718c1ee6ee7db26ae3ce22fd6be1deec57c66d37b6c97b4db0200000000fdffffff9be83d568d617ea931857f0f90065137f6a7e67a20cd0c80f3957484762e16810000000000fdffffffe07074e1bd2cc630886cf71eaf1f5977b030d32cd953919be2bd33a6d12184340000000000fdffffff03f84d000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af9525000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af5344000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af000000000001012bfa11000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af2116c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c011720c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee0001012bf401000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af2116c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c011720c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee0001012b50c3000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af2116c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c011720c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee00010520c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee2107c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c00010520c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee2107c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c00010520c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee2107c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c00";
+        const inputHexTx = "70736274ff0100fd310101000000030ee633984a9a05d6932f3c1cefda8d461c1e86027ba95a80273eadc1f604edae0000000000fdffffffa80e773fda5be00d40984da72427f8fb3638aa0840b30da10f8c92e428f458060200000000fdffffff0ee633984a9a05d6932f3c1cefda8d461c1e86027ba95a80273eadc1f604edae0100000000fdffffff04f401000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af044c00000000000022512076c8edc1322a1eb3582be0db0794d140c0a3b5b8663cb6e04adc4acab9a938cd2202000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af1c02000000000000225120d11b52ebc5e8a1d3010b1d1494ea526494e651bfe81d7e9ba3b7779623f954ba000000000001012bf84d000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af0001012b220200000000000022512076c8edc1322a1eb3582be0db0794d140c0a3b5b8663cb6e04adc4acab9a938cd0001012b9525000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af0000000000";
 
-        const { msgTxHex, msgTxID } = signMsgTx({
+        const psbt = Psbt.fromHex(inputHexTx);
+        const indicesToSign: number[] = [];
+        for (let i = 0; i < psbt.txInputs.length; i++) {
+            indicesToSign.push(i);
+        }
+
+        const res = signPSBT2({
             senderPrivateKey: privateKeyBuffer,
-            hexMsgTx: inputHexTx,
-            indicesToSign: [],
+            psbtB64: psbt.toBase64(),
+            indicesToSign: indicesToSign,
         })
-        console.log("msgTxHex: ", msgTxHex);
-        console.log("msgTxID: ", msgTxID);
+        console.log(res);
+
+        // console.log("msgTx: ", msgTx);
+        // console.log("msgTxHex: ", msgTxHex);
+        // console.log("msgTxID: ", msgTxID);
     })
 });
 
