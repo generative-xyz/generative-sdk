@@ -3937,7 +3937,7 @@ const createRawTx = ({ pubKey, utxos, inscriptions, sendInscriptionID = "", rece
     return { base64Psbt: psbt.toBase64(), fee: feeRes, changeAmount, selectedUTXOs, indicesToSign };
 };
 /**
-* createRawTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
+* createTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
 * @param utxos list of utxos (include non-inscription and inscription utxos)
@@ -3951,7 +3951,7 @@ const createRawTx = ({ pubKey, utxos, inscriptions, sendInscriptionID = "", rece
 * @returns the hex signed transaction
 * @returns the network fee
 */
-const createRawTxFromAnyWallet = async ({ pubKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true, // default is true,
+const createTxFromAnyWallet = async ({ pubKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true, // default is true,
 walletType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, cancelFn, }) => {
     const { address } = generateTaprootAddressFromPubKey(pubKey);
     const { base64Psbt, indicesToSign, selectedUTXOs, fee, changeAmount } = createRawTx({
@@ -5858,11 +5858,11 @@ exports.createRawPSBTToSell = createRawPSBTToSell;
 exports.createRawTx = createRawTx;
 exports.createRawTxDummyUTXOForSale = createRawTxDummyUTXOForSale;
 exports.createRawTxDummyUTXOFromCardinal = createRawTxDummyUTXOFromCardinal;
-exports.createRawTxFromAnyWallet = createRawTxFromAnyWallet;
 exports.createRawTxSendBTC = createRawTxSendBTC;
 exports.createRawTxSplitFundFromOrdinalUTXO = createRawTxSplitFundFromOrdinalUTXO;
 exports.createRawTxToPrepareUTXOsToBuyMultiInscs = createRawTxToPrepareUTXOsToBuyMultiInscs;
 exports.createTx = createTx;
+exports.createTxFromAnyWallet = createTxFromAnyWallet;
 exports.createTxSendBTC = createTxSendBTC;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
 exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;

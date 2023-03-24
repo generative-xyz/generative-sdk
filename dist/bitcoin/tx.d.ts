@@ -104,7 +104,7 @@ declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, re
     isUseInscriptionPayFeeParam: boolean;
 }) => ICreateRawTxResp;
 /**
-* createRawTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
+* createTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
 * @param utxos list of utxos (include non-inscription and inscription utxos)
@@ -118,7 +118,7 @@ declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, re
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createRawTxFromAnyWallet: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, walletType, cancelFn, }: {
+declare const createTxFromAnyWallet: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, walletType, cancelFn, }: {
     pubKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -301,4 +301,4 @@ declare const createRawTxToPrepareUTXOsToBuyMultiInscs: ({ pubKey, address, utxo
     indicesToSign: number[];
 };
 declare const broadcastTx: (txHex: string) => Promise<string>;
-export { selectUTXOs, createTx, createRawTx, createRawTxFromAnyWallet, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, signMsgTx, };
+export { selectUTXOs, createTx, createRawTx, createTxFromAnyWallet, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, signMsgTx, };

@@ -356,7 +356,7 @@ const createRawTx = ({
 
 
 /**
-* createRawTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx. 
+* createTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx. 
 * NOTE: Currently, the function only supports sending from Taproot address. 
 * @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
 * @param utxos list of utxos (include non-inscription and inscription utxos)
@@ -370,7 +370,7 @@ const createRawTx = ({
 * @returns the hex signed transaction
 * @returns the network fee
 */
-const createRawTxFromAnyWallet = async ({
+const createTxFromAnyWallet = async ({
     pubKey,
     utxos,
     inscriptions,
@@ -1136,7 +1136,7 @@ export {
     selectUTXOs,
     createTx,
     createRawTx,
-    createRawTxFromAnyWallet,
+    createTxFromAnyWallet,
     broadcastTx,
     createTxWithSpecificUTXOs,
     createRawTxDummyUTXOForSale,
