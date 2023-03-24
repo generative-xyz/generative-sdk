@@ -86,6 +86,11 @@ interface ISignPSBTResp {
     msgTx: Transaction,
 }
 
+interface NeedPaymentUTXO {
+    buyInfoIndex: number,
+    amount: BigNumber,
+}
+
 
 export {
     UTXO,
@@ -100,4 +105,5 @@ export {
     BuyReqFullInfo,
     Wallet,
     ISignPSBTResp,
+    NeedPaymentUTXO,
 };

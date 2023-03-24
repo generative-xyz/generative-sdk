@@ -1,4 +1,4 @@
-import { BuyReqFullInfo, ICreateRawTxResp, ICreateTxResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, Inscription, PaymentInfo, UTXO } from "./types";
+import { BuyReqFullInfo, ICreateRawTxResp, ICreateTxResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, Inscription, NeedPaymentUTXO, PaymentInfo, UTXO } from "./types";
 import { selectUTXOs } from "./selectcoin";
 import BigNumber from "bignumber.js";
 /**
@@ -230,5 +230,25 @@ declare const prepareUTXOsToBuyMultiInscriptions: ({ privateKey, address, utxos,
     fee: BigNumber;
     splitTxHex: string;
 };
+declare const createRawTxToPrepareUTXOsToBuyMultiInscs: ({ pubKey, address, utxos, inscriptions, feeRatePerByte, buyReqFullInfos, }: {
+    pubKey: Buffer;
+    address: string;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+    buyReqFullInfos: BuyReqFullInfo[];
+}) => {
+    buyReqFullInfos: BuyReqFullInfo[];
+    dummyUTXO: any;
+    selectedUTXOs: UTXO[];
+    fee: BigNumber;
+    changeAmount: BigNumber;
+    needPaymentUTXOs: NeedPaymentUTXO[];
+    needCreateDummyUTXO: boolean;
+    splitPsbtB64: string;
+    indicesToSign: number[];
+};
 declare const broadcastTx: (txHex: string) => Promise<string>;
-export { selectUTXOs, createTx, createRawTx, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, signPSBT, };
+export { selectUTXOs, createTx, createRawTx, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, };
