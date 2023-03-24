@@ -10,7 +10,8 @@ export const ERROR_CODE = {
     INVALID_VALIDATOR_LABEL: "-8",
     NOT_FOUND_UTXO: "-9",
     NOT_FOUND_DUMMY_UTXO: "-10",
-    SIGN_XVERSE_ERROR: "-11",
+    WALLET_NOT_SUPPORT: "-11",
+    SIGN_XVERSE_ERROR: "-12",
 };
 
 export const ERROR_MESSAGE = {
@@ -62,6 +63,10 @@ export const ERROR_MESSAGE = {
     [ERROR_CODE.SIGN_XVERSE_ERROR]: {
         message: "Can not sign with Xverse.",
         desc: "Can not sign with Xverse.",
+    },
+    [ERROR_CODE.WALLET_NOT_SUPPORT]: {
+        message: "Your wallet is not supported currently.",
+        desc: "Your wallet is not supported currently.",
     },
 };
 

@@ -10,6 +10,7 @@ export declare const ERROR_CODE: {
     INVALID_VALIDATOR_LABEL: string;
     NOT_FOUND_UTXO: string;
     NOT_FOUND_DUMMY_UTXO: string;
+    WALLET_NOT_SUPPORT: string;
     SIGN_XVERSE_ERROR: string;
 };
 export declare const ERROR_MESSAGE: {
