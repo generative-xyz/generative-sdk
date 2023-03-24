@@ -1081,6 +1081,7 @@ export {
     createPSBTToSell,
     createPSBTToBuy,
     reqListForSaleInscription,
+    reqListForSaleInscFromAnyWallet,
     reqBuyInscription,
     reqBuyMultiInscriptions,
 };
