@@ -22,6 +22,27 @@ declare const signPSBT: ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType
     indicesToSign: number[];
     sigHashType: number;
 }) => ISignPSBTResp;
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const signMsgTx: ({ senderPrivateKey, hexMsgTx, indicesToSign, sigHashType }: {
+    senderPrivateKey: Buffer;
+    hexMsgTx: string;
+    indicesToSign?: number[] | undefined;
+    sigHashType?: number | undefined;
+}) => ISignPSBTResp;
 declare const createRawTxDummyUTXOForSale: ({ pubKey, utxos, inscriptions, sellInscriptionID, feeRatePerByte, }: {
     pubKey: Buffer;
     utxos: UTXO[];
@@ -82,6 +103,35 @@ declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, re
     feeRatePerByte: number;
     isUseInscriptionPayFeeParam: boolean;
 }) => ICreateRawTxResp;
+/**
+* createRawTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createRawTxFromAnyWallet: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, walletType, cancelFn, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sendInscriptionID: string;
+    receiverInsAddress: string;
+    sendAmount: BigNumber;
+    feeRatePerByte: number;
+    isUseInscriptionPayFeeParam: boolean;
+    walletType?: number | undefined;
+    cancelFn: () => void;
+}) => Promise<ICreateTxResp>;
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -251,4 +301,4 @@ declare const createRawTxToPrepareUTXOsToBuyMultiInscs: ({ pubKey, address, utxo
     indicesToSign: number[];
 };
 declare const broadcastTx: (txHex: string) => Promise<string>;
-export { selectUTXOs, createTx, createRawTx, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, };
+export { selectUTXOs, createTx, createRawTx, createRawTxFromAnyWallet, broadcastTx, createTxWithSpecificUTXOs, createRawTxDummyUTXOForSale, createTxSplitFundFromOrdinalUTXO, createRawTxSplitFundFromOrdinalUTXO, createDummyUTXOFromCardinal, createRawTxDummyUTXOFromCardinal, createTxSendBTC, createRawTxSendBTC, prepareUTXOsToBuyMultiInscriptions, createRawTxToPrepareUTXOsToBuyMultiInscs, signPSBT, signMsgTx, };

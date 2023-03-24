@@ -15,10 +15,7 @@ const BNZero = new BigNumber(0);
 const WalletType = {
     Xverse: 1,
     Hiro: 2,
-
 };
-
-
 
 export {
     BlockStreamURL,

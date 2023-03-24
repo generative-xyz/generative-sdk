@@ -1,12 +1,13 @@
+import { ECPair, broadcastTx, convertPrivateKeyFromStr, fromSat, generateTaprootKeyPair, signMsgTx, toXOnly } from "../src/index";
+import {
+    Psbt,
+    networks,
+    payments
+} from "bitcoinjs-lib";
+
+import BigNumber from "bignumber.js";
 import { assert } from "chai";
 
-import {
-    networks,
-    payments,
-    Psbt
-} from "bitcoinjs-lib";
-import BigNumber from "bignumber.js";
-import { broadcastTx, convertPrivateKeyFromStr, ECPair, fromSat, generateTaprootKeyPair, toXOnly } from "../src/index";
 const network = networks.bitcoin;  // mainnet
 
 
@@ -76,18 +77,36 @@ const network = networks.bitcoin;  // mainnet
 // });
 
 
-describe("Generate address from private key", async () => {
-    it("should return the valid address", async () => {
+// describe("Generate address from private key", async () => {
+//     it("should return the valid address", async () => {
+//         // Enter your private key
+//         const privateKey = "";
+//         const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
+
+//         const { tweakedSigner, senderAddress, p2pktr } = generateTaprootKeyPair(privateKeyBuffer)
+//         console.log("Address:", senderAddress);
+//         console.log("PubKey: ", tweakedSigner.publicKey.toString('hex'));
+
+//         const tapInternalPubKey = toXOnly(tweakedSigner.publicKey);
+//         console.log("Tap internal PubKey: ", tapInternalPubKey.toString("hex"));
+//     })
+// });
+
+describe("Sign msg Tx", async () => {
+    it("should return the valid tx", async () => {
         // Enter your private key
         const privateKey = "";
         const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
+        console.log("privateKeyBuffer: ", privateKeyBuffer);
+        const inputHexTx = "70736274ff0100fd060101000000038bd0d0c54e8543f718c1ee6ee7db26ae3ce22fd6be1deec57c66d37b6c97b4db0200000000fdffffff9be83d568d617ea931857f0f90065137f6a7e67a20cd0c80f3957484762e16810000000000fdffffffe07074e1bd2cc630886cf71eaf1f5977b030d32cd953919be2bd33a6d12184340000000000fdffffff03f84d000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af9525000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af5344000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af000000000001012bfa11000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af2116c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c011720c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee0001012bf401000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af2116c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c011720c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee0001012b50c3000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af2116c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c011720c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee00010520c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee2107c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c00010520c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee2107c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c00010520c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee2107c6b1f8a432d0bf501bce5d9ec28767ab9f60c4a0de1abcd1c8bbaeba4269d9ee05007ad34a0c00";
 
-        const { tweakedSigner, senderAddress, p2pktr } = generateTaprootKeyPair(privateKeyBuffer)
-        console.log("Address:", senderAddress);
-        console.log("PubKey: ", tweakedSigner.publicKey.toString('hex'));
-
-        const tapInternalPubKey = toXOnly(tweakedSigner.publicKey);
-        console.log("Tap internal PubKey: ", tapInternalPubKey.toString("hex"));
+        const { msgTxHex, msgTxID } = signMsgTx({
+            senderPrivateKey: privateKeyBuffer,
+            hexMsgTx: inputHexTx,
+            indicesToSign: [],
+        })
+        console.log("msgTxHex: ", msgTxHex);
+        console.log("msgTxID: ", msgTxID);
     })
 });
 
