@@ -71,4 +71,8 @@ interface ISignPSBTResp {
     msgTxID: string;
     msgTx: Transaction;
 }
-export { UTXO, Inscription, ICreateTxResp, ICreateRawTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, BuyReqInfo, PaymentInfo, BuyReqFullInfo, Wallet, ISignPSBTResp, };
+interface NeedPaymentUTXO {
+    buyInfoIndex: number;
+    amount: BigNumber;
+}
+export { UTXO, Inscription, ICreateTxResp, ICreateRawTxResp, ICreateTxSplitInscriptionResp, ICreateTxBuyResp, ICreateTxSellResp, BuyReqInfo, PaymentInfo, BuyReqFullInfo, Wallet, ISignPSBTResp, NeedPaymentUTXO, };

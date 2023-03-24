@@ -173,10 +173,8 @@ const handleSignPsbtWithSpecificWallet = async ({
         default: {
             throw new SDKError(ERROR_CODE.WALLET_NOT_SUPPORT);
         }
-
     }
 };
-
 
 
 export {

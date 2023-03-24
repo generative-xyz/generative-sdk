@@ -4219,98 +4219,55 @@ const prepareUTXOsToBuyMultiInscriptions = ({ privateKey, address, utxos, inscri
     }
     return { buyReqFullInfos, dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee, splitTxHex };
 };
-// const prepareUTXOsToBuyMultiInscriptions = ({
-//     privateKey,
-//     address,
-//     utxos,
-//     inscriptions,
-//     feeRatePerByte,
-//     buyReqFullInfos,
-// }: {
-//     privateKey: Buffer,
-//     address: string,
-//     utxos: UTXO[],
-//     inscriptions: { [key: string]: Inscription[] },
-//     feeRatePerByte: number,
-//     buyReqFullInfos: BuyReqFullInfo[],
-// }): { buyReqFullInfos: BuyReqFullInfo[], dummyUTXO: any, splitTxID: string, selectedUTXOs: UTXO[], newUTXO: any, fee: BigNumber, splitTxHex: string } => {
-//     let splitTxID = "";
-//     let splitTxHex = "";
-//     let newUTXO: any;
-//     let dummyUTXO: any;
-//     let selectedUTXOs: UTXO[] = [];
-//     let fee = BNZero;
-//     // filter to get cardinal utxos
-//     const { cardinalUTXOs, totalCardinalAmount } = filterAndSortCardinalUTXOs(utxos, inscriptions);
-//     // select dummy utxo
-//     let needCreateDummyUTXO = false;
-//     try {
-//         dummyUTXO = selectDummyUTXO(cardinalUTXOs, {});
-//     } catch (e) {
-//         console.log("Can not find dummy UTXO, need to create it.");
-//         needCreateDummyUTXO = true;
-//     }
-//     // find payment utxos for each buy info
-//     interface needPayment {
-//         buyInfoIndex: number,
-//         amount: BigNumber,
-//     }
-//     const needPaymentUTXOs: needPayment[] = [];
-//     for (let i = 0; i < buyReqFullInfos.length; i++) {
-//         const info = buyReqFullInfos[i];
-//         try {
-//             const { utxo } = findExactValueUTXO(cardinalUTXOs, info.price);
-//             buyReqFullInfos[i].paymentUTXO = utxo;
-//         } catch (e) {
-//             needPaymentUTXOs.push({ buyInfoIndex: i, amount: info.price });
-//         }
-//     }
-//     console.log("buyReqFullInfos: ", buyReqFullInfos);
-//     // create split tx to create enough payment uxtos (if needed)
-//     if (needPaymentUTXOs.length > 0 || needCreateDummyUTXO) {
-//         const paymentInfos: PaymentInfo[] = [];
-//         for (const info of needPaymentUTXOs) {
-//             paymentInfos.push({ address: address, amount: info.amount });
-//         }
-//         if (needCreateDummyUTXO) {
-//             paymentInfos.push({ address: address, amount: new BigNumber(DummyUTXOValue) });
-//         }
-//         const res = createTxSendBTC({ senderPrivateKey: privateKey, utxos: cardinalUTXOs, inscriptions: {}, paymentInfos, feeRatePerByte });
-//         splitTxID = res.txID;
-//         splitTxHex = res.txHex;
-//         selectedUTXOs = res.selectedUTXOs;
-//         fee = res.fee;
-//         for (let i = 0; i < needPaymentUTXOs.length; i++) {
-//             const info = needPaymentUTXOs[i];
-//             const buyInfoIndex = info.buyInfoIndex;
-//             if (buyReqFullInfos[buyInfoIndex].paymentUTXO != null) {
-//                 throw new SDKError(ERROR_CODE.INVALID_CODE);
-//             }
-//             const newUTXO: UTXO = {
-//                 tx_hash: splitTxID,
-//                 tx_output_n: i,
-//                 value: info.amount,
-//             };
-//             buyReqFullInfos[buyInfoIndex].paymentUTXO = newUTXO;
-//         }
-//         if (needCreateDummyUTXO) {
-//             dummyUTXO = {
-//                 tx_hash: splitTxID,
-//                 tx_output_n: needPaymentUTXOs.length,  // dummy utxo is the last (last - 1) output in the split tx
-//                 value: new BigNumber(DummyUTXOValue),
-//             };
-//         }
-//         if (res.changeAmount.gt(BNZero)) {
-//             const indexChangeUTXO = needCreateDummyUTXO ? needPaymentUTXOs.length + 1 : needPaymentUTXOs.length;
-//             newUTXO = {
-//                 tx_hash: splitTxID,
-//                 tx_output_n: indexChangeUTXO,  // change utxo is the last output in the split tx
-//                 value: res.changeAmount,
-//             };
-//         }
-//     }
-//     return { buyReqFullInfos, dummyUTXO, splitTxID, selectedUTXOs, newUTXO, fee, splitTxHex };
-// };
+const createRawTxToPrepareUTXOsToBuyMultiInscs = ({ pubKey, address, utxos, inscriptions, feeRatePerByte, buyReqFullInfos, }) => {
+    let splitPsbtB64 = "";
+    let dummyUTXO;
+    let selectedUTXOs = [];
+    let fee = BNZero;
+    let changeAmount = BNZero;
+    let indicesToSign = [];
+    // filter to get cardinal utxos
+    const { cardinalUTXOs } = filterAndSortCardinalUTXOs(utxos, inscriptions);
+    // select dummy utxo
+    let needCreateDummyUTXO = false;
+    try {
+        dummyUTXO = selectDummyUTXO(cardinalUTXOs, {});
+    }
+    catch (e) {
+        console.log("Can not find dummy UTXO, need to create it.");
+        needCreateDummyUTXO = true;
+    }
+    // find payment utxos for each buy info
+    const needPaymentUTXOs = [];
+    for (let i = 0; i < buyReqFullInfos.length; i++) {
+        const info = buyReqFullInfos[i];
+        try {
+            const { utxo } = findExactValueUTXO(cardinalUTXOs, info.price);
+            buyReqFullInfos[i].paymentUTXO = utxo;
+        }
+        catch (e) {
+            needPaymentUTXOs.push({ buyInfoIndex: i, amount: info.price });
+        }
+    }
+    console.log("buyReqFullInfos: ", buyReqFullInfos);
+    // create split tx to create enough payment uxtos (if needed)
+    if (needPaymentUTXOs.length > 0 || needCreateDummyUTXO) {
+        const paymentInfos = [];
+        for (const info of needPaymentUTXOs) {
+            paymentInfos.push({ address: address, amount: info.amount });
+        }
+        if (needCreateDummyUTXO) {
+            paymentInfos.push({ address: address, amount: new BigNumber(DummyUTXOValue) });
+        }
+        const res = createRawTxSendBTC({ pubKey: pubKey, utxos: cardinalUTXOs, inscriptions: {}, paymentInfos, feeRatePerByte });
+        selectedUTXOs = res.selectedUTXOs;
+        fee = res.fee;
+        splitPsbtB64 = res.base64Psbt;
+        changeAmount = res.changeAmount;
+        indicesToSign = res.indicesToSign;
+    }
+    return { buyReqFullInfos, dummyUTXO, needPaymentUTXOs, splitPsbtB64, selectedUTXOs, fee, changeAmount: changeAmount, needCreateDummyUTXO, indicesToSign };
+};
 const broadcastTx = async (txHex) => {
     const blockstream = new axios__default["default"].Axios({
         baseURL: BlockStreamURL
@@ -4919,6 +4876,130 @@ const createPSBTToBuyMultiInscriptions = ({ buyReqFullInfos, buyerPrivateKey, fe
     return { txID: tx.getId(), txHex, fee, selectedUTXOs, changeAmount: changeValue, tx, };
 };
 /**
+* createRawPSBTToBuyMultiInscriptions creates the partially signed bitcoin transaction to buy multiple inscriptions.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbt PSBT from seller
+* @param internalPubKey buffer public key of the buyer
+* @param buyerAddress payment address of the buy to receive inscription
+* @param valueInscription value in inscription
+* @param price price of the inscription that the seller wants to sell (in satoshi)
+* @param paymentUtxos cardinal input coins to payment
+* @param dummyUtxo cardinal dummy input coin
+* @returns the encoded base64 partially signed transaction
+*/
+const createRawPSBTToBuyMultiInscriptions = ({ buyReqFullInfos, internalPubKey, feeUTXOs, fee, dummyUTXO, feeRatePerByte, }) => {
+    // validation
+    if (buyReqFullInfos.length === 0) {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "buyReqFullInfos is empty");
+    }
+    const psbt = new bitcoinjsLib.Psbt({ network });
+    const indexInputNeedToSign = [];
+    const selectedUTXOs = [];
+    const { p2pktr, address: buyerAddress } = generateTaprootAddressFromPubKey(internalPubKey);
+    // Add dummy utxo to the first input coin
+    psbt.addInput({
+        hash: dummyUTXO.tx_hash,
+        index: dummyUTXO.tx_output_n,
+        witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output },
+        tapInternalKey: internalPubKey,
+    });
+    indexInputNeedToSign.push(0);
+    selectedUTXOs.push(dummyUTXO);
+    // Add the first inscription output
+    // the frist output coin has value equal to the sum of dummy value and value inscription
+    // this makes sure the first output coin is inscription outcoin 
+    const theFirstBuyReq = buyReqFullInfos[0];
+    psbt.addOutput({
+        address: theFirstBuyReq.receiverInscriptionAddress,
+        value: dummyUTXO.value.plus(theFirstBuyReq.valueInscription).toNumber(),
+    });
+    for (let i = 0; i < buyReqFullInfos.length; i++) {
+        const info = buyReqFullInfos[i];
+        const sellerSignedPsbt = info.sellerSignedPsbt;
+        const paymentUTXO = info.paymentUTXO;
+        if (sellerSignedPsbt.txInputs.length !== sellerSignedPsbt.txOutputs.length) {
+            throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Length of inputs and outputs in seller psbt must not be different.");
+        }
+        for (let i = 0; i < sellerSignedPsbt.txInputs.length; i++) {
+            // Add seller signed input
+            psbt.addInput({
+                ...sellerSignedPsbt.txInputs[i],
+                ...sellerSignedPsbt.data.inputs[i]
+            });
+            // Add seller output
+            psbt.addOutput({
+                ...sellerSignedPsbt.txOutputs[i],
+            });
+        }
+        // add payment utxo input
+        psbt.addInput({
+            hash: paymentUTXO.tx_hash,
+            index: paymentUTXO.tx_output_n,
+            witnessUtxo: { value: paymentUTXO.value.toNumber(), script: p2pktr.output },
+            tapInternalKey: internalPubKey,
+        });
+        indexInputNeedToSign.push(psbt.txInputs.length - 1);
+        selectedUTXOs.push(paymentUTXO);
+        // add receiver next inscription output
+        if (i < buyReqFullInfos.length - 1) {
+            const theNextBuyReq = buyReqFullInfos[i + 1];
+            psbt.addOutput({
+                address: theNextBuyReq.receiverInscriptionAddress,
+                value: theNextBuyReq.valueInscription.toNumber(),
+            });
+        }
+    }
+    // add utxo for pay fee
+    let totalAmountFeeUTXOs = BNZero;
+    for (const utxo of feeUTXOs) {
+        psbt.addInput({
+            hash: utxo.tx_hash,
+            index: utxo.tx_output_n,
+            witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output },
+            tapInternalKey: internalPubKey,
+        });
+        indexInputNeedToSign.push(psbt.txInputs.length - 1);
+        totalAmountFeeUTXOs = totalAmountFeeUTXOs.plus(utxo.value);
+    }
+    selectedUTXOs.push(...feeUTXOs);
+    // let fee = new BigNumber(estimateTxFee(psbt.txInputs.length, psbt.txOutputs.length, feeRate));
+    if (fee.gt(totalAmountFeeUTXOs)) {
+        fee = totalAmountFeeUTXOs; // maximum fee can paid
+    }
+    let changeValue = totalAmountFeeUTXOs.minus(fee);
+    if (changeValue.gte(DummyUTXOValue)) {
+        // Create a new dummy utxo output for the next purchase
+        psbt.addOutput({
+            address: buyerAddress,
+            value: DummyUTXOValue,
+        });
+        changeValue = changeValue.minus(DummyUTXOValue);
+        const extraFee = new BigNumber(OutputSize * feeRatePerByte);
+        if (changeValue.gte(extraFee)) {
+            changeValue = changeValue.minus(extraFee);
+            fee = fee.plus(extraFee);
+        }
+    }
+    if (changeValue.lt(BNZero)) {
+        throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_SEND);
+    }
+    // Change utxo
+    if (changeValue.gt(BNZero)) {
+        if (changeValue.gte(MinSats)) {
+            psbt.addOutput({
+                address: buyerAddress,
+                value: changeValue.toNumber(),
+            });
+        }
+        else {
+            fee = fee.plus(changeValue);
+            changeValue = BNZero;
+        }
+    }
+    console.log("indexInputNeedToSign: ", indexInputNeedToSign);
+    return { base64Psbt: psbt.toBase64(), selectedUTXOs, indicesToSign: indexInputNeedToSign, fee, changeAmount: changeValue };
+};
+/**
 * reqListForSaleInscription creates the PSBT of the seller to list for sale inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param sellerPrivateKey buffer private key of the seller
@@ -5438,6 +5519,152 @@ const reqBuyMultiInscriptions = (params) => {
         splitTxRaw: splitTxHex,
     };
 };
+/**
+* reqBuyInscription creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbtB64 buffer private key of the buyer
+* @param buyerPrivateKey buffer private key of the buyer
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
+* @returns the base64 encode Psbt
+*/
+const reqBuyMultiInscriptionsFromAnyWallet = async ({ buyReqInfos, pubKey, utxos, inscriptions, feeRatePerByte, walletType = WalletType.Xverse, cancelFn, }) => {
+    var _a;
+    const { address: buyerAddress } = generateTaprootAddressFromPubKey(pubKey);
+    // decode list of seller's signed PSBT
+    let buyReqFullInfos = [];
+    for (let i = 0; i < buyReqInfos.length; i++) {
+        const sellerSignedPsbtB64 = buyReqInfos[i].sellerSignedPsbtB64;
+        const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+        const sellerInputs = sellerSignedPsbt.data.inputs;
+        if (sellerInputs.length === 0) {
+            throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
+        }
+        const valueInscription = (_a = sellerInputs[0].witnessUtxo) === null || _a === void 0 ? void 0 : _a.value;
+        if (valueInscription === undefined || valueInscription === 0) {
+            throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid value inscription in seller's PSBT.");
+        }
+        buyReqFullInfos.push({
+            ...buyReqInfos[i],
+            sellerSignedPsbt,
+            valueInscription: new BigNumber(valueInscription),
+            paymentUTXO: null,
+        });
+    }
+    const newUTXOs = [...utxos];
+    // need to split UTXOs correspond to list of prices to payment
+    // and only one dummy UTXO for multiple inscriptions
+    const { buyReqFullInfos: buyReqFullInfosRes, dummyUTXO, splitPsbtB64, selectedUTXOs, fee: feeSplitUTXO, changeAmount, needCreateDummyUTXO, needPaymentUTXOs, indicesToSign, } = createRawTxToPrepareUTXOsToBuyMultiInscs({
+        pubKey: pubKey, address: buyerAddress, utxos, inscriptions, feeRatePerByte, buyReqFullInfos
+    });
+    // sign transaction 
+    const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithSpecificWallet({
+        base64Psbt: splitPsbtB64,
+        indicesToSign: indicesToSign,
+        address: buyerAddress,
+        isGetMsgTx: true,
+        walletType,
+        cancelFn
+    });
+    const splitTxID = msgTxID;
+    const splitTxHex = msgTxHex;
+    let dummyUTXORes = dummyUTXO;
+    let newUTXO;
+    for (let i = 0; i < needPaymentUTXOs.length; i++) {
+        const info = needPaymentUTXOs[i];
+        const buyInfoIndex = info.buyInfoIndex;
+        if (buyReqFullInfos[buyInfoIndex].paymentUTXO != null) {
+            throw new SDKError(ERROR_CODE.INVALID_CODE);
+        }
+        const newUTXO = {
+            tx_hash: splitTxID,
+            tx_output_n: i,
+            value: info.amount,
+        };
+        buyReqFullInfos[buyInfoIndex].paymentUTXO = newUTXO;
+    }
+    if (needCreateDummyUTXO) {
+        dummyUTXORes = {
+            tx_hash: splitTxID,
+            tx_output_n: needPaymentUTXOs.length,
+            value: new BigNumber(DummyUTXOValue),
+        };
+    }
+    if (changeAmount.gt(BNZero)) {
+        const indexChangeUTXO = needCreateDummyUTXO ? needPaymentUTXOs.length + 1 : needPaymentUTXOs.length;
+        newUTXO = {
+            tx_hash: splitTxID,
+            tx_output_n: indexChangeUTXO,
+            value: changeAmount,
+        };
+    }
+    buyReqFullInfos = buyReqFullInfosRes;
+    console.log("buyReqFullInfos: ", buyReqFullInfos);
+    console.log("buyReqInfos: ", buyReqInfos);
+    console.log("buy dummyUTXO: ", dummyUTXO);
+    console.log("buy splitTxID: ", splitTxID);
+    console.log("buy selectedUTXOs for split: ", selectedUTXOs);
+    console.log("buy newUTXO: ", newUTXO);
+    // remove selected utxo, payment utxo, dummyUTXO, and append new UTXO to list of UTXO to create the next PSBT
+    const tmpSelectedUTXOs = [...selectedUTXOs];
+    for (const info of buyReqFullInfos) {
+        tmpSelectedUTXOs.push(info.paymentUTXO);
+    }
+    tmpSelectedUTXOs.push(dummyUTXO);
+    for (const selectedUtxo of tmpSelectedUTXOs) {
+        const index = newUTXOs.findIndex((utxo) => utxo.tx_hash === selectedUtxo.tx_hash && utxo.tx_output_n === selectedUtxo.tx_output_n);
+        if (index !== -1) {
+            newUTXOs.splice(index, 1);
+        }
+    }
+    if (newUTXO !== undefined && newUTXO !== null) {
+        newUTXOs.push(newUTXO);
+    }
+    console.log("buy newUTXOs: ", newUTXOs);
+    // estimate fee
+    let numIns = 2 + buyReqFullInfos.length; // one for dummy utxo, one for network fee
+    let numOuts = 1 + buyReqFullInfos.length; // one for change value
+    for (const info of buyReqFullInfos) {
+        numIns += info.sellerSignedPsbt.txInputs.length;
+        numOuts += info.sellerSignedPsbt.txOutputs.length;
+    }
+    let fee = new BigNumber(estimateTxFee(numIns, numOuts, feeRatePerByte));
+    // select cardinal UTXOs to pay fee
+    console.log("BUY Fee estimate: ", fee.toNumber());
+    const { selectedUTXOs: feeSelectedUTXOs, totalInputAmount } = selectCardinalUTXOs(newUTXOs, {}, fee);
+    // create PBTS from the seller's one
+    const rawBuyRes = createRawPSBTToBuyMultiInscriptions({
+        buyReqFullInfos,
+        internalPubKey: pubKey,
+        feeUTXOs: feeSelectedUTXOs,
+        fee,
+        dummyUTXO: dummyUTXORes,
+        feeRatePerByte,
+    });
+    fee = rawBuyRes.fee;
+    // sign transaction 
+    const finalRes = await handleSignPsbtWithSpecificWallet({
+        base64Psbt: rawBuyRes.base64Psbt,
+        indicesToSign: rawBuyRes.indicesToSign,
+        address: buyerAddress,
+        isGetMsgTx: true,
+        walletType,
+        cancelFn
+    });
+    return {
+        tx: finalRes.msgTx,
+        txID: finalRes.msgTxID,
+        txHex: finalRes.msgTxHex,
+        fee: rawBuyRes === null || rawBuyRes === void 0 ? void 0 : rawBuyRes.fee.plus(feeSplitUTXO),
+        selectedUTXOs: rawBuyRes.selectedUTXOs,
+        splitTxID,
+        splitUTXOs: [...selectedUTXOs],
+        splitTxRaw: splitTxHex,
+    };
+};
 
 function isPrivateKey(privateKey) {
     let isValid = false;
@@ -5532,6 +5759,7 @@ exports.createRawTxDummyUTXOForSale = createRawTxDummyUTXOForSale;
 exports.createRawTxDummyUTXOFromCardinal = createRawTxDummyUTXOFromCardinal;
 exports.createRawTxSendBTC = createRawTxSendBTC;
 exports.createRawTxSplitFundFromOrdinalUTXO = createRawTxSplitFundFromOrdinalUTXO;
+exports.createRawTxToPrepareUTXOsToBuyMultiInscs = createRawTxToPrepareUTXOsToBuyMultiInscs;
 exports.createTx = createTx;
 exports.createTxSendBTC = createTxSendBTC;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
@@ -5560,6 +5788,7 @@ exports.prepareUTXOsToBuyMultiInscriptions = prepareUTXOsToBuyMultiInscriptions;
 exports.reqBuyInscription = reqBuyInscription;
 exports.reqBuyInscriptionFromAnyWallet = reqBuyInscriptionFromAnyWallet;
 exports.reqBuyMultiInscriptions = reqBuyMultiInscriptions;
+exports.reqBuyMultiInscriptionsFromAnyWallet = reqBuyMultiInscriptionsFromAnyWallet;
 exports.reqListForSaleInscFromAnyWallet = reqListForSaleInscFromAnyWallet;
 exports.reqListForSaleInscription = reqListForSaleInscription;
 exports.selectCardinalUTXOs = selectCardinalUTXOs;
