@@ -87,6 +87,35 @@ declare const reqListForSaleInscription: (params: {
     feeRatePerByte: number;
 }) => Promise<ICreateTxSellResp>;
 /**
+* reqListForSaleInscFromAnyWallet creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerPrivateKey buffer private key of the seller
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param amountPayToSeller BTC amount to pay to seller
+* @param feePayToCreator BTC fee to pay to creator
+* @param creatorAddress address of creator
+* amountPayToSeller + feePayToCreator = price that is showed on UI
+* @returns the base64 encode Psbt
+*/
+declare const reqListForSaleInscFromAnyWallet: ({ pubKey, utxos, inscriptions, sellInscriptionID, receiverBTCAddress, amountPayToSeller, feePayToCreator, creatorAddress, feeRatePerByte, walletType, cancelFn, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sellInscriptionID: string;
+    receiverBTCAddress: string;
+    amountPayToSeller: BigNumber;
+    feePayToCreator: BigNumber;
+    creatorAddress: string;
+    feeRatePerByte: number;
+    walletType?: number | undefined;
+    cancelFn: () => void;
+}) => Promise<ICreateTxSellResp>;
+/**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param sellerSignedPsbtB64 buffer private key of the buyer
@@ -130,4 +159,4 @@ declare const reqBuyMultiInscriptions: (params: {
     };
     feeRatePerByte: number;
 }) => ICreateTxBuyResp;
-export { createRawPSBTToSell, createPSBTToSell, createPSBTToBuy, reqListForSaleInscription, reqBuyInscription, reqBuyMultiInscriptions, };
+export { createRawPSBTToSell, createPSBTToSell, createPSBTToBuy, reqListForSaleInscription, reqListForSaleInscFromAnyWallet, reqBuyInscription, reqBuyMultiInscriptions, };
