@@ -120,7 +120,7 @@ const handleSignPsbtWithXverse = async ({
     }
 
     return {
-        base64SignedPsbt,
+        base64SignedPsbt: finalizedPsbt.toBase64(),
         msgTx,
         msgTxHex,
         msgTxID

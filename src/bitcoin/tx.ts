@@ -33,7 +33,7 @@ const signPSBT = (
         senderPrivateKey: Buffer,
         psbtB64: string,
         indicesToSign: number[],
-        sigHashType: number,
+        sigHashType?: number,
     }
 ): ISignPSBTResp => {
 
@@ -84,64 +84,127 @@ const signPSBT = (
 * @returns the hex signed transaction
 * @returns the network fee
 */
-const signMsgTx = (
+const signPSBT2 = (
     {
-        senderPrivateKey, hexMsgTx, indicesToSign, sigHashType = Transaction.SIGHASH_DEFAULT
+        senderPrivateKey, psbtB64, indicesToSign, sigHashType = Transaction.SIGHASH_DEFAULT
     }: {
         senderPrivateKey: Buffer,
-        hexMsgTx: string,
-        indicesToSign?: number[],
+        psbtB64: string,
+        indicesToSign: number[],
         sigHashType?: number,
     }
-): ISignPSBTResp => {
+): string => {
 
-    // parse msgTx string 
-    const msgTx = Transaction.fromHex(hexMsgTx);
-    const psbt = new Psbt();
-
-    for (const input of msgTx.ins) {
-        // TODO
-        psbt.addInput({
-            ...input
-        });
-    }
-
-    for (const output of msgTx.outs) {
-        // TODO
-        psbt.addOutput({
-            ...output
-        });
-    }
+    // parse psbt string 
+    const rawPsbt = Psbt.fromBase64(psbtB64);
 
     // init key pair and tweakedSigner from senderPrivateKey
     const { tweakedSigner } = generateTaprootKeyPair(senderPrivateKey);
 
 
     // sign inputs
-    for (let i = 0; i < msgTx.ins.length; i++) {
+    for (let i = 0; i < rawPsbt.txInputs.length; i++) {
         // if (indicesToSign.findIndex(value => value === i) !== -1) {
-        // msgTx.ins[i](i, tweakedSigner, [sigHashType]);
-        psbt.signInput(i, tweakedSigner);
+        try {
+            rawPsbt.signInput(i, tweakedSigner, [sigHashType]);
+        } catch (e) {
+            console.log("Sign index error: ", i, e);
+        }
         // }
     }
 
     // finalize inputs
-    for (let i = 0; i < psbt.txInputs.length; i++) {
+    for (let i = 0; i < rawPsbt.txInputs.length; i++) {
         // if (indicesToSign.findIndex(value => value === i) !== -1) {
-        psbt.finalizeInput(i);
+        try {
+            rawPsbt.finalizeInput(i);
+        } catch (e) {
+            console.log("Finalize index error: ", i, e);
+        }
+
         // }
     }
 
     // extract psbt to get msgTx
-    const finalMsgTx = psbt.extractTransaction();
+    // const msgTx = rawPsbt.extractTransaction();
 
-    return {
-        signedBase64PSBT: psbt.toBase64(),
-        msgTx: finalMsgTx,
-        msgTxHex: finalMsgTx.toHex(),
-        msgTxID: finalMsgTx.getId(),
-    };
+    console.log("hex psbt: ", rawPsbt.toHex());
+
+    return rawPsbt.toBase64();
 };
+
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions). 
+* NOTE: Currently, the function only supports sending from Taproot address. 
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send 
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee 
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+// const signMsgTx = (
+//     {
+//         senderPrivateKey, hexMsgTx, indicesToSign, sigHashType = Transaction.SIGHASH_DEFAULT
+//     }: {
+//         senderPrivateKey: Buffer,
+//         hexMsgTx: string,
+//         indicesToSign?: number[],
+//         sigHashType?: number,
+//     }
+// ): ISignPSBTResp => {
+
+//     // parse msgTx string 
+//     const psbt = Psbt.fromHex(hexMsgTx);
+
+//     for (const input of msgTx.ins) {
+//         // TODO
+//         psbt.addInput({
+//             ...input
+//         });
+//     }
+
+//     for (const output of msgTx.outs) {
+//         // TODO
+//         psbt.addOutput({
+//             ...output
+//         });
+//     }
+
+//     // init key pair and tweakedSigner from senderPrivateKey
+//     const { tweakedSigner } = generateTaprootKeyPair(senderPrivateKey);
+
+
+//     // sign inputs
+//     for (let i = 0; i < msgTx.ins.length; i++) {
+//         // if (indicesToSign.findIndex(value => value === i) !== -1) {
+//         // msgTx.ins[i](i, tweakedSigner, [sigHashType]);
+//         psbt.signInput(i, tweakedSigner);
+//         // }
+//     }
+
+//     // finalize inputs
+//     for (let i = 0; i < psbt.txInputs.length; i++) {
+//         // if (indicesToSign.findIndex(value => value === i) !== -1) {
+//         psbt.finalizeInput(i);
+//         // }
+//     }
+
+//     // extract psbt to get msgTx
+//     const finalMsgTx = psbt.extractTransaction();
+
+//     return {
+//         signedBase64PSBT: psbt.toBase64(),
+//         msgTx: finalMsgTx,
+//         msgTxHex: finalMsgTx.toHex(),
+//         msgTxID: finalMsgTx.getId(),
+//     };
+// };
 
 const createRawTxDummyUTXOForSale = ({
     pubKey,
@@ -1149,5 +1212,5 @@ export {
     prepareUTXOsToBuyMultiInscriptions,
     createRawTxToPrepareUTXOsToBuyMultiInscs,
     signPSBT,
-    signMsgTx,
+    signPSBT2,
 };
