@@ -2,8 +2,6 @@ import { Psbt, Transaction } from "bitcoinjs-lib";
 import {
     SignTransactionOptions,
     SignTransactionPayload,
-    callWalletPopup,
-    getAddress,
     signTransaction,
 } from "sats-connect";
 

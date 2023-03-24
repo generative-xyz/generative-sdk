@@ -3580,6 +3580,113 @@ const decryptWallet = (ciphertext, password) => {
     return wallet;
 };
 
+const preparePayloadSignTx = ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT }) => {
+    return {
+        network: {
+            type: "Mainnet",
+            address: "", // TODO:
+        },
+        message: "Sign Transaction",
+        psbtBase64: base64Psbt,
+        broadcast: false,
+        inputsToSign: [{
+                address: address,
+                signingIndexes: indicesToSign,
+                sigHash: sigHashType,
+            }],
+    };
+};
+const finalizeSignedPsbt = ({ signedRawPsbtB64, indicesToSign, }) => {
+    const signedPsbt = bitcoinjsLib.Psbt.fromBase64(signedRawPsbtB64);
+    // finalize inputs
+    for (let i = 0; i < signedPsbt.txInputs.length; i++) {
+        if (indicesToSign.findIndex(value => value === i) !== -1) {
+            signedPsbt.finalizeInput(i);
+        }
+    }
+    return signedPsbt;
+};
+/**
+* handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
+* extract to msgTx (if isGetMsgTx is true)
+* @param base64Psbt the base64 encoded psbt need to sign
+* @param indicesToSign indices of inputs need to sign
+* @param address address of signer
+* @param sigHashType default is SIGHASH_DEFAULT
+* @param isGetMsgTx flag used to extract to msgTx or not
+* @param cancelFn callback function for handling cancel signing
+* @returns the base64 encode signed Psbt
+*/
+const handleSignPsbtWithXverse = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, cancelFn, }) => {
+    let base64SignedPsbt = "";
+    const payload = preparePayloadSignTx({
+        base64Psbt,
+        indicesToSign, address,
+        sigHashType
+    });
+    const signPsbtOptions = {
+        payload: payload,
+        onFinish: (response) => {
+            console.log("Sign Xverse response: ", response);
+            if (response.psbtBase64 !== null && response.psbtBase64 !== undefined && response.psbtBase64 !== "") {
+                // sign successfully
+                base64SignedPsbt = response.psbtBase64;
+            }
+            else {
+                // sign unsuccessfully
+                throw new SDKError(ERROR_CODE.SIGN_XVERSE_ERROR, response);
+            }
+        },
+        onCancel: cancelFn,
+    };
+    await satsConnect.signTransaction(signPsbtOptions);
+    if (base64SignedPsbt === "") {
+        throw new SDKError(ERROR_CODE.SIGN_XVERSE_ERROR, "Response is empty");
+    }
+    const finalizedPsbt = finalizeSignedPsbt({ signedRawPsbtB64: base64SignedPsbt, indicesToSign });
+    let msgTx;
+    let msgTxID = "";
+    let msgTxHex = "";
+    if (isGetMsgTx) {
+        msgTx = finalizedPsbt.extractTransaction();
+        msgTxHex = msgTx.toHex();
+        msgTxID = msgTx.getId();
+    }
+    return {
+        base64SignedPsbt,
+        msgTx,
+        msgTxHex,
+        msgTxID
+    };
+};
+/**
+* handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
+* extract to msgTx (if isGetMsgTx is true)
+* @param base64Psbt the base64 encoded psbt need to sign
+* @param indicesToSign indices of inputs need to sign
+* @param address address of signer
+* @param sigHashType default is SIGHASH_DEFAULT
+* @param isGetMsgTx flag used to extract to msgTx or not
+* @param cancelFn callback function for handling cancel signing
+* @returns the base64 encode signed Psbt
+*/
+const handleSignPsbtWithSpecificWallet = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, walletType = WalletType.Xverse, cancelFn, }) => {
+    switch (walletType) {
+        case WalletType.Xverse: {
+            return handleSignPsbtWithXverse({
+                base64Psbt, indicesToSign,
+                address,
+                sigHashType,
+                isGetMsgTx,
+                cancelFn,
+            });
+        }
+        default: {
+            throw new SDKError(ERROR_CODE.WALLET_NOT_SUPPORT);
+        }
+    }
+};
+
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -3619,6 +3726,61 @@ const signPSBT = ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType = bitc
         msgTx: msgTx,
         msgTxHex: msgTx.toHex(),
         msgTxID: msgTx.getId(),
+    };
+};
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+const signMsgTx = ({ senderPrivateKey, hexMsgTx, indicesToSign, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT }) => {
+    // parse msgTx string 
+    const msgTx = bitcoinjsLib.Transaction.fromHex(hexMsgTx);
+    const psbt = new bitcoinjsLib.Psbt();
+    for (const input of msgTx.ins) {
+        // TODO
+        psbt.addInput({
+            ...input
+        });
+    }
+    for (const output of msgTx.outs) {
+        // TODO
+        psbt.addOutput({
+            ...output
+        });
+    }
+    // init key pair and tweakedSigner from senderPrivateKey
+    const { tweakedSigner } = generateTaprootKeyPair(senderPrivateKey);
+    // sign inputs
+    for (let i = 0; i < msgTx.ins.length; i++) {
+        // if (indicesToSign.findIndex(value => value === i) !== -1) {
+        // msgTx.ins[i](i, tweakedSigner, [sigHashType]);
+        psbt.signInput(i, tweakedSigner);
+        // }
+    }
+    // finalize inputs
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        // if (indicesToSign.findIndex(value => value === i) !== -1) {
+        psbt.finalizeInput(i);
+        // }
+    }
+    // extract psbt to get msgTx
+    const finalMsgTx = psbt.extractTransaction();
+    return {
+        signedBase64PSBT: psbt.toBase64(),
+        msgTx: finalMsgTx,
+        msgTxHex: finalMsgTx.toHex(),
+        msgTxID: finalMsgTx.getId(),
     };
 };
 const createRawTxDummyUTXOForSale = ({ pubKey, utxos, inscriptions, sellInscriptionID, feeRatePerByte, }) => {
@@ -3773,6 +3935,52 @@ const createRawTx = ({ pubKey, utxos, inscriptions, sendInscriptionID = "", rece
         indicesToSign.push(i);
     }
     return { base64Psbt: psbt.toBase64(), fee: feeRes, changeAmount, selectedUTXOs, indicesToSign };
+};
+/**
+* createRawTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+const createRawTxFromAnyWallet = async ({ pubKey, utxos, inscriptions, sendInscriptionID = "", receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam = true, // default is true,
+walletType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, cancelFn, }) => {
+    const { address } = generateTaprootAddressFromPubKey(pubKey);
+    const { base64Psbt, indicesToSign, selectedUTXOs, fee, changeAmount } = createRawTx({
+        pubKey,
+        utxos,
+        inscriptions,
+        sendInscriptionID,
+        receiverInsAddress,
+        sendAmount,
+        feeRatePerByte,
+        isUseInscriptionPayFeeParam,
+    });
+    // sign transaction 
+    const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithSpecificWallet({
+        base64Psbt: base64Psbt,
+        indicesToSign: indicesToSign,
+        address: address,
+        isGetMsgTx: true,
+        walletType,
+        cancelFn
+    });
+    return {
+        tx: msgTx,
+        txID: msgTxID,
+        txHex: msgTxHex,
+        fee,
+        selectedUTXOs,
+        changeAmount,
+    };
 };
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
@@ -4278,113 +4486,6 @@ const broadcastTx = async (txHex) => {
         throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
     }
     return response.data;
-};
-
-const preparePayloadSignTx = ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT }) => {
-    return {
-        network: {
-            type: "Mainnet",
-            address: "", // TODO:
-        },
-        message: "Sign Transaction",
-        psbtBase64: base64Psbt,
-        broadcast: false,
-        inputsToSign: [{
-                address: address,
-                signingIndexes: indicesToSign,
-                sigHash: sigHashType,
-            }],
-    };
-};
-const finalizeSignedPsbt = ({ signedRawPsbtB64, indicesToSign, }) => {
-    const signedPsbt = bitcoinjsLib.Psbt.fromBase64(signedRawPsbtB64);
-    // finalize inputs
-    for (let i = 0; i < signedPsbt.txInputs.length; i++) {
-        if (indicesToSign.findIndex(value => value === i) !== -1) {
-            signedPsbt.finalizeInput(i);
-        }
-    }
-    return signedPsbt;
-};
-/**
-* handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
-* extract to msgTx (if isGetMsgTx is true)
-* @param base64Psbt the base64 encoded psbt need to sign
-* @param indicesToSign indices of inputs need to sign
-* @param address address of signer
-* @param sigHashType default is SIGHASH_DEFAULT
-* @param isGetMsgTx flag used to extract to msgTx or not
-* @param cancelFn callback function for handling cancel signing
-* @returns the base64 encode signed Psbt
-*/
-const handleSignPsbtWithXverse = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, cancelFn, }) => {
-    let base64SignedPsbt = "";
-    const payload = preparePayloadSignTx({
-        base64Psbt,
-        indicesToSign, address,
-        sigHashType
-    });
-    const signPsbtOptions = {
-        payload: payload,
-        onFinish: (response) => {
-            console.log("Sign Xverse response: ", response);
-            if (response.psbtBase64 !== null && response.psbtBase64 !== undefined && response.psbtBase64 !== "") {
-                // sign successfully
-                base64SignedPsbt = response.psbtBase64;
-            }
-            else {
-                // sign unsuccessfully
-                throw new SDKError(ERROR_CODE.SIGN_XVERSE_ERROR, response);
-            }
-        },
-        onCancel: cancelFn,
-    };
-    await satsConnect.signTransaction(signPsbtOptions);
-    if (base64SignedPsbt === "") {
-        throw new SDKError(ERROR_CODE.SIGN_XVERSE_ERROR, "Response is empty");
-    }
-    const finalizedPsbt = finalizeSignedPsbt({ signedRawPsbtB64: base64SignedPsbt, indicesToSign });
-    let msgTx;
-    let msgTxID = "";
-    let msgTxHex = "";
-    if (isGetMsgTx) {
-        msgTx = finalizedPsbt.extractTransaction();
-        msgTxHex = msgTx.toHex();
-        msgTxID = msgTx.getId();
-    }
-    return {
-        base64SignedPsbt,
-        msgTx,
-        msgTxHex,
-        msgTxID
-    };
-};
-/**
-* handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
-* extract to msgTx (if isGetMsgTx is true)
-* @param base64Psbt the base64 encoded psbt need to sign
-* @param indicesToSign indices of inputs need to sign
-* @param address address of signer
-* @param sigHashType default is SIGHASH_DEFAULT
-* @param isGetMsgTx flag used to extract to msgTx or not
-* @param cancelFn callback function for handling cancel signing
-* @returns the base64 encode signed Psbt
-*/
-const handleSignPsbtWithSpecificWallet = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, walletType = WalletType.Xverse, cancelFn, }) => {
-    switch (walletType) {
-        case WalletType.Xverse: {
-            return handleSignPsbtWithXverse({
-                base64Psbt, indicesToSign,
-                address,
-                sigHashType,
-                isGetMsgTx,
-                cancelFn,
-            });
-        }
-        default: {
-            throw new SDKError(ERROR_CODE.WALLET_NOT_SUPPORT);
-        }
-    }
 };
 
 const SigHashTypeForSale = bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY;
@@ -5757,6 +5858,7 @@ exports.createRawPSBTToSell = createRawPSBTToSell;
 exports.createRawTx = createRawTx;
 exports.createRawTxDummyUTXOForSale = createRawTxDummyUTXOForSale;
 exports.createRawTxDummyUTXOFromCardinal = createRawTxDummyUTXOFromCardinal;
+exports.createRawTxFromAnyWallet = createRawTxFromAnyWallet;
 exports.createRawTxSendBTC = createRawTxSendBTC;
 exports.createRawTxSplitFundFromOrdinalUTXO = createRawTxSplitFundFromOrdinalUTXO;
 exports.createRawTxToPrepareUTXOsToBuyMultiInscs = createRawTxToPrepareUTXOsToBuyMultiInscs;
@@ -5797,6 +5899,7 @@ exports.selectTheSmallestUTXO = selectTheSmallestUTXO;
 exports.selectUTXOs = selectUTXOs;
 exports.selectUTXOsToCreateBuyTx = selectUTXOsToCreateBuyTx;
 exports.signByETHPrivKey = signByETHPrivKey;
+exports.signMsgTx = signMsgTx;
 exports.signPSBT = signPSBT;
 exports.tapTweakHash = tapTweakHash;
 exports.toXOnly = toXOnly;
