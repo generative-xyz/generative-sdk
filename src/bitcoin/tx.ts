@@ -35,6 +35,8 @@ const signPSBT = (
     }
 ): ISignPSBTResp => {
 
+    Transaction;
+
     // parse psbt string 
     const rawPsbt = Psbt.fromBase64(psbtB64);
 
