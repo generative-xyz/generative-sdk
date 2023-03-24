@@ -22,6 +22,10 @@ declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
 declare const generateTaprootAddress: (privateKey: Buffer) => string;
+declare const generateTaprootAddressFromPubKey: (pubKey: Buffer) => {
+    address: string;
+    p2pktr: payments.Payment;
+};
 declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     keyPair: import("ecpair").ECPairInterface;
     senderAddress: string;
@@ -105,4 +109,4 @@ declare const encryptWallet: (wallet: Wallet, password: string) => string;
 * @returns the Wallet object
 */
 declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
-export { ECPair, convertPrivateKey, convertPrivateKeyFromStr, toXOnly, tweakSigner, tapTweakHash, generateTaprootAddress, generateTaprootKeyPair, generateP2PKHKeyPair, generateP2PKHKeyFromRoot, getBTCBalance, importBTCPrivateKey, derivePasswordWallet, getBitcoinKeySignContent, encryptWallet, decryptWallet, deriveSegwitWallet, deriveETHWallet, signByETHPrivKey, };
+export { ECPair, convertPrivateKey, convertPrivateKeyFromStr, toXOnly, tweakSigner, tapTweakHash, generateTaprootAddress, generateTaprootKeyPair, generateP2PKHKeyPair, generateP2PKHKeyFromRoot, getBTCBalance, importBTCPrivateKey, derivePasswordWallet, getBitcoinKeySignContent, encryptWallet, decryptWallet, deriveSegwitWallet, deriveETHWallet, signByETHPrivKey, generateTaprootAddressFromPubKey, };

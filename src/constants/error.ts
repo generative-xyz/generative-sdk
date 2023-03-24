@@ -10,6 +10,7 @@ export const ERROR_CODE = {
     INVALID_VALIDATOR_LABEL: "-8",
     NOT_FOUND_UTXO: "-9",
     NOT_FOUND_DUMMY_UTXO: "-10",
+    SIGN_XVERSE_ERROR: "-11",
 };
 
 export const ERROR_MESSAGE = {
@@ -56,6 +57,11 @@ export const ERROR_MESSAGE = {
     [ERROR_CODE.NOT_FOUND_DUMMY_UTXO]: {
         message: "Can not find dummy UTXO in your wallet.",
         desc: "Can not find dummy UTXO in your wallet.",
+    },
+
+    [ERROR_CODE.SIGN_XVERSE_ERROR]: {
+        message: "Can not sign with Xverse.",
+        desc: "Can not sign with Xverse.",
     },
 };
 

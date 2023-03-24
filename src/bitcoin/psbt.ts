@@ -1,7 +1,8 @@
-import { BNZero, DummyUTXOValue, MinSats, OutputSize, network } from "./constants";
+import { BNZero, DummyUTXOValue, MinSats, OutputSize, WalletType, network } from "./constants";
 import {
     BuyReqFullInfo,
     BuyReqInfo,
+    ICreateRawTxResp,
     ICreateTxBuyResp,
     ICreateTxResp,
     ICreateTxSellResp,
@@ -15,6 +16,7 @@ import {
 import SDKError, { ERROR_CODE } from "../constants/error";
 import {
     createDummyUTXOFromCardinal,
+    createRawTxDummyUTXOForSale,
     createTxSplitFundFromOrdinalUTXO,
     prepareUTXOsToBuyMultiInscriptions
 } from "./tx";
@@ -23,6 +25,7 @@ import {
     fromSat,
 } from "./utils";
 import {
+    generateTaprootAddressFromPubKey,
     generateTaprootKeyPair,
     toXOnly,
 } from "./wallet";
@@ -33,7 +36,10 @@ import {
 } from "./selectcoin";
 
 import BigNumber from "bignumber.js";
+import { handleSignPsbtWithXverse } from "./xverse";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
+
+const SigHashTypeForSale = Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY;
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription. 
@@ -118,6 +124,82 @@ const createPSBTToSell = (
     psbt.finalizeAllInputs();
 
     return psbt.toBase64();
+};
+
+/**
+* createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription. 
+* NOTE: Currently, the function only supports sending from Taproot address. 
+* @param sellerPrivateKey buffer private key of the seller
+* @param sellerAddress payment address of the seller to recieve BTC from buyer
+* @param ordinalInput ordinal input coin to sell
+* @param price price of the inscription that the seller wants to sell (in satoshi)
+* @returns the encoded base64 partially signed transaction
+*/
+const createRawPSBTToSell = (
+    params: {
+        internalPubKey: Buffer,
+        receiverBTCAddress: string,  // default is seller address
+        inscriptionUTXO: UTXO,
+        amountPayToSeller: BigNumber,
+        feePayToCreator: BigNumber,
+        creatorAddress: string,
+        dummyUTXO: UTXO,
+    },
+): ICreateRawTxResp => {
+    const psbt = new Psbt({ network });
+    const { inscriptionUTXO: ordinalInput, amountPayToSeller, receiverBTCAddress, internalPubKey, dummyUTXO, creatorAddress, feePayToCreator } = params;
+
+    const { address, p2pktr } = generateTaprootAddressFromPubKey(internalPubKey);
+
+    // add ordinal input into the first input coins with 
+    // sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY
+
+    psbt.addInput({
+        hash: ordinalInput.tx_hash,
+        index: ordinalInput.tx_output_n,
+        witnessUtxo: { value: ordinalInput.value.toNumber(), script: p2pktr.output as Buffer },
+        tapInternalKey: internalPubKey,
+        sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
+    });
+    const selectedUTXOs: UTXO[] = [ordinalInput];
+
+    if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.value.gt(BNZero)) {
+        psbt.addOutput({
+            address: receiverBTCAddress,
+            value: amountPayToSeller.plus(dummyUTXO.value).toNumber(),
+        });
+    } else {
+        psbt.addOutput({
+            address: receiverBTCAddress,
+            value: amountPayToSeller.toNumber(),
+        });
+    }
+
+    // the second input and output
+    // add dummy UTXO and output for paying to creator
+    if (feePayToCreator.gt(BNZero) && creatorAddress !== "") {
+        psbt.addInput({
+            hash: dummyUTXO.tx_hash,
+            index: dummyUTXO.tx_output_n,
+            witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output as Buffer },
+            tapInternalKey: internalPubKey,
+            sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY | Transaction.SIGHASH_DEFAULT,
+        });
+
+        selectedUTXOs.push(dummyUTXO);
+
+        psbt.addOutput({
+            address: creatorAddress,
+            value: feePayToCreator.toNumber()
+        });
+    }
+
+    const indicesToSign: number[] = [];
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        indicesToSign.push(i);
+    }
+
+    return { base64Psbt: psbt.toBase64(), selectedUTXOs, indicesToSign, fee: BNZero, changeAmount: BNZero };
 };
 
 /**
@@ -589,6 +671,180 @@ const reqListForSaleInscription = async (
     return { base64Psbt, selectedUTXOs: inscriptionUTXOs, splitTxID, splitUTXOs: selectedUTXOs, splitTxRaw: splitTxRaw };
 };
 
+
+/**
+* reqListForSaleInscFromAnyWallet creates the PSBT of the seller to list for sale inscription. 
+* NOTE: Currently, the function only supports sending from Taproot address. 
+* @param sellerPrivateKey buffer private key of the seller
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param amountPayToSeller BTC amount to pay to seller
+* @param feePayToCreator BTC fee to pay to creator
+* @param creatorAddress address of creator
+* amountPayToSeller + feePayToCreator = price that is showed on UI
+* @returns the base64 encode Psbt
+*/
+const reqListForSaleInscFromAnyWallet = async ({
+    pubKey,
+    utxos,
+    inscriptions,
+    sellInscriptionID,
+    receiverBTCAddress,
+    amountPayToSeller,
+    feePayToCreator,
+    creatorAddress,
+    feeRatePerByte,
+    walletType = WalletType.Xverse,
+    cancelFn,
+}: {
+    pubKey: Buffer,
+    utxos: UTXO[],
+    inscriptions: { [key: string]: Inscription[] },
+    sellInscriptionID: string,
+    receiverBTCAddress: string,
+    amountPayToSeller: BigNumber,
+    feePayToCreator: BigNumber,
+    creatorAddress: string,
+    feeRatePerByte: number,
+    walletType?: number,
+    cancelFn: () => void,
+}): Promise<ICreateTxSellResp> => {
+
+
+    // validation
+    if (feePayToCreator.gt(BNZero) && creatorAddress === "") {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Creator address must not be empty.");
+    }
+    if (sellInscriptionID === "") {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "SellInscriptionID must not be empty.");
+    }
+    if (receiverBTCAddress === "") {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "receiverBTCAddress must not be empty.");
+    }
+    if (amountPayToSeller.eq(BNZero)) {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "amountPayToSeller must be greater than zero.");
+    }
+
+    let needDummyUTXO = false;
+
+    if (feePayToCreator.gt(BNZero)) {
+        // creator is the selller
+        if (creatorAddress !== receiverBTCAddress) {
+            needDummyUTXO = true;
+        } else {
+            // create only one output, don't need to create 2 outputs
+            amountPayToSeller = amountPayToSeller.plus(feePayToCreator);
+            creatorAddress = "";
+            feePayToCreator = BNZero;
+        }
+    }
+
+    if (amountPayToSeller.lt(MinSats)) {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "amountPayToSeller must not be less than " + fromSat(MinSats) + " BTC.");
+    }
+    if (feePayToCreator.gt(BNZero) && feePayToCreator.lt(MinSats)) {
+        throw new SDKError(ERROR_CODE.INVALID_PARAMS, "feePayToCreator must not be less than " + fromSat(MinSats) + " BTC.");
+    }
+
+
+    const { address } = generateTaprootAddressFromPubKey(pubKey);
+
+    // select inscription UTXO
+    const { inscriptionUTXO, inscriptionInfo } = selectInscriptionUTXO(utxos, inscriptions, sellInscriptionID);
+    let newInscriptionUTXO = inscriptionUTXO;
+
+    // select dummy UTXO 
+    // if there is no dummy UTXO, we have to create and broadcast the tx to split dummy UTXO first
+    let dummyUTXORes: any;
+    let selectedUTXOsRes: UTXO[] = [];
+    let splitTxID = "";
+    let splitTxRaw = "";
+
+    if (needDummyUTXO) {
+        const { dummyUTXO, splitPsbtB64, indicesToSign, selectedUTXOs, newValueInscription } = createRawTxDummyUTXOForSale({
+            pubKey,
+            utxos,
+            inscriptions,
+            sellInscriptionID,
+            feeRatePerByte,
+        });
+
+        if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.tx_hash !== "") {
+            // select an available dummy UTXO
+            dummyUTXORes = dummyUTXO;
+
+        } else {
+            // need to create split tx 
+            // sign transaction 
+            const { base64SignedPsbt, msgTx, msgTxID, msgTxHex } = await handleSignPsbtWithXverse({
+                base64Psbt: splitPsbtB64,
+                indicesToSign,
+                address,
+                isGetMsgTx: true,
+                cancelFn
+            });
+
+            splitTxID = msgTxID;
+            splitTxRaw = msgTxHex;
+            selectedUTXOsRes = selectedUTXOs;
+
+            if (newValueInscription.eq(BNZero)) {
+                // split from cardinal
+                dummyUTXORes = {
+                    tx_hash: splitTxID,
+                    tx_output_n: 0,
+                    value: new BigNumber(DummyUTXOValue),
+                };
+                newInscriptionUTXO = inscriptionUTXO;
+
+            } else {
+                // split from ordinal
+                newInscriptionUTXO = {
+                    tx_hash: splitTxID,
+                    tx_output_n: 0,
+                    value: newValueInscription,
+                };
+                dummyUTXORes = {
+                    tx_hash: splitTxID,
+                    tx_output_n: 1,
+                    value: new BigNumber(DummyUTXOValue),
+                };
+            }
+        }
+    }
+    console.log("sell splitTxID: ", splitTxID);
+    console.log("sell dummyUTXORes: ", dummyUTXORes);
+    console.log("sell newInscriptionUTXO: ", newInscriptionUTXO);
+
+    const rawPsbtRes = createRawPSBTToSell({
+        inscriptionUTXO: newInscriptionUTXO,
+        amountPayToSeller: amountPayToSeller,
+        receiverBTCAddress: receiverBTCAddress,
+        internalPubKey: pubKey,
+        dummyUTXO: dummyUTXORes,
+        creatorAddress: creatorAddress,
+        feePayToCreator: feePayToCreator,
+    });
+
+    // sign transaction 
+    const { base64SignedPsbt } = await handleSignPsbtWithXverse({
+        base64Psbt: rawPsbtRes.base64Psbt,
+        indicesToSign: rawPsbtRes.indicesToSign,
+        address,
+        sigHashType: SigHashTypeForSale,
+        cancelFn
+    });
+
+    const inscriptionUTXOs = [inscriptionUTXO];
+    if (dummyUTXORes !== null) {
+        inscriptionUTXOs.push(dummyUTXORes);
+    }
+
+    return { base64Psbt: base64SignedPsbt, selectedUTXOs: inscriptionUTXOs, splitTxID, splitUTXOs: selectedUTXOsRes, splitTxRaw: splitTxRaw };
+};
+
 /**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription. 
 * NOTE: Currently, the function only supports sending from Taproot address. 
@@ -821,6 +1077,7 @@ const reqBuyMultiInscriptions = (
 };
 
 export {
+    createRawPSBTToSell,
     createPSBTToSell,
     createPSBTToBuy,
     reqListForSaleInscription,
