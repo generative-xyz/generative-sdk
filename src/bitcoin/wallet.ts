@@ -94,6 +94,17 @@ const generateTaprootAddress = (privateKey: Buffer): string => {
     return address ? address : "";
 };
 
+const generateTaprootAddressFromPubKey = (pubKey: Buffer) => {
+    // const internalPubkey = toXOnly(pubKey);
+    const internalPubkey = pubKey;
+
+    const p2pktr = payments.p2tr({
+        internalPubkey,
+    });
+
+    return { address: p2pktr.address || "", p2pktr };
+};
+
 const generateTaprootKeyPair = (privateKey: Buffer) => {
     // init key pair from senderPrivateKey
     const keyPair = ECPair.fromPrivateKey(privateKey);
@@ -305,4 +316,5 @@ export {
     deriveSegwitWallet,
     deriveETHWallet,
     signByETHPrivKey,
+    generateTaprootAddressFromPubKey,
 };
