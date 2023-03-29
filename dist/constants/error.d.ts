@@ -12,6 +12,8 @@ export declare const ERROR_CODE: {
     NOT_FOUND_DUMMY_UTXO: string;
     WALLET_NOT_SUPPORT: string;
     SIGN_XVERSE_ERROR: string;
+    CREATE_COMMIT_TX_ERR: string;
+    INVALID_TAPSCRIPT_ADDRESS: string;
 };
 export declare const ERROR_MESSAGE: {
     [x: string]: {

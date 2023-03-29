@@ -27,7 +27,8 @@
     "test-util": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/utils.spec.ts'",
     "test-psbt": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/psbt.spec.ts'",
     "test-psbt-multi": "yarn build && env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/psbtmulti.spec.ts'",
-    "test-wallet": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register  'test/wallet.spec.ts'"
+    "test-wallet": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register  'test/wallet.spec.ts'",
+    "test-tc": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register  'test/tc.spec.ts'"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^17.4.4",

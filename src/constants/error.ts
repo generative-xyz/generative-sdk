@@ -12,6 +12,8 @@ export const ERROR_CODE = {
     NOT_FOUND_DUMMY_UTXO: "-10",
     WALLET_NOT_SUPPORT: "-11",
     SIGN_XVERSE_ERROR: "-12",
+    CREATE_COMMIT_TX_ERR: "-13",
+    INVALID_TAPSCRIPT_ADDRESS: "-14",
 };
 
 export const ERROR_MESSAGE = {
@@ -68,6 +70,16 @@ export const ERROR_MESSAGE = {
         message: "Your wallet is not supported currently.",
         desc: "Your wallet is not supported currently.",
     },
+    [ERROR_CODE.CREATE_COMMIT_TX_ERR]: {
+        message: "Create commit tx error.",
+        desc: "Create commit tx error.",
+    },
+    [ERROR_CODE.INVALID_TAPSCRIPT_ADDRESS]: {
+        message: "Can not generate valid tap script address to inscribe.",
+        desc: "Can not generate valid tap script address to inscribe.",
+    },
+
+
 };
 
 class SDKError extends Error {
