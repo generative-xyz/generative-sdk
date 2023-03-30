@@ -1,4 +1,4 @@
-import { Wallet, decryptWallet, deriveETHWallet, deriveSegwitWallet, encryptWallet, getBitcoinKeySignContent, importBTCPrivateKey, signByETHPrivKey } from "../src/index";
+import { NetworkType, Wallet, convertPrivateKeyFromStr, decryptWallet, deriveETHWallet, deriveSegwitWallet, encryptWallet, generateTaprootAddress, getBitcoinKeySignContent, importBTCPrivateKey, setBTCNetwork, signByETHPrivKey } from "../src/index";
 
 import { assert } from "chai";
 import {
@@ -104,4 +104,15 @@ describe("Import Wallet", async () => {
         const signature = signByETHPrivKey(ethPrivKey, toSign);
         assert.equal(signature, "0xa081f4f6e06bdc0b6d503d847fc2332d150b09838aa3391c6e417c2903994cbd00afc2a0d8582d252d8e9a7714572a766600bf1fc588858ae3ce799832d110911c");
     });
+
+    it("Generate Taproot address by custom network", async () => {
+        const privKey = process.env.PRIV_KEY_1 || "";
+        const privKeyBuffer = convertPrivateKeyFromStr(privKey);
+
+        setBTCNetwork(NetworkType.Testnet);
+        const address = generateTaprootAddress(privKeyBuffer);
+        console.log("address: ", address);
+    });
+
+
 });

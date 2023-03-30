@@ -1,4 +1,4 @@
-import { BNZero, MinSats, network } from "../bitcoin/constants";
+import { BNZero, MinSats } from "../bitcoin/constants";
 import { ECPair, generateTaprootAddressFromPubKey, generateTaprootKeyPair, toXOnly, tweakSigner } from "../bitcoin/wallet";
 import { Inscription, SDKError, UTXO, createTxSendBTC, estimateTxFee, selectCardinalUTXOs, signPSBT } from "..";
 import { Psbt, payments, script } from "bitcoinjs-lib";
@@ -7,6 +7,7 @@ import { Tapleaf, Taptree } from "bitcoinjs-lib/src/types";
 import BigNumber from "bignumber.js";
 import { ECPairInterface } from "ecpair";
 import { ERROR_CODE } from "../constants/error";
+import { Network } from "../bitcoin/network";
 import { randomBytes } from "crypto";
 import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness";
 
@@ -126,7 +127,7 @@ const createRawCommitTx = ({
             }
         }
 
-        const p2pk_psbt = new Psbt({ network });
+        const p2pk_psbt = new Psbt({ network: Network });
         //get change if the value is greater than 1000
         p2pk_psbt.addOutput({
             address: script_addr,
@@ -178,20 +179,18 @@ const createRawCommitTx = ({
 
 const createRawRevealTx = ({
     internalPubKey,
-    feeRatePerByte,
     commitTxID,
     hashLockKeyPair,
     hashLockRedeem,
     script_p2tr,
-    revealVByte
+    revealTxFee
 }: {
     internalPubKey: Buffer,
-    feeRatePerByte: number,
     commitTxID: string,
-    revealVByte: number,
     hashLockKeyPair: ECPairInterface,
     hashLockRedeem: any,
     script_p2tr: payments.Payment,
+    revealTxFee: number,
 }): { revealTxHex: string, revealTxID: string } => {
     const { p2pktr, address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
 
@@ -217,11 +216,11 @@ const createRawRevealTx = ({
     };
 
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     psbt.addInput({
         hash: commitTxID,
         index: 0,
-        witnessUtxo: { value: revealVByte * feeRatePerByte + 1000, script: script_p2tr.output! },
+        witnessUtxo: { value: revealTxFee + MinSats, script: script_p2tr.output! },
         tapLeafScript: [
             tapLeafScript
         ]
@@ -229,7 +228,7 @@ const createRawRevealTx = ({
 
     psbt.addOutput({
         address: p2pktr_addr,
-        value: 1000
+        value: MinSats
     });
 
 
@@ -252,6 +251,8 @@ const createRawRevealTx = ({
 
     psbt.finalizeInput(0, customFinalizer);
     const revealTX = psbt.extractTransaction();
+
+    console.log("revealTX: ", revealTX);
 
     return { revealTxHex: revealTX.toHex(), revealTxID: revealTX.getId() };
 
@@ -293,7 +294,7 @@ const start_taptree = async (
 
     const { tweakedSigner, keyPair, p2pktr, senderAddress: p2pktr_addr } = generateTaprootKeyPair(privateKey);
 
-    const hash_lock_keypair = ECPair.makeRandom({ network });
+    const hash_lock_keypair = ECPair.makeRandom({ network: Network });
     console.log("prepare inscribe event", data);
 
     const dataHex = generateInscribeContent(ProtocolID, reImbursementTCAddress, data);
@@ -313,14 +314,14 @@ const start_taptree = async (
         internalPubkey: toXOnly(keyPair.publicKey),
         scriptTree,
         redeem: hash_lock_redeem,
-        network
+        network: Network
     });
 
     const script_addr = script_p2tr.address ?? "";
 
     const p2pk_p2tr = payments.p2tr({
         internalPubkey: toXOnly(keyPair.publicKey),
-        network
+        network: Network
     });
 
     // let utxos = await waitUntilUTXO(p2pktr_addr)
@@ -350,7 +351,7 @@ const start_taptree = async (
             }
         }
 
-        const p2pk_psbt = new Psbt({ network });
+        const p2pk_psbt = new Psbt({ network: Network });
         //get change if the value is greater than 1000
         p2pk_psbt.addOutput({
             address: script_addr,
@@ -400,7 +401,7 @@ const start_taptree = async (
         controlBlock: script_p2tr.witness![script_p2tr.witness!.length - 1]
     };
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     psbt.addInput({
         hash: commitTX.getId(),
         index: 0,
@@ -456,7 +457,7 @@ function getRevealVirtualSize(hash_lock_redeem: any, script_p2tr: any, p2pktr_ad
         controlBlock: script_p2tr.witness![script_p2tr.witness!.length - 1]
     };
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     psbt.addInput({
         hash: "00".repeat(32),
         index: 0,
@@ -502,7 +503,7 @@ function getCommitVirtualSize(p2pk_p2tr: any, keypair: any, script_addr: any, tw
         inputValue = inputValue.plus(utxos[i].value);
         useUTXO.push(utxos[i]);
     }
-    const p2pk_psbt = new Psbt({ network });
+    const p2pk_psbt = new Psbt({ network: Network });
     p2pk_psbt.addOutput({
         address: script_addr,
         value: inputValue.minus(1).toNumber(),
@@ -565,13 +566,14 @@ const createInscribeTx = ({
     commitTxID: string,
     revealTxHex: string,
     revealTxID: string,
+    totalFee: BigNumber,
 } => {
 
     const { keyPair, p2pktr, senderAddress } = generateTaprootKeyPair(senderPrivateKey);
     const internalPubKey = toXOnly(keyPair.publicKey);
 
     // create lock script for commit tx
-    const { hashLockKeyPair, hashLockRedeem, hashLockScript, hashScriptAsm, script_p2tr } = createLockScript({
+    const { hashLockKeyPair, hashLockRedeem, script_p2tr } = createLockScript({
         internalPubKey,
         data,
         reImbursementTCAddress
@@ -584,21 +586,24 @@ const createInscribeTx = ({
     const revealVByte = getRevealVirtualSize(hashLockRedeem, script_p2tr, senderAddress, hashLockKeyPair);
     const estRevealTxFee = revealVByte * feeRatePerByte;
     const totalFee = estCommitTxFee + estRevealTxFee;
-    const totalAmount = new BigNumber(totalFee + MinSats); // MinSats for new output in the reveal tx
+    // const totalAmount = new BigNumber(totalFee + MinSats); // MinSats for new output in the reveal tx
 
-    const { selectedUTXOs, totalInputAmount } = selectCardinalUTXOs(utxos, inscriptions, totalAmount);
+    // const { selectedUTXOs, totalInputAmount } = selectCardinalUTXOs(utxos, inscriptions, totalAmount);
 
     if (script_p2tr.address === undefined || script_p2tr.address === "") {
         throw new SDKError(ERROR_CODE.INVALID_TAPSCRIPT_ADDRESS, "");
     }
 
-    const { txHex: commitTxHex, txID: commitTxID, fee: commitTxFee, changeAmount } = createTxSendBTC({
+    const { txHex: commitTxHex, txID: commitTxID, fee: commitTxFee, changeAmount, selectedUTXOs, tx } = createTxSendBTC({
         senderPrivateKey,
         utxos,
         inscriptions,
         paymentInfos: [{ address: script_p2tr.address || "", amount: new BigNumber(estRevealTxFee + MinSats) }],
         feeRatePerByte,
     });
+
+    console.log("commitTX: ", tx);
+    console.log("COMMITTX selectedUTXOs: ", selectedUTXOs);
 
 
 
@@ -625,19 +630,19 @@ const createInscribeTx = ({
     // create and sign reveal tx
     const { revealTxHex, revealTxID } = createRawRevealTx({
         internalPubKey,
-        feeRatePerByte,
         commitTxID,
         hashLockKeyPair,
         hashLockRedeem,
         script_p2tr,
-        revealVByte
+        revealTxFee: estRevealTxFee,
     });
 
     return {
         commitTxHex,
         commitTxID,
         revealTxHex,
-        revealTxID
+        revealTxID,
+        totalFee: new BigNumber(totalFee),
     };
 };
 
@@ -655,10 +660,9 @@ const createLockScript = ({
     hashLockScript: Buffer,
     hashLockRedeem: Tapleaf,
     script_p2tr: payments.Payment,
-
 } => {
     // const { address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
-    const hashLockKeyPair = ECPair.makeRandom({ network });
+    const hashLockKeyPair = ECPair.makeRandom({ network: Network });
     console.log("prepare inscribe event", data);
 
     const dataHex = generateInscribeContent(ProtocolID, reImbursementTCAddress, data);
@@ -681,7 +685,7 @@ const createLockScript = ({
         internalPubkey: internalPubKey,
         scriptTree,
         redeem: hashLockRedeem,
-        network
+        network: Network
     });
 
     console.log("Script witnesss: ", script_p2tr.witness);

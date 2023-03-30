@@ -1,12 +1,14 @@
-import { ECPair, convertPrivateKeyFromStr, createInscribeTx, createRawCommitTx, createRawRevealTx, generateInscribeContent, network, start_taptree } from "../src";
+import { ECPair, Network, convertPrivateKeyFromStr, createInscribeTx, createRawCommitTx, createRawRevealTx, generateInscribeContent, start_taptree } from "../src";
 
 import BigNumber from 'bignumber.js';
 import { ECPairInterface } from 'ecpair';
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from 'chai';
+import { ethers } from "ethers";
 
 require("dotenv").config({ path: __dirname + "/.env" });
 console.log(__dirname + "../test/.env");
+var Web3 = require('web3');
 
 
 // TODO: fill the private key
@@ -24,15 +26,20 @@ let sellerUTXOs = [
     // inscription UTXOs
     // real
 
-    // {
-    //     tx_hash: "4963e4ec3bf2599c542259ad5cc393ceef6a1dfea1aa0df2c3533a27d173aeee",
-    //     tx_output_n: 1,
-    //     value: 1078, // normal
-    // },
     {
-        tx_hash: "4df03f8d428aeec015a8d0ee7f2bc03d0cd32f36479647683ab9192a1ba11fde",
+        tx_hash: "3725557faa37f011b626a13d5f67cded181616487a7a69cee7ada3f1429db3e0",
         tx_output_n: 0,
-        value: new BigNumber(10000),
+        value: new BigNumber(1000),
+    },
+    {
+        tx_hash: "3725557faa37f011b626a13d5f67cded181616487a7a69cee7ada3f1429db3e0",
+        tx_output_n: 1,
+        value: new BigNumber(2458),
+    },
+    {
+        tx_hash: "3d707230fb43523b0b54beafee2971d6cbcf60ace633ab53d4a43d293de1acd0",
+        tx_output_n: 1,
+        value: new BigNumber(2000),
     },
     // {
     //     tx_hash: "da7d8f7d7234d65ce8876475ba75e7ab60f6ea807fc0b248270f640db2d0189f",
@@ -47,11 +54,51 @@ let sellerUTXOs = [
 ];
 
 describe("Sign msg Tx", async () => {
+    it("create signed raw tc tx", async () => {
+        // var web3 = new Web3(Web3.givenProvider);
+        // const tcAddress = "0x82268aF8207117ddBCD8ce4e444263CcD8d1bF87";
+        // const toAddress = "0xF91cEe2DE943733e338891Ef602c962eF4D7Eb81";
+        // const callbackFn = (err: any, res: any) => {
+        //     console.log("err: ", err);
+        //     console.log("res: ", res);
+        // }
+        // await web3.eth.signTransaction({
+        //     from: tcAddress,
+        //     gasPrice: "10",
+        //     gas: "21000",
+        //     to: toAddress,
+        //     value: "10000000000000000",
+        //     data: ""
+        // }, tcAddress, callbackFn);
+
+        const tx = {
+            "nonce": "0x0", "gasPrice": "0x2540be400", "gas": "0x5208", "to": "0xF91cEe2DE943733e338891Ef602c962eF4D7Eb81", "value": "0x2386f26fc10000", "input": "0x", "v": "0xadae", "r": "0xf9b5498dbbb514d896391ed0aff62fe381fcada60c4a24d50995217f4e5debf", "s": "0x136bf98a811ff28e1b39cd0b4da2a91c65f2f8ccdf6602e894f5a1e67f896d5b", "hash": "0x7b18470897091fc2cc75b0b7288b2e0e1ffc7ab13b146e295c6acf6a62f9bf54", "from": "0x82268aF8207117ddBCD8ce4e444263CcD8d1bF87", "blockHash": null, "blockNumber": null, "transactionIndex": null
+        }
+
+        const unsignedTx = {
+            to: tx.to,
+            nonce: 0,
+            gasLimit: tx.gas,
+            gasPrice: tx.gasPrice,
+            data: tx.input,
+            value: tx.value,
+            chainId: 22213,
+        };
+        const signature = {
+            v: 44462,
+            r: tx.r,
+            s: tx.s
+        }
+
+        const serialized = ethers.utils.serializeTransaction(unsignedTx, signature);
+        console.log("serialized: ", serialized);
+
+    })
     it("should return the raw commit tx", async () => {
-        const data = "0xf8698080825208949b9add2b5b572ccc43ef2660d8b81cfd0701435b8898a7d9b8314c000080823696a0ee3795a786dd6c4f028517f2f5dd7333f066b83d03ca7404d73b8b212454e123a0488ddfdb48101b5ac0647e1b823f98e05ba7310c3046810e3327d1d2ccc51434";
-        const tcAddress = "";
+        const data = "0xf86d808502540be40082520894f91cee2de943733e338891ef602c962ef4d7eb81872386f26fc100008082adaea00f9b5498dbbb514d896391ed0aff62fe381fcada60c4a24d50995217f4e5debfa0136bf98a811ff28e1b39cd0b4da2a91c65f2f8ccdf6602e894f5a1e67f896d5b";
+        const tcAddress = "0x82268aF8207117ddBCD8ce4e444263CcD8d1bF87";
         const pubKeyStr = "";
-        const { commitTxHex, commitTxID, revealTxHex, revealTxID } = createInscribeTx({
+        const { commitTxHex, commitTxID, revealTxHex, revealTxID, totalFee } = createInscribeTx({
             senderPrivateKey: sellerPrivateKey,
 
             // internalPubKey: Buffer.from(pubKeyStr, "hex"),
@@ -73,6 +120,9 @@ describe("Sign msg Tx", async () => {
         console.log("commitTxID: ", commitTxID);
         console.log("revealTxHex: ", revealTxHex);
         console.log("revealTxID: ", revealTxID);
+        console.log("totalFee: ", totalFee);
+
+
 
 
     });
@@ -114,19 +164,6 @@ describe("Sign msg Tx", async () => {
 
 
     // });
-
-    // it("abc", () => {
-    //     const hash_lock_keypair: ECPairInterface = ECPair.makeRandom({ network });
-    //     const privateKeyWIF: string = hash_lock_keypair.toWIF();
-
-    //     const keyPair = ECPair.fromWIF(privateKeyWIF);
-    //     console.log("hash_lock_keypair: ", hash_lock_keypair);
-    //     console.log("keyPair: ", keyPair);
-
-    //     // assert.equal(hash_lock_keypair, keyPair);
-
-
-    // })
 
 
 });

@@ -14,11 +14,11 @@ import { ethers, utils } from "ethers";
 import BIP32Factory from "bip32";
 import { BIP32Interface } from "bip32";
 import BigNumber from "bignumber.js";
+import { Network } from "./network";
 import Web3 from "web3";
 import { filterAndSortCardinalUTXOs } from "./selectcoin";
 import { hdkey } from "ethereumjs-wallet";
 import { keccak256 } from "js-sha3";
-import { network } from "./constants";
 import wif from "wif";
 
 initEccLib(ecc);
@@ -27,6 +27,8 @@ const bip32 = BIP32Factory(ecc);
 
 const ETHWalletDefaultPath = "m/44'/60'/0'/0/0";
 const BTCSegwitWalletDefaultPath = "m/84'/0'/0'/0/0";
+
+
 
 /**
 * convertPrivateKey converts buffer private key to WIF private key string
@@ -84,11 +86,12 @@ function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer {
 }
 
 const generateTaprootAddress = (privateKey: Buffer): string => {
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair.fromPrivateKey(privateKey, { network: Network });
     const internalPubkey = toXOnly(keyPair.publicKey);
 
     const { address } = payments.p2tr({
         internalPubkey,
+        network: Network,
     });
 
     return address ? address : "";
@@ -100,6 +103,7 @@ const generateTaprootAddressFromPubKey = (pubKey: Buffer) => {
 
     const p2pktr = payments.p2tr({
         internalPubkey,
+        network: Network,
     });
 
     return { address: p2pktr.address || "", p2pktr };
@@ -107,14 +111,14 @@ const generateTaprootAddressFromPubKey = (pubKey: Buffer) => {
 
 const generateTaprootKeyPair = (privateKey: Buffer) => {
     // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair.fromPrivateKey(privateKey, { network: Network });
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keyPair, { network });
+    const tweakedSigner = tweakSigner(keyPair, { network: Network });
 
     // Generate an address from the tweaked public key
     const p2pktr = payments.p2tr({
         pubkey: toXOnly(tweakedSigner.publicKey),
-        network
+        network: Network
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
@@ -126,12 +130,12 @@ const generateTaprootKeyPair = (privateKey: Buffer) => {
 
 const generateP2PKHKeyPair = (privateKey: Buffer) => {
     // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair.fromPrivateKey(privateKey, { network: Network });
 
     // Generate an address from the tweaked public key
     const p2pkh = payments.p2pkh({
         pubkey: keyPair.publicKey,
-        network
+        network: Network
     });
     const address = p2pkh.address ? p2pkh.address : "";
     if (address === "") {
@@ -194,7 +198,7 @@ const deriveSegwitWallet = (
     const seedSegwit = ethers.utils.arrayify(
         ethers.utils.keccak256(ethers.utils.arrayify(privKeyTaproot))
     );
-    const root = bip32.fromSeed(Buffer.from(seedSegwit));
+    const root = bip32.fromSeed(Buffer.from(seedSegwit), Network);
 
     const { privateKey: segwitPrivKey, address: segwitAddress } = generateP2PKHKeyFromRoot(root);
 

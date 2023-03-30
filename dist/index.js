@@ -2,10 +2,10 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var bitcoinjsLib = require('bitcoinjs-lib');
 var ecc = require('@bitcoinerlab/secp256k1');
 var cryptoJs = require('crypto-js');
 var ecpair = require('ecpair');
+var bitcoinjsLib = require('bitcoinjs-lib');
 var ethers = require('ethers');
 var BIP32Factory = require('bip32');
 var Web3 = require('web3');
@@ -2934,7 +2934,6 @@ var BigNumber = clone();
 
 const BlockStreamURL = "https://blockstream.info/api";
 const MinSats = 1000;
-const network = bitcoinjsLib.networks.bitcoin; // mainnet
 const DummyUTXOValue = 1000;
 const InputSize = 68;
 const OutputSize = 43;
@@ -2942,6 +2941,30 @@ const BNZero = new BigNumber(0);
 const WalletType = {
     Xverse: 1,
     Hiro: 2,
+};
+
+// default is bitcoin mainnet
+exports.Network = bitcoinjsLib.networks.bitcoin;
+const NetworkType = {
+    Mainnet: 1,
+    Testnet: 2,
+    Regtest: 3,
+};
+const setBTCNetwork = (netType) => {
+    switch (netType) {
+        case NetworkType.Mainnet: {
+            exports.Network = bitcoinjsLib.networks.bitcoin;
+            break;
+        }
+        case NetworkType.Testnet: {
+            exports.Network = bitcoinjsLib.networks.testnet;
+            break;
+        }
+        case NetworkType.Regtest: {
+            exports.Network = bitcoinjsLib.networks.regtest;
+            break;
+        }
+    }
 };
 
 const ERROR_CODE = {
@@ -3437,10 +3460,11 @@ function tapTweakHash(pubKey, h) {
     return bitcoinjsLib.crypto.taggedHash("TapTweak", Buffer.concat(h ? [pubKey, h] : [pubKey]));
 }
 const generateTaprootAddress = (privateKey) => {
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair.fromPrivateKey(privateKey, { network: exports.Network });
     const internalPubkey = toXOnly(keyPair.publicKey);
     const { address } = bitcoinjsLib.payments.p2tr({
         internalPubkey,
+        network: exports.Network,
     });
     return address ? address : "";
 };
@@ -3449,18 +3473,19 @@ const generateTaprootAddressFromPubKey = (pubKey) => {
     const internalPubkey = pubKey;
     const p2pktr = bitcoinjsLib.payments.p2tr({
         internalPubkey,
+        network: exports.Network,
     });
     return { address: p2pktr.address || "", p2pktr };
 };
 const generateTaprootKeyPair = (privateKey) => {
     // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair.fromPrivateKey(privateKey, { network: exports.Network });
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keyPair, { network });
+    const tweakedSigner = tweakSigner(keyPair, { network: exports.Network });
     // Generate an address from the tweaked public key
     const p2pktr = bitcoinjsLib.payments.p2tr({
         pubkey: toXOnly(tweakedSigner.publicKey),
-        network
+        network: exports.Network
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
@@ -3470,11 +3495,11 @@ const generateTaprootKeyPair = (privateKey) => {
 };
 const generateP2PKHKeyPair = (privateKey) => {
     // init key pair from senderPrivateKey
-    const keyPair = ECPair.fromPrivateKey(privateKey);
+    const keyPair = ECPair.fromPrivateKey(privateKey, { network: exports.Network });
     // Generate an address from the tweaked public key
     const p2pkh = bitcoinjsLib.payments.p2pkh({
         pubkey: keyPair.publicKey,
-        network
+        network: exports.Network
     });
     const address = p2pkh.address ? p2pkh.address : "";
     if (address === "") {
@@ -3513,7 +3538,7 @@ const importBTCPrivateKey = (wifPrivKey) => {
 */
 const deriveSegwitWallet = (privKeyTaproot) => {
     const seedSegwit = ethers.ethers.utils.arrayify(ethers.ethers.utils.keccak256(ethers.ethers.utils.arrayify(privKeyTaproot)));
-    const root = bip32.fromSeed(Buffer.from(seedSegwit));
+    const root = bip32.fromSeed(Buffer.from(seedSegwit), exports.Network);
     const { privateKey: segwitPrivKey, address: segwitAddress } = generateP2PKHKeyFromRoot(root);
     return {
         segwitPrivKeyBuffer: segwitPrivKey,
@@ -3961,7 +3986,7 @@ const createRawTx = ({ pubKey, utxos, inscriptions, sendInscriptionID = "", rece
     // init key pair and tweakedSigner from senderPrivateKey
     // const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
     const { address: senderAddress, p2pktr } = generateTaprootAddressFromPubKey(pubKey);
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     // add inputs
     for (const input of selectedUTXOs) {
         psbt.addInput({
@@ -4079,7 +4104,7 @@ const createTxSendBTC = ({ senderPrivateKey, utxos, inscriptions, paymentInfos, 
     let feeRes = fee;
     // init key pair and tweakedSigner from senderPrivateKey
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     // add inputs
     for (const input of selectedUTXOs) {
         psbt.addInput({
@@ -4149,7 +4174,7 @@ const createRawTxSendBTC = ({ pubKey, utxos, inscriptions, paymentInfos, feeRate
     let changeAmountRes = changeAmount;
     // init key pair and tweakedSigner from senderPrivateKey
     const { address: senderAddress, p2pktr } = generateTaprootAddressFromPubKey(pubKey);
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     // add inputs
     for (const input of selectedUTXOs) {
         psbt.addInput({
@@ -4202,22 +4227,21 @@ const createRawTxSendBTC = ({ pubKey, utxos, inscriptions, paymentInfos, feeRate
 * @returns the network fee
 */
 const createTxWithSpecificUTXOs = (senderPrivateKey, utxos, sendInscriptionID = "", receiverInsAddress, sendAmount, valueOutInscription, changeAmount, fee) => {
-    const network = bitcoinjsLib.networks.bitcoin; // mainnet
     const selectedUTXOs = utxos;
     // init key pair from senderPrivateKey
-    const keypair = ECPair.fromPrivateKey(senderPrivateKey);
+    const keypair = ECPair.fromPrivateKey(senderPrivateKey, { network: exports.Network });
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: exports.Network });
     // Generate an address from the tweaked public key
     const p2pktr = bitcoinjsLib.payments.p2tr({
         pubkey: toXOnly(tweakedSigner.publicKey),
-        network
+        network: exports.Network,
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Can not get the sender address from the private key");
     }
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     // add inputs
     for (const input of selectedUTXOs) {
         psbt.addInput({
@@ -4320,7 +4344,7 @@ const createRawTxSplitFundFromOrdinalUTXO = ({ pubKey, inscriptionUTXO, inscript
         throw new SDKError(ERROR_CODE.NOT_ENOUGH_BTC_TO_PAY_FEE);
     }
     const newValueInscription = inscriptionUTXO.value.minus(totalAmountSpend);
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     // add inputs
     psbt.addInput({
         hash: inscriptionUTXO.tx_hash,
@@ -4567,7 +4591,7 @@ const SigHashTypeForSale = bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLi
 * @returns the encoded base64 partially signed transaction
 */
 const createPSBTToSell = (params) => {
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     const { inscriptionUTXO: ordinalInput, amountPayToSeller, receiverBTCAddress, sellerPrivateKey, dummyUTXO, creatorAddress, feePayToCreator } = params;
     const { keyPair, tweakedSigner, p2pktr } = generateTaprootKeyPair(sellerPrivateKey);
     // add ordinal input into the first input coins with 
@@ -4633,7 +4657,7 @@ const createPSBTToSell = (params) => {
 * @returns the encoded base64 partially signed transaction
 */
 const createRawPSBTToSell = (params) => {
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     const { inscriptionUTXO: ordinalInput, amountPayToSeller, receiverBTCAddress, internalPubKey, dummyUTXO, creatorAddress, feePayToCreator } = params;
     const { address, p2pktr } = generateTaprootAddressFromPubKey(internalPubKey);
     // add ordinal input into the first input coins with 
@@ -4693,7 +4717,7 @@ const createRawPSBTToSell = (params) => {
 * @returns the encoded base64 partially signed transaction
 */
 const createPSBTToBuy = (params) => {
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     const { sellerSignedPsbt, buyerPrivateKey, price, receiverInscriptionAddress, valueInscription, paymentUtxos, dummyUtxo, feeRate } = params;
     let totalValue = BNZero;
     const { keyPair, tweakedSigner, p2pktr, senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
@@ -4810,7 +4834,7 @@ const createPSBTToBuy = (params) => {
 * @returns the encoded base64 psbt
 */
 const createRawPSBTToBuy = ({ sellerSignedPsbt, internalPubKey, receiverInscriptionAddress, valueInscription, price, paymentUtxos, dummyUtxo, feeRate, }) => {
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     let totalValue = BNZero;
     const { p2pktr, address: buyerAddress } = generateTaprootAddressFromPubKey(internalPubKey);
     // Add dummy utxo to the first input coin
@@ -4913,7 +4937,7 @@ const createPSBTToBuyMultiInscriptions = ({ buyReqFullInfos, buyerPrivateKey, fe
     if (buyReqFullInfos.length === 0) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "buyReqFullInfos is empty");
     }
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     const indexInputNeedToSign = [];
     const selectedUTXOs = [];
     const { keyPair, tweakedSigner, p2pktr, senderAddress: buyerAddress } = generateTaprootKeyPair(buyerPrivateKey);
@@ -5061,7 +5085,7 @@ const createRawPSBTToBuyMultiInscriptions = ({ buyReqFullInfos, internalPubKey, 
     if (buyReqFullInfos.length === 0) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "buyReqFullInfos is empty");
     }
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     const indexInputNeedToSign = [];
     const selectedUTXOs = [];
     const { p2pktr, address: buyerAddress } = generateTaprootAddressFromPubKey(internalPubKey);
@@ -5420,7 +5444,7 @@ const reqBuyInscription = async (params) => {
     var _a;
     const { sellerSignedPsbtB64, buyerPrivateKey, receiverInscriptionAddress, price, utxos, inscriptions, feeRatePerByte } = params;
     // decode seller's signed PSBT
-    const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+    const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network: exports.Network });
     const sellerInputs = sellerSignedPsbt.data.inputs;
     if (sellerInputs.length === 0) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
@@ -5491,7 +5515,7 @@ const reqBuyInscription = async (params) => {
 const reqBuyInscriptionFromAnyWallet = async ({ sellerSignedPsbtB64, pubKey, receiverInscriptionAddress, price, utxos, inscriptions, feeRatePerByte, walletType = WalletType.Xverse, cancelFn, }) => {
     var _a;
     // decode seller's signed PSBT
-    const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+    const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network: exports.Network });
     const sellerInputs = sellerSignedPsbt.data.inputs;
     if (sellerInputs.length === 0) {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
@@ -5613,7 +5637,7 @@ const reqBuyMultiInscriptions = (params) => {
     let buyReqFullInfos = [];
     for (let i = 0; i < buyReqInfos.length; i++) {
         const sellerSignedPsbtB64 = buyReqInfos[i].sellerSignedPsbtB64;
-        const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+        const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network: exports.Network });
         const sellerInputs = sellerSignedPsbt.data.inputs;
         if (sellerInputs.length === 0) {
             throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
@@ -5707,7 +5731,7 @@ const reqBuyMultiInscriptionsFromAnyWallet = async ({ buyReqInfos, pubKey, utxos
     let buyReqFullInfos = [];
     for (let i = 0; i < buyReqInfos.length; i++) {
         const sellerSignedPsbtB64 = buyReqInfos[i].sellerSignedPsbtB64;
-        const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network });
+        const sellerSignedPsbt = bitcoinjsLib.Psbt.fromBase64(sellerSignedPsbtB64, { network: exports.Network });
         const sellerInputs = sellerSignedPsbt.data.inputs;
         if (sellerInputs.length === 0) {
             throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Invalid seller's PSBT.");
@@ -5841,11 +5865,11 @@ function isPrivateKey(privateKey) {
         // init key pair from senderPrivateKey
         const keyPair = ECPair.fromPrivateKey(privateKey);
         // Tweak the original keypair
-        const tweakedSigner = tweakSigner(keyPair, { network });
+        const tweakedSigner = tweakSigner(keyPair, { network: exports.Network });
         // Generate an address from the tweaked public key
         const p2pktr = bitcoinjsLib.payments.p2tr({
             pubkey: toXOnly(tweakedSigner.publicKey),
-            network
+            network: exports.Network
         });
         const senderAddress = p2pktr.address ? p2pktr.address : "";
         isValid = senderAddress !== "";
@@ -6002,7 +6026,7 @@ const createRawCommitTx = ({ internalPubKey, data, utxos, feeRatePerByte, reImbu
                 break;
             }
         }
-        const p2pk_psbt = new bitcoinjsLib.Psbt({ network });
+        const p2pk_psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
         //get change if the value is greater than 1000
         p2pk_psbt.addOutput({
             address: script_addr,
@@ -6036,7 +6060,7 @@ const createRawCommitTx = ({ internalPubKey, data, utxos, feeRatePerByte, reImbu
     // }
     throw new SDKError(ERROR_CODE.CREATE_COMMIT_TX_ERR);
 };
-const createRawRevealTx = ({ internalPubKey, feeRatePerByte, commitTxID, hashLockKeyPair, hashLockRedeem, script_p2tr, revealVByte }) => {
+const createRawRevealTx = ({ internalPubKey, commitTxID, hashLockKeyPair, hashLockRedeem, script_p2tr, revealTxFee }) => {
     const { p2pktr, address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
     // const hashLockScript = Buffer.from(hashLockRedeemScriptHex, "hex");
     // const hash_lock_redeem = {
@@ -6055,18 +6079,18 @@ const createRawRevealTx = ({ internalPubKey, feeRatePerByte, commitTxID, hashLoc
         script: hashLockRedeem === null || hashLockRedeem === void 0 ? void 0 : hashLockRedeem.output,
         controlBlock: script_p2tr.witness[script_p2tr.witness.length - 1]
     };
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     psbt.addInput({
         hash: commitTxID,
         index: 0,
-        witnessUtxo: { value: revealVByte * feeRatePerByte + 1000, script: script_p2tr.output },
+        witnessUtxo: { value: revealTxFee + MinSats, script: script_p2tr.output },
         tapLeafScript: [
             tapLeafScript
         ]
     });
     psbt.addOutput({
         address: p2pktr_addr,
-        value: 1000
+        value: MinSats
     });
     // const hash_lock_keypair = ECPair.fromWIF(hashLockPriKey);
     psbt.signInput(0, hashLockKeyPair);
@@ -6084,6 +6108,7 @@ const createRawRevealTx = ({ internalPubKey, feeRatePerByte, commitTxID, hashLoc
     };
     psbt.finalizeInput(0, customFinalizer);
     const revealTX = psbt.extractTransaction();
+    console.log("revealTX: ", revealTX);
     return { revealTxHex: revealTX.toHex(), revealTxID: revealTX.getId() };
 };
 const start_taptree = async ({ privateKey, data, utxos, feeRatePerByte, reImbursementTCAddress, }) => {
@@ -6101,7 +6126,7 @@ const start_taptree = async ({ privateKey, data, utxos, feeRatePerByte, reImburs
     // const p2pktr_addr = p2pktr.address ?? "";
     // console.log(p2pktr_addr)
     const { tweakedSigner, keyPair, p2pktr, senderAddress: p2pktr_addr } = generateTaprootKeyPair(privateKey);
-    const hash_lock_keypair = ECPair.makeRandom({ network });
+    const hash_lock_keypair = ECPair.makeRandom({ network: exports.Network });
     console.log("prepare inscribe event", data);
     const dataHex = generateInscribeContent(ProtocolID, reImbursementTCAddress, data);
     console.log("dataHex: ", dataHex);
@@ -6117,12 +6142,12 @@ const start_taptree = async ({ privateKey, data, utxos, feeRatePerByte, reImburs
         internalPubkey: toXOnly(keyPair.publicKey),
         scriptTree,
         redeem: hash_lock_redeem,
-        network
+        network: exports.Network
     });
     const script_addr = (_a = script_p2tr.address) !== null && _a !== void 0 ? _a : "";
     const p2pk_p2tr = bitcoinjsLib.payments.p2tr({
         internalPubkey: toXOnly(keyPair.publicKey),
-        network
+        network: exports.Network
     });
     // let utxos = await waitUntilUTXO(p2pktr_addr)
     const revealVByte = getRevealVirtualSize(hash_lock_redeem, script_p2tr, p2pktr_addr, hash_lock_keypair);
@@ -6149,7 +6174,7 @@ const start_taptree = async ({ privateKey, data, utxos, feeRatePerByte, reImburs
                 break;
             }
         }
-        const p2pk_psbt = new bitcoinjsLib.Psbt({ network });
+        const p2pk_psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
         //get change if the value is greater than 1000
         p2pk_psbt.addOutput({
             address: script_addr,
@@ -6191,7 +6216,7 @@ const start_taptree = async ({ privateKey, data, utxos, feeRatePerByte, reImburs
         script: hash_lock_redeem.output,
         controlBlock: script_p2tr.witness[script_p2tr.witness.length - 1]
     };
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     psbt.addInput({
         hash: commitTX.getId(),
         index: 0,
@@ -6236,7 +6261,7 @@ function getRevealVirtualSize(hash_lock_redeem, script_p2tr, p2pktr_addr, hash_l
         script: hash_lock_redeem.output,
         controlBlock: script_p2tr.witness[script_p2tr.witness.length - 1]
     };
-    const psbt = new bitcoinjsLib.Psbt({ network });
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     psbt.addInput({
         hash: "00".repeat(32),
         index: 0,
@@ -6274,7 +6299,7 @@ function getCommitVirtualSize(p2pk_p2tr, keypair, script_addr, tweakedSigner, ut
         inputValue = inputValue.plus(utxos[i].value);
         useUTXO.push(utxos[i]);
     }
-    const p2pk_psbt = new bitcoinjsLib.Psbt({ network });
+    const p2pk_psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     p2pk_psbt.addOutput({
         address: script_addr,
         value: inputValue.minus(1).toNumber(),
@@ -6317,7 +6342,7 @@ const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, data, reImbur
     const { keyPair, p2pktr, senderAddress } = generateTaprootKeyPair(senderPrivateKey);
     const internalPubKey = toXOnly(keyPair.publicKey);
     // create lock script for commit tx
-    const { hashLockKeyPair, hashLockRedeem, hashLockScript, hashScriptAsm, script_p2tr } = createLockScript({
+    const { hashLockKeyPair, hashLockRedeem, script_p2tr } = createLockScript({
         internalPubKey,
         data,
         reImbursementTCAddress
@@ -6327,18 +6352,20 @@ const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, data, reImbur
     const revealVByte = getRevealVirtualSize(hashLockRedeem, script_p2tr, senderAddress, hashLockKeyPair);
     const estRevealTxFee = revealVByte * feeRatePerByte;
     const totalFee = estCommitTxFee + estRevealTxFee;
-    const totalAmount = new BigNumber(totalFee + MinSats); // MinSats for new output in the reveal tx
-    selectCardinalUTXOs(utxos, inscriptions, totalAmount);
+    // const totalAmount = new BigNumber(totalFee + MinSats); // MinSats for new output in the reveal tx
+    // const { selectedUTXOs, totalInputAmount } = selectCardinalUTXOs(utxos, inscriptions, totalAmount);
     if (script_p2tr.address === undefined || script_p2tr.address === "") {
         throw new SDKError(ERROR_CODE.INVALID_TAPSCRIPT_ADDRESS, "");
     }
-    const { txHex: commitTxHex, txID: commitTxID, fee: commitTxFee, changeAmount } = createTxSendBTC({
+    const { txHex: commitTxHex, txID: commitTxID, fee: commitTxFee, changeAmount, selectedUTXOs, tx } = createTxSendBTC({
         senderPrivateKey,
         utxos,
         inscriptions,
         paymentInfos: [{ address: script_p2tr.address || "", amount: new BigNumber(estRevealTxFee + MinSats) }],
         feeRatePerByte,
     });
+    console.log("commitTX: ", tx);
+    console.log("COMMITTX selectedUTXOs: ", selectedUTXOs);
     // create raw commit tx
     // const { commitTxB64, hashLockPriKey, hashLockRedeemScriptHex } = createRawCommitTx({
     //     internalPubKey,
@@ -6358,23 +6385,23 @@ const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, data, reImbur
     // create and sign reveal tx
     const { revealTxHex, revealTxID } = createRawRevealTx({
         internalPubKey,
-        feeRatePerByte,
         commitTxID,
         hashLockKeyPair,
         hashLockRedeem,
         script_p2tr,
-        revealVByte
+        revealTxFee: estRevealTxFee,
     });
     return {
         commitTxHex,
         commitTxID,
         revealTxHex,
-        revealTxID
+        revealTxID,
+        totalFee: new BigNumber(totalFee),
     };
 };
 const createLockScript = ({ internalPubKey, data, reImbursementTCAddress, }) => {
     // const { address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
-    const hashLockKeyPair = ECPair.makeRandom({ network });
+    const hashLockKeyPair = ECPair.makeRandom({ network: exports.Network });
     console.log("prepare inscribe event", data);
     const dataHex = generateInscribeContent(ProtocolID, reImbursementTCAddress, data);
     console.log("dataHex: ", dataHex);
@@ -6393,7 +6420,7 @@ const createLockScript = ({ internalPubKey, data, reImbursementTCAddress, }) => 
         internalPubkey: internalPubKey,
         scriptTree,
         redeem: hashLockRedeem,
-        network
+        network: exports.Network
     });
     console.log("Script witnesss: ", script_p2tr.witness);
     // const script_addr = script_p2tr.address ?? "";
@@ -6418,6 +6445,7 @@ exports.ERROR_CODE = ERROR_CODE;
 exports.ERROR_MESSAGE = ERROR_MESSAGE;
 exports.InputSize = InputSize;
 exports.MinSats = MinSats;
+exports.NetworkType = NetworkType;
 exports.OutputSize = OutputSize;
 exports.SDKError = SDKError;
 exports.Validator = Validator;
@@ -6463,7 +6491,6 @@ exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;
 exports.getBitcoinKeySignContent = getBitcoinKeySignContent;
 exports.importBTCPrivateKey = importBTCPrivateKey;
-exports.network = network;
 exports.prepareUTXOsToBuyMultiInscriptions = prepareUTXOsToBuyMultiInscriptions;
 exports.reqBuyInscription = reqBuyInscription;
 exports.reqBuyInscriptionFromAnyWallet = reqBuyInscriptionFromAnyWallet;
@@ -6476,6 +6503,7 @@ exports.selectInscriptionUTXO = selectInscriptionUTXO;
 exports.selectTheSmallestUTXO = selectTheSmallestUTXO;
 exports.selectUTXOs = selectUTXOs;
 exports.selectUTXOsToCreateBuyTx = selectUTXOsToCreateBuyTx;
+exports.setBTCNetwork = setBTCNetwork;
 exports.signByETHPrivKey = signByETHPrivKey;
 exports.signPSBT = signPSBT;
 exports.signPSBT2 = signPSBT2;

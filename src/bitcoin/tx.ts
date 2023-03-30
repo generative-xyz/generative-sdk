@@ -1,14 +1,14 @@
-import { BNZero, BlockStreamURL, DummyUTXOValue, MinSats, network } from "./constants";
+import { BNZero, BlockStreamURL, DummyUTXOValue, MinSats } from "./constants";
 import { BuyReqFullInfo, ICreateRawTxResp, ICreateTxResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, Inscription, NeedPaymentUTXO, PaymentInfo, UTXO } from "./types";
 import { ECPair, generateTaprootAddressFromPubKey, generateTaprootKeyPair, toXOnly, tweakSigner } from "./wallet";
-import { Psbt, Transaction, networks, payments } from "bitcoinjs-lib";
+import { Psbt, Transaction, payments } from "bitcoinjs-lib";
 import SDKError, { ERROR_CODE } from "../constants/error";
 import axios, { AxiosResponse } from "axios";
 import { estimateTxFee, fromSat } from "./utils";
 import { filterAndSortCardinalUTXOs, findExactValueUTXO, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs } from "./selectcoin";
 
 import BigNumber from "bignumber.js";
-import bitcoin from "bitcoinjs-lib";
+import { Network } from "./network";
 import { handleSignPsbtWithSpecificWallet } from "./xverse";
 
 /**
@@ -370,7 +370,7 @@ const createRawTx = ({
 
     const { address: senderAddress, p2pktr } = generateTaprootAddressFromPubKey(pubKey);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     // add inputs
     for (const input of selectedUTXOs) {
         psbt.addInput({
@@ -538,7 +538,7 @@ const createTxSendBTC = (
     // init key pair and tweakedSigner from senderPrivateKey
     const { keyPair, senderAddress, tweakedSigner, p2pktr } = generateTaprootKeyPair(senderPrivateKey);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     // add inputs
 
     for (const input of selectedUTXOs) {
@@ -632,7 +632,7 @@ const createRawTxSendBTC = (
     // init key pair and tweakedSigner from senderPrivateKey
     const { address: senderAddress, p2pktr } = generateTaprootAddressFromPubKey(pubKey);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     // add inputs
 
     for (const input of selectedUTXOs) {
@@ -699,26 +699,25 @@ const createTxWithSpecificUTXOs = (
     changeAmount: BigNumber,
     fee: BigNumber,
 ): { txID: string, txHex: string, fee: BigNumber } => {
-    const network = networks.bitcoin;  // mainnet
 
     const selectedUTXOs = utxos;
 
     // init key pair from senderPrivateKey
-    const keypair = ECPair.fromPrivateKey(senderPrivateKey);
+    const keypair = ECPair.fromPrivateKey(senderPrivateKey, { network: Network });
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: Network });
 
     // Generate an address from the tweaked public key
     const p2pktr = payments.p2tr({
         pubkey: toXOnly(tweakedSigner.publicKey),
-        network
+        network: Network,
     });
     const senderAddress = p2pktr.address ? p2pktr.address : "";
     if (senderAddress === "") {
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "Can not get the sender address from the private key");
     }
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     // add inputs
 
     for (const input of selectedUTXOs) {
@@ -858,7 +857,7 @@ const createRawTxSplitFundFromOrdinalUTXO = ({
 
     const newValueInscription = inscriptionUTXO.value.minus(totalAmountSpend);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: Network });
     // add inputs
     psbt.addInput({
         hash: inscriptionUTXO.tx_hash,
