@@ -1,4 +1,4 @@
-import { NetworkType, Wallet, convertPrivateKeyFromStr, decryptWallet, deriveETHWallet, deriveSegwitWallet, encryptWallet, generateTaprootAddress, getBitcoinKeySignContent, importBTCPrivateKey, setBTCNetwork, signByETHPrivKey } from "../src/index";
+import { ECPair, Network, NetworkType, Wallet, convertPrivateKey, convertPrivateKeyFromStr, decryptWallet, deriveETHWallet, deriveSegwitWallet, encryptWallet, generateTaprootAddress, getBitcoinKeySignContent, importBTCPrivateKey, setBTCNetwork, signByETHPrivKey } from "../src/index";
 
 import { assert } from "chai";
 import {
@@ -106,10 +106,19 @@ describe("Import Wallet", async () => {
     });
 
     it("Generate Taproot address by custom network", async () => {
-        const privKey = process.env.PRIV_KEY_1 || "";
-        const privKeyBuffer = convertPrivateKeyFromStr(privKey);
+        const privKey = process.env.PRIV_KEY_2 || "";
+        // const privKeyBuffer = convertPrivateKeyFromStr(privKey);
+        setBTCNetwork(NetworkType.Regtest);
 
-        setBTCNetwork(NetworkType.Testnet);
+        const randomKeyPAir = ECPair.makeRandom({ network: Network });
+        const privKeyBuffer: Buffer = randomKeyPAir.privateKey || new Buffer(2);
+        // convertPrivateKey(privKeyBuffer);
+        // generateTaprootAddress(privKeyBuffer)
+        console.log("Private key : ", convertPrivateKey(privKeyBuffer))
+
+        convertPrivateKeyFromStr(sr)
+
+
         const address = generateTaprootAddress(privKeyBuffer);
         console.log("address: ", address);
     });

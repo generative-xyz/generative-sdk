@@ -1,23 +1,8 @@
 import { Inscription, UTXO } from "..";
 import { payments } from "bitcoinjs-lib";
-import { Tapleaf } from "bitcoinjs-lib/src/types";
 import BigNumber from "bignumber.js";
 import { ECPairInterface } from "ecpair";
 declare function generateInscribeContent(protocolID: string, reimbursementAddr: string, datas: string[]): string;
-declare const createRawCommitTx: ({ internalPubKey, data, utxos, feeRatePerByte, reImbursementTCAddress, hashLockKeyPair, hashLockRedeem, hashLockScript, script_p2tr, revealVByte, }: {
-    internalPubKey: Buffer;
-    data: string[];
-    utxos: UTXO[];
-    feeRatePerByte: number;
-    reImbursementTCAddress: string;
-    hashLockKeyPair: ECPairInterface;
-    hashLockRedeem: Tapleaf;
-    hashLockScript: Buffer;
-    script_p2tr: payments.Payment;
-    revealVByte: number;
-}) => {
-    commitTxB64: string;
-};
 declare const createRawRevealTx: ({ internalPubKey, commitTxID, hashLockKeyPair, hashLockRedeem, script_p2tr, revealTxFee }: {
     internalPubKey: Buffer;
     commitTxID: string;
@@ -70,4 +55,4 @@ declare const createInscribeTx: ({ senderPrivateKey, utxos, inscriptions, data, 
     revealTxID: string;
     totalFee: BigNumber;
 };
-export { start_taptree, generateInscribeContent, createRawRevealTx, createRawCommitTx, createInscribeTx };
+export { start_taptree, generateInscribeContent, createRawRevealTx, createInscribeTx };

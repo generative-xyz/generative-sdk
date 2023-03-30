@@ -14,7 +14,6 @@ var jsSha3 = require('js-sha3');
 var wif = require('wif');
 var axios = require('axios');
 var satsConnect = require('sats-connect');
-var crypto$1 = require('crypto');
 var varuint = require('varuint-bitcoin');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
@@ -2944,7 +2943,7 @@ const WalletType = {
 };
 
 // default is bitcoin mainnet
-exports.Network = bitcoinjsLib.networks.bitcoin;
+exports.Network = bitcoinjsLib.networks.regtest;
 const NetworkType = {
     Mainnet: 1,
     Testnet: 2,
@@ -5984,82 +5983,6 @@ function generateInscribeContent(protocolID, reimbursementAddr, datas) {
     }
     return dataHex.trim();
 }
-const createRawCommitTx = ({ internalPubKey, data, utxos, feeRatePerByte, reImbursementTCAddress, hashLockKeyPair, hashLockRedeem, hashLockScript, script_p2tr, revealVByte, }) => {
-    var _a;
-    // const hash_lock_privkey = "KwsMY7zgHQ3DobYpto3HFkkTh8k5Pw5FL3d8pLAqSSntF4c8WG8p";
-    // const hash_lock_keypair = ECPair.fromWIF(hash_lock_privkey);
-    const { address: p2pktr_addr, p2pktr: p2pk_p2tr } = generateTaprootAddressFromPubKey(internalPubKey);
-    console.log("prepare inscribe event", data);
-    // const dataHex = generateInscribeContent(ProtocolID, reImbursementTCAddress, data);
-    // console.log("dataHex: ", dataHex);
-    // Construct script to pay to hash_lock_keypair if the correct preimage/secret is provided
-    // const hash_lock_script = hashLockScript;
-    // console.log("hash_lock_script: ", hash_lock_script);
-    const scriptTree = hashLockRedeem;
-    console.log("scriptTree: ", scriptTree);
-    // const script_p2tr = payments.p2tr({
-    //     internalPubkey: internalPubKey,
-    //     scriptTree,
-    //     redeem: hash_lock_redeem,
-    //     network
-    // });
-    console.log("Script witnesss: ", script_p2tr.witness);
-    const script_addr = (_a = script_p2tr.address) !== null && _a !== void 0 ? _a : "";
-    //try to generate commit tx with target fee rate
-    for (let nTry = 0; nTry < 100; nTry++) {
-        const numberUTXO = nTry + 1;
-        if (utxos.length < numberUTXO) {
-            console.log("Not enough utxo");
-        }
-        // fake
-        const { tweakedSigner: fakeSigner, keyPair: fakeKeyPair } = generateTaprootKeyPair(crypto$1.randomBytes(32));
-        const commitVByte = getCommitVirtualSize(p2pk_p2tr, fakeKeyPair, script_addr, fakeSigner, utxos, numberUTXO);
-        //total fee for both commit and reveal
-        const totalFee = new BigNumber((revealVByte + commitVByte) * feeRatePerByte + 1000);
-        //select output
-        let inputValue = BNZero;
-        const useUTXO = [];
-        for (let i = 0; i < utxos.length; i++) {
-            inputValue = inputValue.plus(utxos[i].value);
-            useUTXO.push(utxos[i]);
-            if (inputValue.gte(totalFee)) {
-                break;
-            }
-        }
-        const p2pk_psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
-        //get change if the value is greater than 1000
-        p2pk_psbt.addOutput({
-            address: script_addr,
-            value: revealVByte * feeRatePerByte + 1000
-        });
-        if (inputValue.minus(totalFee).toNumber() > 1000) {
-            p2pk_psbt.addOutput({
-                address: p2pktr_addr,
-                value: inputValue.minus(totalFee).toNumber(),
-            });
-        }
-        for (let i = 0; i < useUTXO.length; i++) {
-            p2pk_psbt.addInput({
-                hash: useUTXO[i].tx_hash,
-                index: useUTXO[i].tx_output_n,
-                witnessUtxo: { value: useUTXO[i].value.toNumber(), script: p2pk_p2tr.output },
-                tapInternalKey: internalPubKey
-            });
-        }
-        return { commitTxB64: p2pk_psbt.toBase64(), };
-    }
-    // console.log("COMMIT PSBT B64: ", p2pk_psbt.toBase64());
-    // for (let i = 0; i < useUTXO.length; i++) {
-    //     p2pk_psbt.signInput(i, tweakedSigner);
-    // }
-    // p2pk_psbt.finalizeAllInputs();
-    // commitTX = p2pk_psbt.extractTransaction();
-    // if (commitTX.virtualSize() == commitVByte) {
-    //     console.log("Commit tx expect fee rate ", feeRatePerByte);
-    //     break;
-    // }
-    throw new SDKError(ERROR_CODE.CREATE_COMMIT_TX_ERR);
-};
 const createRawRevealTx = ({ internalPubKey, commitTxID, hashLockKeyPair, hashLockRedeem, script_p2tr, revealTxFee }) => {
     const { p2pktr, address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
     // const hashLockScript = Buffer.from(hashLockRedeemScriptHex, "hex");
@@ -6077,7 +6000,7 @@ const createRawRevealTx = ({ internalPubKey, commitTxID, hashLockKeyPair, hashLo
     const tapLeafScript = {
         leafVersion: hashLockRedeem === null || hashLockRedeem === void 0 ? void 0 : hashLockRedeem.redeemVersion,
         script: hashLockRedeem === null || hashLockRedeem === void 0 ? void 0 : hashLockRedeem.output,
-        controlBlock: script_p2tr.witness[script_p2tr.witness.length - 1]
+        controlBlock: script_p2tr.witness[script_p2tr.witness.length - 1],
     };
     const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     psbt.addInput({
@@ -6366,22 +6289,6 @@ const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, data, reImbur
     });
     console.log("commitTX: ", tx);
     console.log("COMMITTX selectedUTXOs: ", selectedUTXOs);
-    // create raw commit tx
-    // const { commitTxB64, hashLockPriKey, hashLockRedeemScriptHex } = createRawCommitTx({
-    //     internalPubKey,
-    //     data,
-    //     utxos,
-    //     feeRatePerByte,
-    //     reImbursementTCAddress,
-    //     hashLockKeyPair, hashLockRedeem, hashLockScript,
-    //     script_p2tr
-    // });
-    // // sign and finalize commit tx
-    // const { msgTxHex: commitTxHex, msgTxID: commitTxID } = signPSBT({
-    //     senderPrivateKey,
-    //     psbtB64: commitTxB64,
-    //     indicesToSign: [],
-    // });
     // create and sign reveal tx
     const { revealTxHex, revealTxID } = createRawRevealTx({
         internalPubKey,
@@ -6400,34 +6307,28 @@ const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, data, reImbur
     };
 };
 const createLockScript = ({ internalPubKey, data, reImbursementTCAddress, }) => {
-    // const { address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
+    // Create a tap tree with two spend paths
+    // One path should allow spending using secret
+    // The other path should pay to another pubkey
+    // Make random key pair for hash_lock script
     const hashLockKeyPair = ECPair.makeRandom({ network: exports.Network });
     console.log("prepare inscribe event", data);
+    // generate inscribe content
     const dataHex = generateInscribeContent(ProtocolID, reImbursementTCAddress, data);
-    console.log("dataHex: ", dataHex);
     // Construct script to pay to hash_lock_keypair if the correct preimage/secret is provided
     const hashScriptAsm = `${toXOnly(hashLockKeyPair.publicKey).toString("hex")} OP_CHECKSIG OP_FALSE OP_IF ${dataHex} OP_ENDIF`;
-    console.log("hash_script_asm: ", hashScriptAsm);
     const hashLockScript = bitcoinjsLib.script.fromASM(hashScriptAsm);
-    console.log("hash_lock_script: ", hashLockScript);
     const hashLockRedeem = {
         output: hashLockScript,
         redeemVersion: 192,
     };
     const scriptTree = hashLockRedeem;
-    console.log("scriptTree: ", scriptTree);
     const script_p2tr = bitcoinjsLib.payments.p2tr({
         internalPubkey: internalPubKey,
         scriptTree,
         redeem: hashLockRedeem,
         network: exports.Network
     });
-    console.log("Script witnesss: ", script_p2tr.witness);
-    // const script_addr = script_p2tr.address ?? "";
-    // const p2pk_p2tr = payments.p2tr({
-    //     internalPubkey: internalPubKey,
-    //     network
-    // });
     return {
         hashLockKeyPair,
         hashScriptAsm,
@@ -6457,7 +6358,6 @@ exports.createDummyUTXOFromCardinal = createDummyUTXOFromCardinal;
 exports.createInscribeTx = createInscribeTx;
 exports.createPSBTToBuy = createPSBTToBuy;
 exports.createPSBTToSell = createPSBTToSell;
-exports.createRawCommitTx = createRawCommitTx;
 exports.createRawPSBTToSell = createRawPSBTToSell;
 exports.createRawRevealTx = createRawRevealTx;
 exports.createRawTx = createRawTx;

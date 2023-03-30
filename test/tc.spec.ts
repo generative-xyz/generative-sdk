@@ -1,4 +1,4 @@
-import { ECPair, Network, convertPrivateKeyFromStr, createInscribeTx, createRawCommitTx, createRawRevealTx, generateInscribeContent, start_taptree } from "../src";
+import { ECPair, Network, convertPrivateKeyFromStr, createInscribeTx, createRawRevealTx, generateInscribeContent, start_taptree } from "../src";
 
 import BigNumber from 'bignumber.js';
 import { ECPairInterface } from 'ecpair';
