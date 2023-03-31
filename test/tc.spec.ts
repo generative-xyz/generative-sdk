@@ -1,11 +1,10 @@
-import { ECPair, Network, ProtocolID, convertPrivateKeyFromStr, createInscribeTx, createRawRevealTx, generateInscribeContent, start_taptree } from "../src";
+import { ECPair, Network, convertPrivateKeyFromStr, createInscribeTx, createRawRevealTx, generateInscribeContent, start_taptree } from "../src";
 
 import BigNumber from 'bignumber.js';
 import { ECPairInterface } from 'ecpair';
 import { Psbt } from "bitcoinjs-lib";
 import { assert } from 'chai';
 import { ethers } from "ethers";
-import { randomBytes } from "crypto";
 
 require("dotenv").config({ path: __dirname + "/.env" });
 console.log(__dirname + "../test/.env");
@@ -122,30 +121,6 @@ describe("Sign msg Tx", async () => {
         console.log("revealTxHex: ", revealTxHex);
         console.log("revealTxID: ", revealTxID);
         console.log("totalFee: ", totalFee);
-
-
-
-
-    });
-
-    it("should return the raw commit tx", async () => {
-        // const data = "0xf86d808502540be40082520894f91cee2de943733e338891ef602c962ef4d7eb81872386f26fc100008082adaea00f9b5498dbbb514d896391ed0aff62fe381fcada60c4a24d50995217f4e5debfa0136bf98a811ff28e1b39cd0b4da2a91c65f2f8ccdf6602e894f5a1e67f896d5b";
-        const tcAddress = "0x82268aF8207117ddBCD8ce4e444263CcD8d1bF87";
-
-
-        const dataBuff = randomBytes(1024);
-        const data = dataBuff.toString("hex");
-
-        console.log("Data: ", data);
-        const dataHex = generateInscribeContent(
-            ProtocolID,
-
-            tcAddress,
-            [data]
-        );
-
-        console.log("dataHex: ", dataHex);
-
 
 
 
