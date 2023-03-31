@@ -2,6 +2,7 @@ import { Inscription, UTXO } from "..";
 import { payments } from "bitcoinjs-lib";
 import BigNumber from "bignumber.js";
 import { ECPairInterface } from "ecpair";
+declare const ProtocolID = "bvmv1";
 declare function generateInscribeContent(protocolID: string, reimbursementAddr: string, datas: string[]): string;
 declare const createRawRevealTx: ({ internalPubKey, commitTxID, hashLockKeyPair, hashLockRedeem, script_p2tr, revealTxFee }: {
     internalPubKey: Buffer;
@@ -55,4 +56,4 @@ declare const createInscribeTx: ({ senderPrivateKey, utxos, inscriptions, data, 
     revealTxID: string;
     totalFee: BigNumber;
 };
-export { start_taptree, generateInscribeContent, createRawRevealTx, createInscribeTx };
+export { start_taptree, generateInscribeContent, createRawRevealTx, createInscribeTx, ProtocolID };

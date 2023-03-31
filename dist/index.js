@@ -5955,11 +5955,65 @@ function witnessStackToScriptWitness(witness) {
 }
 
 const ProtocolID = "bvmv1";
+const OPS = bitcoinjsLib.script.OPS;
+const OP_0 = OPS.OP_0;
+const OP_1 = OPS.OP_1;
+const OP_1NEGATE = OPS.OP_1NEGATE;
+const OP_PUSHDATA1 = OPS.OP_PUSHDATA1;
+const OP_DATA_1 = OPS.OP_1 + 1;
+const OP_PUSHDATA2 = OPS.OP_PUSHDATA2;
+const OP_PUSHDATA4 = OPS.OP_PUSHDATA4;
 const remove0x = (data) => {
     if (data.startsWith("0x"))
         data = data.slice(2);
     return data;
 };
+function addData(data) {
+    const dataLen = data.length;
+    const script = [];
+    // When the data consists of a single number that can be represented
+    // by one of the "small integer" opcodes, use that opcode instead of
+    // a data push opcode followed by the number.
+    if (dataLen == 0 || (dataLen == 1 && data[0] == 0)) {
+        script.push(OP_0);
+        return script;
+    }
+    else if (dataLen == 1 && data[0] <= 16) {
+        script.push(OP_1 - 1 + data[0]);
+        return script;
+    }
+    else if (dataLen == 1 && data[0] == 0x81) {
+        script.push(OP_1NEGATE);
+        return script;
+    }
+    // Use one of the OP_DATA_# opcodes if the length of the data is small
+    // enough so the data push instruction is only a single byte.
+    // Otherwise, choose the smallest possible OP_PUSHDATA# opcode that
+    // can represent the length of the data.
+    if (dataLen < OP_PUSHDATA1) {
+        script.push(OP_DATA_1 - 1 + dataLen);
+    }
+    else if (dataLen <= 0xff) {
+        script.push(OP_PUSHDATA1, dataLen);
+    }
+    else if (dataLen <= 0xffff) {
+        const buf = Buffer.alloc(2);
+        buf.writeUInt16LE(dataLen);
+        script.push(OP_PUSHDATA2);
+        script.push(...buf);
+    }
+    else {
+        const buf = Buffer.alloc(4);
+        buf.writeUInt32LE(dataLen);
+        script.push(OP_PUSHDATA4);
+        script.push(...buf);
+    }
+    // Append the actual data.
+    script.push(...data);
+    console.log("script: ", script, script.length);
+    console.log("Buffer.from(script): ", Buffer.from(script), Buffer.from(script).length);
+    return Buffer.from(script);
+}
 function generateInscribeContent(protocolID, reimbursementAddr, datas) {
     let content = Buffer.from(protocolID);
     reimbursementAddr = remove0x(reimbursementAddr);
@@ -5975,13 +6029,19 @@ function generateInscribeContent(protocolID, reimbursementAddr, datas) {
         lenBuf[3] = len;
         content = Buffer.concat([content, lenBuf, Buffer.from(data, "hex")]);
     }
-    const chunkSize = 512;
-    let dataHex = "";
+    console.log("Content: ", content);
+    const chunkSize = 520;
+    // let dataHex = "";
+    let res = Buffer.from("");
     for (let i = 0; i < content.length; i += chunkSize) {
         const chunk = content.subarray(i, i + chunkSize);
-        dataHex += chunk.toString("hex") + " ";
+        const chunkRes = addData(chunk);
+        res = Buffer.concat([res, chunkRes]);
+        // dataHex += chunk.toString("hex") + " ";
     }
-    return dataHex.trim();
+    // console.log("DataHex before trim: ", dataHex);
+    // console.log("DataHex after trim: ", dataHex.trim());
+    return res.toString("hex");
 }
 const createRawRevealTx = ({ internalPubKey, commitTxID, hashLockKeyPair, hashLockRedeem, script_p2tr, revealTxFee }) => {
     const { p2pktr, address: p2pktr_addr } = generateTaprootAddressFromPubKey(internalPubKey);
@@ -6348,6 +6408,7 @@ exports.InputSize = InputSize;
 exports.MinSats = MinSats;
 exports.NetworkType = NetworkType;
 exports.OutputSize = OutputSize;
+exports.ProtocolID = ProtocolID;
 exports.SDKError = SDKError;
 exports.Validator = Validator;
 exports.WalletType = WalletType;
