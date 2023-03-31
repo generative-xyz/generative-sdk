@@ -1,20 +1,17 @@
+import { assert } from "chai";
+import BigNumber from "bignumber.js";
 import {
-    BNZero,
-    Inscription,
-    MinSats,
+    selectUTXOs,
     UTXO,
+    Inscription,
+    createTx,
+    MinSats,
+    createTxWithSpecificUTXOs,
     convertPrivateKey,
     convertPrivateKeyFromStr,
-    createTx,
-    createTxWithSpecificUTXOs,
-    selectUTXOs,
+    BNZero,
 } from "../src/index";
-
-import BigNumber from "bignumber.js";
-import { Transaction } from "bitcoinjs-lib";
-import { assert } from "chai";
 import { number } from "bitcoinjs-lib/src/script";
-
 require("dotenv").config({ path: __dirname + "/.env" });
 
 
@@ -510,23 +507,14 @@ describe("Create tx with multiple UTXOs Tests", () => {
     //     //   UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
 
     it("send BTC - should return 1 selected UTXO - isUseInscriptionPayFeeParam = true", () => {
-        // let sendInscriptionID = "";
-        // let sendAmount = new BigNumber(1000);
+        let sendInscriptionID = "";
+        let sendAmount = new BigNumber(1000);
 
-        // // const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
-        // //   UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
+        // const { selectedUTXOs, isUseInscriptionPayFee, valueOutInscription, changeAmount, fee } = selectUTXOs(
+        //   UTXOs, inscriptions, sendInscriptionID, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam);
 
-        // const { txID, txHex, fee: feeRes } = createTx(sellerPrivateKey, UTXOs, inscriptions, sendInscriptionID, buyerAddress, sendAmount, 6, true);
-        // console.log(txID, txHex, feeRes);
-
-        const hexTx = "020000000001011ec43fb1061ba5c4818ec2fd49055f9812db0f41c5802d887a81628aa4f6172a0100000000ffffffff02a01b000000000000225120f12ac6f144e38c7aa9bbfebccfc1e48a3089682f3b70ec604afa00a0bc26913010adf50500000000225120af775218eb8a31e3233e6fbf27a5b9570b93bb74b2ab77a7081dcd16d173094d0140b2ad01d1d29325e3d85b1c2f941be09b0252fcbd89fa224bc42b41d25a688686e5b1e90b300288e9745ca7bd2155b7b3b2676a3157fc379e60d7e2b8aebc755100000000";
-
-        const msgTx = Transaction.fromHex(hexTx);
-        console.log("HHH: ", Transaction.fromHex(hexTx));
-
-        console.log("msgTx", msgTx.ins[0].hash.toString("hex"));
-
-
+        const { txID, txHex, fee: feeRes } = createTx(sellerPrivateKey, UTXOs, inscriptions, sendInscriptionID, buyerAddress, sendAmount, 6, true);
+        console.log(txID, txHex, feeRes);
     });
 
 

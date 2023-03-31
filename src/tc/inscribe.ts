@@ -13,65 +13,10 @@ import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness";
 
 const ProtocolID = "bvmv1";
 
-const OPS = script.OPS;
-const OP_0 = OPS.OP_0;
-const OP_1 = OPS.OP_1;
-const OP_1NEGATE = OPS.OP_1NEGATE;
-const OP_PUSHDATA1 = OPS.OP_PUSHDATA1;
-const OP_DATA_1 = OPS.OP_1 + 1;
-const OP_PUSHDATA2 = OPS.OP_PUSHDATA2;
-const OP_PUSHDATA4 = OPS.OP_PUSHDATA4;
-
 const remove0x = (data: string): string => {
     if (data.startsWith("0x")) data = data.slice(2);
     return data;
 };
-
-function addData(data: Buffer) {
-    const dataLen = data.length;
-
-    const script: any = [];
-    // When the data consists of a single number that can be represented
-    // by one of the "small integer" opcodes, use that opcode instead of
-    // a data push opcode followed by the number.
-    if (dataLen == 0 || (dataLen == 1 && data[0] == 0)) {
-        script.push(OP_0);
-        return script;
-    } else if (dataLen == 1 && data[0] <= 16) {
-        script.push(OP_1 - 1 + data[0]);
-        return script;
-
-
-    } else if (dataLen == 1 && data[0] == 0x81) {
-        script.push(OP_1NEGATE);
-        return script;
-    }
-    // Use one of the OP_DATA_# opcodes if the length of the data is small
-    // enough so the data push instruction is only a single byte.
-    // Otherwise, choose the smallest possible OP_PUSHDATA# opcode that
-    // can represent the length of the data.
-    if (dataLen < OP_PUSHDATA1) {
-        script.push(OP_DATA_1 - 1 + dataLen);
-    } else if (dataLen <= 0xff) {
-        script.push(OP_PUSHDATA1, dataLen);
-    } else if (dataLen <= 0xffff) {
-        const buf = Buffer.alloc(2);
-        buf.writeUInt16LE(dataLen);
-        script.push(OP_PUSHDATA2);
-        script.push(...buf);
-    } else {
-        const buf = Buffer.alloc(4);
-        buf.writeUInt32LE(dataLen);
-        script.push(OP_PUSHDATA4);
-        script.push(...buf);
-    }
-    // Append the actual data.
-    script.push(...data);
-    console.log("script: ", script, script.length);
-    console.log("Buffer.from(script): ", Buffer.from(script), Buffer.from(script).length);
-    return Buffer.from(script);
-}
-
 
 function generateInscribeContent(protocolID: string, reimbursementAddr: string, datas: string[]): string {
     let content = Buffer.from(protocolID);
@@ -92,22 +37,14 @@ function generateInscribeContent(protocolID: string, reimbursementAddr: string, 
         content = Buffer.concat([content, lenBuf, Buffer.from(data, "hex")]);
     }
 
-    console.log("Content: ", content);
-
-    const chunkSize = 520;
-    // let dataHex = "";
-
-    let res = Buffer.from("");
+    const chunkSize = 512;
+    let dataHex = "";
     for (let i = 0; i < content.length; i += chunkSize) {
         const chunk = content.subarray(i, i + chunkSize);
-        const chunkRes = addData(chunk);
-        res = Buffer.concat([res, chunkRes]);
-        // dataHex += chunk.toString("hex") + " ";
+        dataHex += chunk.toString("hex") + " ";
     }
 
-    // console.log("DataHex before trim: ", dataHex);
-    // console.log("DataHex after trim: ", dataHex.trim());
-    return res.toString("hex");
+    return dataHex.trim();
 }
 
 const createRawRevealTx = ({
@@ -612,6 +549,5 @@ export {
     start_taptree,
     generateInscribeContent,
     createRawRevealTx,
-    createInscribeTx,
-    ProtocolID
+    createInscribeTx
 };
