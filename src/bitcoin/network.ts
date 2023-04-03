@@ -1,7 +1,7 @@
 import { networks } from "bitcoinjs-lib";
 
 // default is bitcoin mainnet
-let Network = networks.bitcoin;
+let Network = networks.regtest;
 
 const NetworkType = {
     Mainnet: 1,
