@@ -6214,6 +6214,10 @@ function getRevealVirtualSize(hash_lock_redeem, script_p2tr, p2pktr_addr, hash_l
     const tx = psbt.extractTransaction();
     return tx.virtualSize();
 }
+const getRevealVirtualSizeByDataSize = (dataSize) => {
+    const inputSize = InputSize + dataSize;
+    return inputSize + OutputSize;
+};
 function getCommitVirtualSize(p2pk_p2tr, keypair, script_addr, tweakedSigner, utxos, numberUTXO, revealVByte, fee_rate) {
     //select output
     let inputValue = BNZero;
@@ -6337,6 +6341,20 @@ const createLockScript = ({ internalPubKey, data, reImbursementTCAddress, }) => 
         script_p2tr
     };
 };
+/**
+* estimateInscribeFee estimate BTC amount need to inscribe for creating project.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param htmlFileSizeByte size of html file from user (in byte)
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @returns the total BTC fee
+*/
+const estimateInscribeFee = ({ htmlFileSizeByte, feeRatePerByte, }) => {
+    const estCommitTxFee = estimateTxFee(1, 2, feeRatePerByte);
+    const revealVByte = getRevealVirtualSizeByDataSize(htmlFileSizeByte + 24000); // 24k for contract size
+    const estRevealTxFee = revealVByte * feeRatePerByte;
+    const totalFee = estCommitTxFee + estRevealTxFee;
+    return { totalFee: new BigNumber(totalFee) };
+};
 
 exports.BNZero = BNZero;
 exports.BlockStreamURL = BlockStreamURL;
@@ -6376,6 +6394,7 @@ exports.deriveETHWallet = deriveETHWallet;
 exports.derivePasswordWallet = derivePasswordWallet;
 exports.deriveSegwitWallet = deriveSegwitWallet;
 exports.encryptWallet = encryptWallet;
+exports.estimateInscribeFee = estimateInscribeFee;
 exports.estimateNumInOutputs = estimateNumInOutputs;
 exports.estimateNumInOutputsForBuyInscription = estimateNumInOutputsForBuyInscription;
 exports.estimateTxFee = estimateTxFee;

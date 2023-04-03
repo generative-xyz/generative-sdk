@@ -1,4 +1,4 @@
-import { BNZero, MinSats } from "../bitcoin/constants";
+import { BNZero, InputSize, MinSats, OutputSize } from "../bitcoin/constants";
 import { ECPair, generateTaprootAddressFromPubKey, generateTaprootKeyPair, toXOnly } from "../bitcoin/wallet";
 import { Inscription, SDKError, UTXO, createTxSendBTC, estimateTxFee } from "..";
 import { Psbt, payments, script } from "bitcoinjs-lib";
@@ -364,6 +364,12 @@ function getRevealVirtualSize(hash_lock_redeem: any, script_p2tr: any, p2pktr_ad
     return tx.virtualSize();
 }
 
+
+const getRevealVirtualSizeByDataSize = (dataSize: number): number => {
+    const inputSize = InputSize + dataSize;
+    return inputSize + OutputSize;
+};
+
 function getCommitVirtualSize(p2pk_p2tr: any, keypair: any, script_addr: any, tweakedSigner: any, utxos: any, numberUTXO: any, revealVByte: any, fee_rate: any) {
     //select output
     let inputValue = BNZero;
@@ -415,7 +421,6 @@ function getCommitVirtualSize(p2pk_p2tr: any, keypair: any, script_addr: any, tw
 * @returns the reveal transaction id
 * @returns the total network fee
 */
-
 const createInscribeTx = ({
     senderPrivateKey,
     utxos,
@@ -423,7 +428,6 @@ const createInscribeTx = ({
     data,
     reImbursementTCAddress,
     feeRatePerByte,
-
 }: {
     senderPrivateKey: Buffer,
     utxos: UTXO[],
@@ -545,9 +549,34 @@ const createLockScript = ({
     };
 };
 
+/**
+* estimateInscribeFee estimate BTC amount need to inscribe for creating project. 
+* NOTE: Currently, the function only supports sending from Taproot address. 
+* @param htmlFileSizeByte size of html file from user (in byte)
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @returns the total BTC fee
+*/
+const estimateInscribeFee = ({
+    htmlFileSizeByte,
+    feeRatePerByte,
+}: {
+    htmlFileSizeByte: number,
+    feeRatePerByte: number,
+}): {
+    totalFee: BigNumber,
+} => {
+
+    const estCommitTxFee = estimateTxFee(1, 2, feeRatePerByte);
+    const revealVByte = getRevealVirtualSizeByDataSize(htmlFileSizeByte + 24000);  // 24k for contract size
+    const estRevealTxFee = revealVByte * feeRatePerByte;
+    const totalFee = estCommitTxFee + estRevealTxFee;
+    return { totalFee: new BigNumber(totalFee) };
+};
+
 export {
     start_taptree,
     generateInscribeContent,
     createRawRevealTx,
-    createInscribeTx
+    createInscribeTx,
+    estimateInscribeFee
 };
