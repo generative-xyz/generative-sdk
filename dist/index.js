@@ -2943,7 +2943,7 @@ const WalletType = {
 };
 
 // default is bitcoin mainnet
-exports.Network = bitcoinjsLib.networks.bitcoin;
+exports.Network = bitcoinjsLib.networks.regtest;
 const NetworkType = {
     Mainnet: 1,
     Testnet: 2,
