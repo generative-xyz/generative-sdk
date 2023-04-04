@@ -6350,7 +6350,7 @@ const createLockScript = ({ internalPubKey, data, reImbursementTCAddress, }) => 
 */
 const estimateInscribeFee = ({ htmlFileSizeByte, feeRatePerByte, }) => {
     const estCommitTxFee = estimateTxFee(1, 2, feeRatePerByte);
-    const revealVByte = getRevealVirtualSizeByDataSize(htmlFileSizeByte + 24000); // 24k for contract size
+    const revealVByte = getRevealVirtualSizeByDataSize((htmlFileSizeByte + 24000) / 4); // 24k for contract size
     const estRevealTxFee = revealVByte * feeRatePerByte;
     const totalFee = estCommitTxFee + estRevealTxFee;
     return { totalFee: new BigNumber(totalFee) };
