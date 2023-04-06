@@ -71,6 +71,7 @@
     "form-data": "^4.0.0",
     "js-sha3": "^0.8.0",
     "sats-connect": "^0.1.11",
+    "tc-js": "https://github.com/TrustlessComputer/tc-sdk#v0.1.6",
     "ts-mocha": "^10.0.0",
     "web3": "^1.9.0",
     "wif": "^2.0.6"

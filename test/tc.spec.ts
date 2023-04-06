@@ -1,9 +1,7 @@
-import { ECPair, Network, convertPrivateKeyFromStr, createInscribeTx, createRawRevealTx, estimateInscribeFee, generateInscribeContent, start_taptree } from "../src";
+import { Mainnet, TcClient } from 'tc-js';
+import { convertPrivateKeyFromStr, createInscribeTx } from "../src";
 
 import BigNumber from 'bignumber.js';
-import { ECPairInterface } from 'ecpair';
-import { Psbt } from "bitcoinjs-lib";
-import { assert } from 'chai';
 import { ethers } from "ethers";
 
 require("dotenv").config({ path: __dirname + "/.env" });
@@ -94,19 +92,16 @@ describe("Sign msg Tx", async () => {
         console.log("serialized: ", serialized);
 
     })
-    it("should return the raw commit tx", async () => {
-        const data = "0xf86d808502540be40082520894f91cee2de943733e338891ef602c962ef4d7eb81872386f26fc100008082adaea00f9b5498dbbb514d896391ed0aff62fe381fcada60c4a24d50995217f4e5debfa0136bf98a811ff28e1b39cd0b4da2a91c65f2f8ccdf6602e894f5a1e67f896d5b";
-        const tcAddress = "0x82268aF8207117ddBCD8ce4e444263CcD8d1bF87";
-        const pubKeyStr = "";
-        const { commitTxHex, commitTxID, revealTxHex, revealTxID, totalFee } = createInscribeTx({
+    it("should create inscribe txs completely", async () => {
+        const tcTxID = "0x50c472ad696b43e4f7af03863c0406f0bb0c1a2eed85bfe1342a1b86fd8944fa";
+        const tcClient = new TcClient(Mainnet, "http://51.83.237.20:10002");
+        const { commitTxHex, commitTxID, revealTxHex, revealTxID, totalFee } = await createInscribeTx({
             senderPrivateKey: sellerPrivateKey,
-
-            // internalPubKey: Buffer.from(pubKeyStr, "hex"),
-            data: [data],
+            tcTxID,
             utxos: sellerUTXOs,
             inscriptions: {},
             feeRatePerByte: 6,
-            reImbursementTCAddress: tcAddress,
+            tcClient,
         });
         // console.log("commitTxB64: ", commitTxB64);
         // console.log("hashLockRedeemScriptHex: ", hashLockRedeemScriptHex);
@@ -122,8 +117,8 @@ describe("Sign msg Tx", async () => {
         console.log("revealTxID: ", revealTxID);
         console.log("totalFee: ", totalFee);
 
-        const { totalFee: totalFeeRes } = estimateInscribeFee({ htmlFileSizeByte: 10000, feeRatePerByte: 5 });
-        console.log("totalFee estimate: ", totalFeeRes.toNumber());
+        // const { totalFee: totalFeeRes } = estimateInscribeFee({ htmlFileSizeByte: 10000, feeRatePerByte: 5 });
+        // console.log("totalFee estimate: ", totalFeeRes.toNumber());
 
 
 
