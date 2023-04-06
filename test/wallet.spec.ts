@@ -126,6 +126,18 @@ describe("Import Wallet", async () => {
         console.log("msgtx: ", msgtx.ins[0].witness, msgtx.ins[0].witness.length)
     });
 
+    it("Generate Taproot address by custom network", async () => {
+        const privateKey = process.env.PRIV_KEY_2 || "";
+        console.log("privateKey: ", privateKey);
+        const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
+
+
+        setBTCNetwork(NetworkType.Testnet);
+
+        const address = generateTaprootAddress(privateKeyBuffer);
+        console.log("Address: ", address);
+    });
+
 
 
 });

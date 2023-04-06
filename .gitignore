@@ -71,3 +71,4 @@ test/.env
 .cache
 
 .idea
+.vscode

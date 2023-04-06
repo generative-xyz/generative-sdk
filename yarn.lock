@@ -5712,6 +5712,29 @@ tar@^4.0.2:
     safe-buffer "^5.2.1"
     yallist "^3.1.1"
 
+"tc-js@https://github.com/TrustlessComputer/tc-sdk#v0.1.6":
+  version "0.0.1"
+  resolved "https://github.com/TrustlessComputer/tc-sdk#fd5381a1b58db695856b23b697bc081bb847d5e8"
+  dependencies:
+    "@bitcoinerlab/secp256k1" "^1.0.2"
+    "@types/node" "^17.0.13"
+    axios "^0.24.0"
+    bignumber.js "^9.1.1"
+    bip32 "^4.0.0"
+    bitcoinjs-lib "github:generative-xyz/bitcoinjs-lib"
+    browserify "^17.0.0"
+    crypto-js "^4.1.1"
+    dotenv "^16.0.3"
+    ecpair "^2.1.0"
+    ethereumjs-wallet "^1.0.2"
+    ethers "5.7.1"
+    form-data "^4.0.0"
+    js-sha3 "^0.8.0"
+    sats-connect "^0.1.11"
+    ts-mocha "^10.0.0"
+    web3 "^1.9.0"
+    wif "^2.0.6"
+
 text-extensions@^1.0.0:
   version "1.9.0"
   resolved "https://registry.yarnpkg.com/text-extensions/-/text-extensions-1.9.0.tgz#1853e45fee39c945ce6f6c36b2d659b5aabc2a26"
