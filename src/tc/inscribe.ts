@@ -74,5 +74,6 @@ const estimateInscribeFee = ({
 
 export {
     createInscribeTx,
-    estimateInscribeFee
+    estimateInscribeFee,
+    TcClient
 };
