@@ -6,6 +6,7 @@ import { ECPairAPI } from 'ecpair';
 import { ethers } from 'ethers';
 import { BIP32Interface } from 'bip32';
 import { TcClient } from 'tc-js';
+export { TcClient } from 'tc-js';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
 declare const MinSats = 1000;

@@ -45,4 +45,4 @@ declare const estimateInscribeFee: ({ htmlFileSizeByte, feeRatePerByte, }: {
 }) => {
     totalFee: BigNumber;
 };
-export { createInscribeTx, estimateInscribeFee };
+export { createInscribeTx, estimateInscribeFee, TcClient };

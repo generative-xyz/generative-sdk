@@ -5963,6 +5963,10 @@ const estimateInscribeFee = ({ htmlFileSizeByte, feeRatePerByte, }) => {
     return { totalFee: new BigNumber(totalFee) };
 };
 
+Object.defineProperty(exports, 'TcClient', {
+  enumerable: true,
+  get: function () { return tcJs.TcClient; }
+});
 exports.BNZero = BNZero;
 exports.BlockStreamURL = BlockStreamURL;
 exports.DummyUTXOValue = DummyUTXOValue;
