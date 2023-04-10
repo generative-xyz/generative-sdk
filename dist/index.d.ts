@@ -933,13 +933,13 @@ declare class Validator {
 * @returns the reveal transaction id
 * @returns the total network fee
 */
-declare const createInscribeTx: ({ senderPrivateKey, utxos, inscriptions, tcTxID, feeRatePerByte, tcClient }: {
+declare const createInscribeTx: ({ senderPrivateKey, utxos, inscriptions, tcTxIDs, feeRatePerByte, tcClient }: {
     senderPrivateKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
         [key: string]: Inscription[];
     };
-    tcTxID: string;
+    tcTxIDs: string[];
     feeRatePerByte: number;
     tcClient: TcClient;
 }) => Promise<{

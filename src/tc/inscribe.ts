@@ -28,14 +28,14 @@ const createInscribeTx = ({
     senderPrivateKey,
     utxos,
     inscriptions,
-    tcTxID,
+    tcTxIDs,
     feeRatePerByte,
     tcClient
 }: {
     senderPrivateKey: Buffer,
     utxos: UTXO[],
     inscriptions: { [key: string]: Inscription[] },
-    tcTxID: string,
+    tcTxIDs: string[],
     feeRatePerByte: number,
     tcClient: TcClient
 }): Promise<{
@@ -45,7 +45,7 @@ const createInscribeTx = ({
     revealTxID: string,
     totalFee: BigNumber,
 }> => {
-    return createInscribeTxTC({ senderPrivateKey, utxos, inscriptions, tcTxID, feeRatePerByte, tcClient });
+    return createInscribeTxTC({ senderPrivateKey, utxos, inscriptions, tcTxIDs, feeRatePerByte, tcClient });
 };
 
 /**
