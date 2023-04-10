@@ -5945,8 +5945,8 @@ const getRevealVirtualSizeByDataSize = (dataSize) => {
 * @returns the reveal transaction id
 * @returns the total network fee
 */
-const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, tcTxID, feeRatePerByte, tcClient }) => {
-    return tcJs.createInscribeTx({ senderPrivateKey, utxos, inscriptions, tcTxID, feeRatePerByte, tcClient });
+const createInscribeTx = ({ senderPrivateKey, utxos, inscriptions, tcTxIDs, feeRatePerByte, tcClient }) => {
+    return tcJs.createInscribeTx({ senderPrivateKey, utxos, inscriptions, tcTxIDs, feeRatePerByte, tcClient });
 };
 /**
 * estimateInscribeFee estimate BTC amount need to inscribe for creating project.

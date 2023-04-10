@@ -5712,9 +5712,9 @@ tar@^4.0.2:
     safe-buffer "^5.2.1"
     yallist "^3.1.1"
 
-"tc-js@https://github.com/TrustlessComputer/tc-sdk#v0.1.6":
+"tc-js@https://github.com/TrustlessComputer/tc-sdk#v0.1.9":
   version "0.0.1"
-  resolved "https://github.com/TrustlessComputer/tc-sdk#fd5381a1b58db695856b23b697bc081bb847d5e8"
+  resolved "https://github.com/TrustlessComputer/tc-sdk#adace320979889356843331be99230855e5d9366"
   dependencies:
     "@bitcoinerlab/secp256k1" "^1.0.2"
     "@types/node" "^17.0.13"
