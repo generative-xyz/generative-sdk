@@ -12,7 +12,6 @@ import { Psbt } from "bitcoinjs-lib";
 import { assert } from "chai";
 import BigNumber from 'bignumber.js';
 require("dotenv").config({ path: __dirname + "/.env" });
-console.log(__dirname + "../test/.env");
 
 
 // for unit test

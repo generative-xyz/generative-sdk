@@ -1,4 +1,5 @@
-import { Transaction, Psbt } from "bitcoinjs-lib";
+import { Psbt, Transaction } from "bitcoinjs-lib";
+
 import BigNumber from "bignumber.js";
 
 interface UTXO {
@@ -20,6 +21,14 @@ interface ICreateTxResp {
     fee: BigNumber,
     selectedUTXOs: UTXO[],
     changeAmount: BigNumber,
+}
+
+interface ICreateRawTxResp {
+    base64Psbt: string,
+    fee: BigNumber,
+    selectedUTXOs: UTXO[],
+    changeAmount: BigNumber,
+    indicesToSign: number[],
 }
 
 interface ICreateTxBuyResp {
@@ -66,14 +75,35 @@ interface PaymentInfo {
     amount: BigNumber
 }
 
+interface Wallet {
+    privKey: string,
+}
+
+interface ISignPSBTResp {
+    signedBase64PSBT: string,
+    msgTxHex: string,
+    msgTxID: string,
+    msgTx: Transaction,
+}
+
+interface NeedPaymentUTXO {
+    buyInfoIndex: number,
+    amount: BigNumber,
+}
+
+
 export {
     UTXO,
     Inscription,
     ICreateTxResp,
+    ICreateRawTxResp,
     ICreateTxSplitInscriptionResp,
     ICreateTxBuyResp,
     ICreateTxSellResp,
     BuyReqInfo,
     PaymentInfo,
     BuyReqFullInfo,
+    Wallet,
+    ISignPSBTResp,
+    NeedPaymentUTXO,
 };
