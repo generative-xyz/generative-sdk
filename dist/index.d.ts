@@ -1,16 +1,23 @@
 /// <reference types="node" />
-import { networks, Transaction, Psbt, Signer, payments } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
+import { Transaction, Psbt, Signer, payments, networks } from 'bitcoinjs-lib';
 import * as ecpair from 'ecpair';
 import { ECPairAPI } from 'ecpair';
+import { ethers } from 'ethers';
+import { BIP32Interface } from 'bip32';
+import { TcClient } from 'tc-js';
+export { TcClient } from 'tc-js';
 
 declare const BlockStreamURL = "https://blockstream.info/api";
 declare const MinSats = 1000;
-declare const network: networks.Network;
 declare const DummyUTXOValue = 1000;
 declare const InputSize = 68;
 declare const OutputSize = 43;
 declare const BNZero: BigNumber;
+declare const WalletType: {
+    Xverse: number;
+    Hiro: number;
+};
 
 interface UTXO {
     tx_hash: string;
@@ -28,6 +35,13 @@ interface ICreateTxResp {
     fee: BigNumber;
     selectedUTXOs: UTXO[];
     changeAmount: BigNumber;
+}
+interface ICreateRawTxResp {
+    base64Psbt: string;
+    fee: BigNumber;
+    selectedUTXOs: UTXO[];
+    changeAmount: BigNumber;
+    indicesToSign: number[];
 }
 interface ICreateTxBuyResp {
     tx: Transaction;
@@ -65,6 +79,19 @@ interface BuyReqFullInfo extends BuyReqInfo {
 }
 interface PaymentInfo {
     address: string;
+    amount: BigNumber;
+}
+interface Wallet {
+    privKey: string;
+}
+interface ISignPSBTResp {
+    signedBase64PSBT: string;
+    msgTxHex: string;
+    msgTxID: string;
+    msgTx: Transaction;
+}
+interface NeedPaymentUTXO {
+    buyInfoIndex: number;
     amount: BigNumber;
 }
 
@@ -190,9 +217,137 @@ declare const findExactValueUTXO: (cardinalUTXOs: UTXO[], value: BigNumber) => {
 * @returns the hex signed transaction
 * @returns the network fee
 */
+declare const signPSBT: ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType }: {
+    senderPrivateKey: Buffer;
+    psbtB64: string;
+    indicesToSign: number[];
+    sigHashType?: number | undefined;
+}) => ISignPSBTResp;
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const signPSBT2: ({ senderPrivateKey, psbtB64, indicesToSign, sigHashType }: {
+    senderPrivateKey: Buffer;
+    psbtB64: string;
+    indicesToSign: number[];
+    sigHashType?: number | undefined;
+}) => string;
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createRawTxDummyUTXOForSale: ({ pubKey, utxos, inscriptions, sellInscriptionID, feeRatePerByte, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sellInscriptionID: string;
+    feeRatePerByte: number;
+}) => {
+    dummyUTXO: any;
+    splitPsbtB64: string;
+    indicesToSign: number[];
+    selectedUTXOs: UTXO[];
+    newValueInscription: BigNumber;
+};
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
 declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
 }, sendInscriptionID: string | undefined, receiverInsAddress: string, sendAmount: BigNumber, feeRatePerByte: number, isUseInscriptionPayFeeParam?: boolean) => ICreateTxResp;
+/**
+* createRawTx creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sendInscriptionID: string;
+    receiverInsAddress: string;
+    sendAmount: BigNumber;
+    feeRatePerByte: number;
+    isUseInscriptionPayFeeParam: boolean;
+}) => ICreateRawTxResp;
+/**
+* createTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createTxFromAnyWallet: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, walletType, cancelFn, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sendInscriptionID: string;
+    receiverInsAddress: string;
+    sendAmount: BigNumber;
+    feeRatePerByte: number;
+    isUseInscriptionPayFeeParam: boolean;
+    walletType?: number | undefined;
+    cancelFn: () => void;
+}) => Promise<ICreateTxResp>;
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -217,6 +372,30 @@ declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, payment
     paymentInfos: PaymentInfo[];
     feeRatePerByte: number;
 }) => ICreateTxResp;
+/**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    paymentInfos: PaymentInfo[];
+    feeRatePerByte: number;
+}) => ICreateRawTxResp;
 /**
 * createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -254,16 +433,51 @@ declare const createTxWithSpecificUTXOs: (senderPrivateKey: Buffer, utxos: UTXO[
 * @returns the network fee
 */
 declare const createTxSplitFundFromOrdinalUTXO: (senderPrivateKey: Buffer, inscriptionUTXO: UTXO, inscriptionInfo: Inscription, sendAmount: BigNumber, feeRatePerByte: number) => ICreateTxSplitInscriptionResp;
+/**
+* createRawTxSplitFundFromOrdinalUTXO creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+declare const createRawTxSplitFundFromOrdinalUTXO: ({ pubKey, inscriptionUTXO, inscriptionInfo, sendAmount, feeRatePerByte, }: {
+    pubKey: Buffer;
+    inscriptionUTXO: UTXO;
+    inscriptionInfo: Inscription;
+    sendAmount: BigNumber;
+    feeRatePerByte: number;
+}) => {
+    resRawTx: ICreateRawTxResp;
+    newValueInscription: BigNumber;
+};
 declare const createDummyUTXOFromCardinal: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: {
     [key: string]: Inscription[];
-}, feeRatePerByte: number) => Promise<{
+}, feeRatePerByte: number) => {
     dummyUTXO: UTXO;
     splitTxID: string;
     selectedUTXOs: UTXO[];
     newUTXO: any;
     fee: BigNumber;
     txHex: string;
-}>;
+};
+declare const createRawTxDummyUTXOFromCardinal: (pubKey: Buffer, utxos: UTXO[], inscriptions: {
+    [key: string]: Inscription[];
+}, feeRatePerByte: number) => {
+    dummyUTXO: any;
+    splitPsbtB64: string;
+    indicesToSign: number[];
+    changeAmount: BigNumber;
+    selectedUTXOs: UTXO[];
+    fee: BigNumber;
+};
 declare const prepareUTXOsToBuyMultiInscriptions: ({ privateKey, address, utxos, inscriptions, feeRatePerByte, buyReqFullInfos, }: {
     privateKey: Buffer;
     address: string;
@@ -282,21 +496,28 @@ declare const prepareUTXOsToBuyMultiInscriptions: ({ privateKey, address, utxos,
     fee: BigNumber;
     splitTxHex: string;
 };
+declare const createRawTxToPrepareUTXOsToBuyMultiInscs: ({ pubKey, address, utxos, inscriptions, feeRatePerByte, buyReqFullInfos, }: {
+    pubKey: Buffer;
+    address: string;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+    buyReqFullInfos: BuyReqFullInfo[];
+}) => {
+    buyReqFullInfos: BuyReqFullInfo[];
+    dummyUTXO: any;
+    selectedUTXOs: UTXO[];
+    fee: BigNumber;
+    changeAmount: BigNumber;
+    needPaymentUTXOs: NeedPaymentUTXO[];
+    needCreateDummyUTXO: boolean;
+    splitPsbtB64: string;
+    indicesToSign: number[];
+};
 declare const broadcastTx: (txHex: string) => Promise<string>;
 
-declare const ECPair: ECPairAPI;
-/**
-* convertPrivateKey converts buffer private key to WIF private key string
-* @param bytes buffer private key
-* @returns the WIF private key string
-*/
-declare const convertPrivateKey: (bytes: Buffer) => string;
-/**
-* convertPrivateKeyFromStr converts private key WIF string to Buffer
-* @param str private key string
-* @returns buffer private key
-*/
-declare const convertPrivateKeyFromStr: (str: string) => Buffer;
 /**
 * estimateTxFee estimates the transaction fee
 * @param numIns number of inputs in the transaction
@@ -327,24 +548,112 @@ declare const estimateNumInOutputsForBuyInscription: (estNumInputsFromBuyer: num
     numIns: number;
     numOuts: number;
 };
+declare const fromSat: (sat: number) => number;
+
+declare const ECPair: ECPairAPI;
+/**
+* convertPrivateKey converts buffer private key to WIF private key string
+* @param bytes buffer private key
+* @returns the WIF private key string
+*/
+declare const convertPrivateKey: (bytes: Buffer) => string;
+/**
+* convertPrivateKeyFromStr converts private key WIF string to Buffer
+* @param str private key string
+* @returns buffer private key
+*/
+declare const convertPrivateKeyFromStr: (str: string) => Buffer;
 declare function toXOnly(pubkey: Buffer): Buffer;
 declare function tweakSigner(signer: Signer, opts?: any): Signer;
 declare function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer;
 declare const generateTaprootAddress: (privateKey: Buffer) => string;
+declare const generateTaprootAddressFromPubKey: (pubKey: Buffer) => {
+    address: string;
+    p2pktr: payments.Payment;
+};
 declare const generateTaprootKeyPair: (privateKey: Buffer) => {
     keyPair: ecpair.ECPairInterface;
     senderAddress: string;
     tweakedSigner: Signer;
     p2pktr: payments.Payment;
 };
-declare const fromSat: (sat: number) => number;
-
+declare const generateP2PKHKeyPair: (privateKey: Buffer) => {
+    keyPair: ecpair.ECPairInterface;
+    address: string;
+    p2pkh: payments.Payment;
+    privateKey: Buffer;
+};
+declare const generateP2PKHKeyFromRoot: (root: BIP32Interface) => {
+    keyPair: ecpair.ECPairInterface;
+    address: string;
+    p2pkh: payments.Payment;
+    privateKey: Buffer;
+};
+/**
+* getBTCBalance returns the Bitcoin balance from cardinal utxos.
+*/
 declare const getBTCBalance: (params: {
     utxos: UTXO[];
     inscriptions: {
         [key: string]: Inscription[];
     };
 }) => BigNumber;
+/**
+* importBTCPrivateKey returns the bitcoin private key and the corresponding taproot address.
+*/
+declare const importBTCPrivateKey: (wifPrivKey: string) => {
+    taprootPrivKeyBuffer: Buffer;
+    taprootAddress: string;
+};
+/**
+* deriveSegwitWallet derives bitcoin segwit wallet from private key taproot.
+* @param privKeyTaproot private key taproot is used to a seed to generate segwit wall
+* @returns the segwit private key and the segwit address
+*/
+declare const deriveSegwitWallet: (privKeyTaproot: Buffer) => {
+    segwitPrivKeyBuffer: Buffer;
+    segwitAddress: string;
+};
+/**
+* deriveETHWallet derives eth wallet from private key taproot.
+* @param privKeyTaproot private key taproot is used to a seed to generate eth wallet
+* @returns the eth private key and the eth address
+*/
+declare const deriveETHWallet: (privKeyTaproot: Buffer) => {
+    ethPrivKey: string;
+    ethAddress: string;
+};
+/**
+* signByETHPrivKey creates the signature on the data by ethPrivKey.
+* @param ethPrivKey private key with either prefix "0x" or non-prefix
+* @param data data toSign is a hex string, MUST hash prefix "0x"
+* @returns the signature with prefix "0x"
+*/
+declare const signByETHPrivKey: (ethPrivKey: string, data: string) => string;
+declare const getBitcoinKeySignContent: (message: string) => Buffer;
+/**
+* derivePasswordWallet derive the password from ONE SPECIFIC evm address.
+* This password is used to encrypt and decrypt the imported BTC wallet.
+* NOTE: The client should save the corresponding evm address to retrieve the same BTC wallet.
+* @param provider ETH provider
+* @param evmAddress evm address is chosen to create the valid signature on IMPORT_MESSAGE
+* @returns the password string
+*/
+declare const derivePasswordWallet: (evmAddress: string, provider: ethers.providers.Web3Provider) => Promise<string>;
+/**
+* encryptWallet encrypts Wallet object by AES algorithm.
+* @param wallet includes the plaintext private key need to encrypt
+* @param password the password to encrypt
+* @returns the signature with prefix "0x"
+*/
+declare const encryptWallet: (wallet: Wallet, password: string) => string;
+/**
+* decryptWallet decrypts ciphertext to Wallet object by AES algorithm.
+* @param ciphertext ciphertext
+* @param password the password to decrypt
+* @returns the Wallet object
+*/
+declare const decryptWallet: (ciphertext: string, password: string) => Wallet;
 
 /**
 * createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
@@ -364,6 +673,24 @@ declare const createPSBTToSell: (params: {
     creatorAddress: string;
     dummyUTXO: UTXO;
 }) => string;
+/**
+* createPSBTToSell creates the partially signed bitcoin transaction to sale the inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerPrivateKey buffer private key of the seller
+* @param sellerAddress payment address of the seller to recieve BTC from buyer
+* @param ordinalInput ordinal input coin to sell
+* @param price price of the inscription that the seller wants to sell (in satoshi)
+* @returns the encoded base64 partially signed transaction
+*/
+declare const createRawPSBTToSell: (params: {
+    internalPubKey: Buffer;
+    receiverBTCAddress: string;
+    inscriptionUTXO: UTXO;
+    amountPayToSeller: BigNumber;
+    feePayToCreator: BigNumber;
+    creatorAddress: string;
+    dummyUTXO: UTXO;
+}) => ICreateRawTxResp;
 /**
 * createPSBTToBuy creates the partially signed bitcoin transaction to buy the inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
@@ -414,6 +741,35 @@ declare const reqListForSaleInscription: (params: {
     feeRatePerByte: number;
 }) => Promise<ICreateTxSellResp>;
 /**
+* reqListForSaleInscFromAnyWallet creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerPrivateKey buffer private key of the seller
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param amountPayToSeller BTC amount to pay to seller
+* @param feePayToCreator BTC fee to pay to creator
+* @param creatorAddress address of creator
+* amountPayToSeller + feePayToCreator = price that is showed on UI
+* @returns the base64 encode Psbt
+*/
+declare const reqListForSaleInscFromAnyWallet: ({ pubKey, utxos, inscriptions, sellInscriptionID, receiverBTCAddress, amountPayToSeller, feePayToCreator, creatorAddress, feeRatePerByte, walletType, cancelFn, }: {
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    sellInscriptionID: string;
+    receiverBTCAddress: string;
+    amountPayToSeller: BigNumber;
+    feePayToCreator: BigNumber;
+    creatorAddress: string;
+    feeRatePerByte: number;
+    walletType?: number | undefined;
+    cancelFn: () => void;
+}) => Promise<ICreateTxSellResp>;
+/**
 * reqBuyInscription creates the PSBT of the seller to list for sale inscription.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param sellerSignedPsbtB64 buffer private key of the buyer
@@ -448,6 +804,31 @@ declare const reqBuyInscription: (params: {
 * @param price  = amount pay to seller + fee pay to creator
 * @returns the base64 encode Psbt
 */
+declare const reqBuyInscriptionFromAnyWallet: ({ sellerSignedPsbtB64, pubKey, receiverInscriptionAddress, price, utxos, inscriptions, feeRatePerByte, walletType, cancelFn, }: {
+    sellerSignedPsbtB64: string;
+    pubKey: Buffer;
+    receiverInscriptionAddress: string;
+    price: BigNumber;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+    walletType?: number | undefined;
+    cancelFn: () => void;
+}) => Promise<ICreateTxBuyResp>;
+/**
+* reqBuyInscription creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbtB64 buffer private key of the buyer
+* @param buyerPrivateKey buffer private key of the buyer
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
+* @returns the base64 encode Psbt
+*/
 declare const reqBuyMultiInscriptions: (params: {
     buyReqInfos: BuyReqInfo[];
     buyerPrivateKey: Buffer;
@@ -457,6 +838,37 @@ declare const reqBuyMultiInscriptions: (params: {
     };
     feeRatePerByte: number;
 }) => ICreateTxBuyResp;
+/**
+* reqBuyInscription creates the PSBT of the seller to list for sale inscription.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param sellerSignedPsbtB64 buffer private key of the buyer
+* @param buyerPrivateKey buffer private key of the buyer
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the seller
+* @param sellInscriptionID id of inscription to sell
+* @param receiverBTCAddress the seller's address to receive BTC
+* @param price  = amount pay to seller + fee pay to creator
+* @returns the base64 encode Psbt
+*/
+declare const reqBuyMultiInscriptionsFromAnyWallet: ({ buyReqInfos, pubKey, utxos, inscriptions, feeRatePerByte, walletType, cancelFn, }: {
+    buyReqInfos: BuyReqInfo[];
+    pubKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    feeRatePerByte: number;
+    walletType?: number | undefined;
+    cancelFn: () => void;
+}) => Promise<ICreateTxBuyResp>;
+
+declare let Network: networks.Network;
+declare const NetworkType: {
+    Mainnet: number;
+    Testnet: number;
+    Regtest: number;
+};
+declare const setBTCNetwork: (netType: number) => void;
 
 declare const ERROR_CODE: {
     INVALID_CODE: string;
@@ -470,6 +882,10 @@ declare const ERROR_CODE: {
     INVALID_VALIDATOR_LABEL: string;
     NOT_FOUND_UTXO: string;
     NOT_FOUND_DUMMY_UTXO: string;
+    WALLET_NOT_SUPPORT: string;
+    SIGN_XVERSE_ERROR: string;
+    CREATE_COMMIT_TX_ERR: string;
+    INVALID_TAPSCRIPT_ADDRESS: string;
 };
 declare const ERROR_MESSAGE: {
     [x: string]: {
@@ -503,4 +919,49 @@ declare class Validator {
     privateKey(message?: string): this;
 }
 
-export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, InputSize, Inscription, MinSats, OutputSize, PaymentInfo, SDKError, UTXO, Validator, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createPSBTToBuy, createPSBTToSell, createTx, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateTaprootAddress, generateTaprootKeyPair, getBTCBalance, network, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyMultiInscriptions, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, tapTweakHash, toXOnly, tweakSigner };
+/**
+* createInscribeTx creates commit and reveal tx to inscribe data on Bitcoin netword.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the inscriber
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param tcTxID TC txID need to be inscribed
+* @param reImbursementTCAddress TC address of the inscriber to receive gas.
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @returns the hex commit transaction
+* @returns the commit transaction id
+* @returns the hex reveal transaction
+* @returns the reveal transaction id
+* @returns the total network fee
+*/
+declare const createInscribeTx: ({ senderPrivateKey, utxos, inscriptions, tcTxIDs, feeRatePerByte, tcClient }: {
+    senderPrivateKey: Buffer;
+    utxos: UTXO[];
+    inscriptions: {
+        [key: string]: Inscription[];
+    };
+    tcTxIDs: string[];
+    feeRatePerByte: number;
+    tcClient: TcClient;
+}) => Promise<{
+    commitTxHex: string;
+    commitTxID: string;
+    revealTxHex: string;
+    revealTxID: string;
+    totalFee: BigNumber;
+}>;
+/**
+* estimateInscribeFee estimate BTC amount need to inscribe for creating project.
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param htmlFileSizeByte size of html file from user (in byte)
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @returns the total BTC fee
+*/
+declare const estimateInscribeFee: ({ htmlFileSizeByte, feeRatePerByte, }: {
+    htmlFileSizeByte: number;
+    feeRatePerByte: number;
+}) => {
+    totalFee: BigNumber;
+};
+
+export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateRawTxResp, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, InputSize, Inscription, MinSats, NeedPaymentUTXO, Network, NetworkType, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, WalletType, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createInscribeTx, createPSBTToBuy, createPSBTToSell, createRawPSBTToSell, createRawTx, createRawTxDummyUTXOForSale, createRawTxDummyUTXOFromCardinal, createRawTxSendBTC, createRawTxSplitFundFromOrdinalUTXO, createRawTxToPrepareUTXOsToBuyMultiInscs, createTx, createTxFromAnyWallet, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, estimateInscribeFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateP2PKHKeyFromRoot, generateP2PKHKeyPair, generateTaprootAddress, generateTaprootAddressFromPubKey, generateTaprootKeyPair, getBTCBalance, getBitcoinKeySignContent, importBTCPrivateKey, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyInscriptionFromAnyWallet, reqBuyMultiInscriptions, reqBuyMultiInscriptionsFromAnyWallet, reqListForSaleInscFromAnyWallet, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, setBTCNetwork, signByETHPrivKey, signPSBT, signPSBT2, tapTweakHash, toXOnly, tweakSigner };

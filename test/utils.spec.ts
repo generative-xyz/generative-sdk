@@ -1,12 +1,13 @@
+import { ECPair, broadcastTx, convertPrivateKeyFromStr, fromSat, generateTaprootKeyPair, signPSBT2, toXOnly } from "../src/index";
+import {
+    Psbt,
+    networks,
+    payments
+} from "bitcoinjs-lib";
+
+import BigNumber from "bignumber.js";
 import { assert } from "chai";
 
-import {
-    networks,
-    payments,
-    Psbt
-} from "bitcoinjs-lib";
-import BigNumber from "bignumber.js";
-import { broadcastTx, convertPrivateKeyFromStr, ECPair, fromSat, generateTaprootKeyPair, toXOnly } from "../src/index";
 const network = networks.bitcoin;  // mainnet
 
 
@@ -76,18 +77,45 @@ const network = networks.bitcoin;  // mainnet
 // });
 
 
-describe("Generate address from private key", async () => {
-    it("should return the valid address", async () => {
+// describe("Generate address from private key", async () => {
+//     it("should return the valid address", async () => {
+//         // Enter your private key
+//         const privateKey = "";
+//         const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
+
+//         const { tweakedSigner, senderAddress, p2pktr } = generateTaprootKeyPair(privateKeyBuffer)
+//         console.log("Address:", senderAddress);
+//         console.log("PubKey: ", tweakedSigner.publicKey.toString('hex'));
+
+//         const tapInternalPubKey = toXOnly(tweakedSigner.publicKey);
+//         console.log("Tap internal PubKey: ", tapInternalPubKey.toString("hex"));
+//     })
+// });
+
+describe("Sign msg Tx", async () => {
+    it("should return the valid tx", async () => {
         // Enter your private key
         const privateKey = "";
         const privateKeyBuffer = convertPrivateKeyFromStr(privateKey);
+        console.log("privateKeyBuffer: ", privateKeyBuffer);
+        const inputHexTx = "70736274ff0100fd310101000000030ee633984a9a05d6932f3c1cefda8d461c1e86027ba95a80273eadc1f604edae0000000000fdffffffa80e773fda5be00d40984da72427f8fb3638aa0840b30da10f8c92e428f458060200000000fdffffff0ee633984a9a05d6932f3c1cefda8d461c1e86027ba95a80273eadc1f604edae0100000000fdffffff04f401000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af044c00000000000022512076c8edc1322a1eb3582be0db0794d140c0a3b5b8663cb6e04adc4acab9a938cd2202000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af1c02000000000000225120d11b52ebc5e8a1d3010b1d1494ea526494e651bfe81d7e9ba3b7779623f954ba000000000001012bf84d000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af0001012b220200000000000022512076c8edc1322a1eb3582be0db0794d140c0a3b5b8663cb6e04adc4acab9a938cd0001012b9525000000000000225120c920e06060005c98739fa4ea58e9fd1859e6affef1b3edbef65257175fa780af0000000000";
 
-        const { tweakedSigner, senderAddress, p2pktr } = generateTaprootKeyPair(privateKeyBuffer)
-        console.log("Address:", senderAddress);
-        console.log("PubKey: ", tweakedSigner.publicKey.toString('hex'));
+        const psbt = Psbt.fromHex(inputHexTx);
+        const indicesToSign: number[] = [];
+        for (let i = 0; i < psbt.txInputs.length; i++) {
+            indicesToSign.push(i);
+        }
 
-        const tapInternalPubKey = toXOnly(tweakedSigner.publicKey);
-        console.log("Tap internal PubKey: ", tapInternalPubKey.toString("hex"));
+        const res = signPSBT2({
+            senderPrivateKey: privateKeyBuffer,
+            psbtB64: psbt.toBase64(),
+            indicesToSign: indicesToSign,
+        })
+        console.log(res);
+
+        // console.log("msgTx: ", msgTx);
+        // console.log("msgTxHex: ", msgTxHex);
+        // console.log("msgTxID: ", msgTxID);
     })
 });
 

@@ -10,6 +10,10 @@ export const ERROR_CODE = {
     INVALID_VALIDATOR_LABEL: "-8",
     NOT_FOUND_UTXO: "-9",
     NOT_FOUND_DUMMY_UTXO: "-10",
+    WALLET_NOT_SUPPORT: "-11",
+    SIGN_XVERSE_ERROR: "-12",
+    CREATE_COMMIT_TX_ERR: "-13",
+    INVALID_TAPSCRIPT_ADDRESS: "-14",
 };
 
 export const ERROR_MESSAGE = {
@@ -57,6 +61,25 @@ export const ERROR_MESSAGE = {
         message: "Can not find dummy UTXO in your wallet.",
         desc: "Can not find dummy UTXO in your wallet.",
     },
+
+    [ERROR_CODE.SIGN_XVERSE_ERROR]: {
+        message: "Can not sign with Xverse.",
+        desc: "Can not sign with Xverse.",
+    },
+    [ERROR_CODE.WALLET_NOT_SUPPORT]: {
+        message: "Your wallet is not supported currently.",
+        desc: "Your wallet is not supported currently.",
+    },
+    [ERROR_CODE.CREATE_COMMIT_TX_ERR]: {
+        message: "Create commit tx error.",
+        desc: "Create commit tx error.",
+    },
+    [ERROR_CODE.INVALID_TAPSCRIPT_ADDRESS]: {
+        message: "Can not generate valid tap script address to inscribe.",
+        desc: "Can not generate valid tap script address to inscribe.",
+    },
+
+
 };
 
 class SDKError extends Error {

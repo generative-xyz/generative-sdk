@@ -1,5 +1,6 @@
+import { ECPair, Network, toXOnly, tweakSigner } from "../bitcoin";
 import SDKError, { ERROR_CODE } from "../constants/error";
-import { ECPair, network, toXOnly, tweakSigner } from "../bitcoin";
+
 import { payments } from "bitcoinjs-lib";
 
 function isPrivateKey(privateKey: Buffer) {
@@ -8,12 +9,12 @@ function isPrivateKey(privateKey: Buffer) {
         // init key pair from senderPrivateKey
         const keyPair = ECPair.fromPrivateKey(privateKey);
         // Tweak the original keypair
-        const tweakedSigner = tweakSigner(keyPair, { network });
+        const tweakedSigner = tweakSigner(keyPair, { network: Network });
 
         // Generate an address from the tweaked public key
         const p2pktr = payments.p2tr({
             pubkey: toXOnly(tweakedSigner.publicKey),
-            network
+            network: Network
         });
         const senderAddress = p2pktr.address ? p2pktr.address : "";
         isValid = senderAddress !== "";
