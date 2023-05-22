@@ -7,6 +7,8 @@ const InputSize = 68;
 const OutputSize = 43;
 const BNZero = new BigNumber(0);
 
+const DefaultSequence = 4294967295;
+const DefaultSequenceRBF = 4294967293;
 
 const WalletType = {
     Xverse: 1,
@@ -21,4 +23,6 @@ export {
     OutputSize,
     BNZero,
     WalletType,
+    DefaultSequence,
+    DefaultSequenceRBF,
 };

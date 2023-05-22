@@ -1,4 +1,4 @@
-import { BNZero, DummyUTXOValue, MinSats, OutputSize, WalletType } from "./constants";
+import { BNZero, DefaultSequenceRBF, DummyUTXOValue, MinSats, OutputSize, WalletType } from "./constants";
 import {
     BuyReqFullInfo,
     BuyReqInfo,
@@ -78,6 +78,7 @@ const createPSBTToSell = (
         witnessUtxo: { value: ordinalInput.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: toXOnly(keyPair.publicKey),
         sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
+        sequence: DefaultSequenceRBF,
     });
 
     if (dummyUTXO !== undefined && dummyUTXO !== null && dummyUTXO.value.gt(BNZero)) {
@@ -102,6 +103,7 @@ const createPSBTToSell = (
             witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
             sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
+            sequence: DefaultSequenceRBF,
         });
 
         psbt.addOutput({
@@ -163,6 +165,7 @@ const createRawPSBTToSell = (
         witnessUtxo: { value: ordinalInput.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: internalPubKey,
         sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
+        sequence: DefaultSequenceRBF,
     });
     const selectedUTXOs: UTXO[] = [ordinalInput];
 
@@ -187,6 +190,7 @@ const createRawPSBTToSell = (
             witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: internalPubKey,
             sighashType: Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY | Transaction.SIGHASH_DEFAULT,
+            sequence: DefaultSequenceRBF,
         });
 
         selectedUTXOs.push(dummyUTXO);
@@ -250,6 +254,7 @@ const createPSBTToBuy = (
         index: dummyUtxo.tx_output_n,
         witnessUtxo: { value: dummyUtxo.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: toXOnly(keyPair.publicKey),
+        sequence: DefaultSequenceRBF,
     });
 
     // Add inscription output
@@ -283,6 +288,7 @@ const createPSBTToBuy = (
             index: utxo.tx_output_n,
             witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
+            sequence: DefaultSequenceRBF,
         });
 
         totalValue = totalValue.plus(utxo.value);
@@ -401,6 +407,7 @@ const createRawPSBTToBuy = ({
         index: dummyUtxo.tx_output_n,
         witnessUtxo: { value: dummyUtxo.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: internalPubKey,
+        sequence: DefaultSequenceRBF,
     });
 
     // Add inscription output
@@ -434,6 +441,7 @@ const createRawPSBTToBuy = ({
             index: utxo.tx_output_n,
             witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: internalPubKey,
+            sequence: DefaultSequenceRBF,
         });
 
         totalValue = totalValue.plus(utxo.value);
@@ -538,6 +546,7 @@ const createPSBTToBuyMultiInscriptions = (
         index: dummyUTXO.tx_output_n,
         witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: toXOnly(keyPair.publicKey),
+        sequence: DefaultSequenceRBF,
     });
     indexInputNeedToSign.push(0);
     selectedUTXOs.push(dummyUTXO);
@@ -577,6 +586,7 @@ const createPSBTToBuyMultiInscriptions = (
             index: paymentUTXO.tx_output_n,
             witnessUtxo: { value: paymentUTXO.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
+            sequence: DefaultSequenceRBF,
         });
         indexInputNeedToSign.push(psbt.txInputs.length - 1);
         selectedUTXOs.push(paymentUTXO);
@@ -599,6 +609,7 @@ const createPSBTToBuyMultiInscriptions = (
             index: utxo.tx_output_n,
             witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
+            sequence: DefaultSequenceRBF,
         });
         indexInputNeedToSign.push(psbt.txInputs.length - 1);
         totalAmountFeeUTXOs = totalAmountFeeUTXOs.plus(utxo.value);
@@ -723,6 +734,7 @@ const createRawPSBTToBuyMultiInscriptions = (
         index: dummyUTXO.tx_output_n,
         witnessUtxo: { value: dummyUTXO.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: internalPubKey,
+        sequence: DefaultSequenceRBF,
     });
     indexInputNeedToSign.push(0);
     selectedUTXOs.push(dummyUTXO);
@@ -762,6 +774,7 @@ const createRawPSBTToBuyMultiInscriptions = (
             index: paymentUTXO.tx_output_n,
             witnessUtxo: { value: paymentUTXO.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: internalPubKey,
+            sequence: DefaultSequenceRBF,
         });
         indexInputNeedToSign.push(psbt.txInputs.length - 1);
         selectedUTXOs.push(paymentUTXO);
@@ -784,6 +797,7 @@ const createRawPSBTToBuyMultiInscriptions = (
             index: utxo.tx_output_n,
             witnessUtxo: { value: utxo.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: internalPubKey,
+            sequence: DefaultSequenceRBF,
         });
         indexInputNeedToSign.push(psbt.txInputs.length - 1);
         totalAmountFeeUTXOs = totalAmountFeeUTXOs.plus(utxo.value);

@@ -14,6 +14,8 @@ declare const DummyUTXOValue = 1000;
 declare const InputSize = 68;
 declare const OutputSize = 43;
 declare const BNZero: BigNumber;
+declare const DefaultSequence = 4294967295;
+declare const DefaultSequenceRBF = 4294967293;
 declare const WalletType: {
     Xverse: number;
     Hiro: number;
@@ -307,7 +309,7 @@ declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: 
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, }: {
+declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, sequence, }: {
     pubKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -318,6 +320,7 @@ declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, re
     sendAmount: BigNumber;
     feeRatePerByte: number;
     isUseInscriptionPayFeeParam: boolean;
+    sequence?: number | undefined;
 }) => ICreateRawTxResp;
 /**
 * createTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
@@ -363,7 +366,7 @@ declare const createTxFromAnyWallet: ({ pubKey, utxos, inscriptions, sendInscrip
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }: {
+declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, paymentInfos, feeRatePerByte, sequence, }: {
     senderPrivateKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -371,6 +374,7 @@ declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, payment
     };
     paymentInfos: PaymentInfo[];
     feeRatePerByte: number;
+    sequence?: number | undefined;
 }) => ICreateTxResp;
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
@@ -387,7 +391,7 @@ declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, payment
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }: {
+declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, feeRatePerByte, sequence, }: {
     pubKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -395,6 +399,7 @@ declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, 
     };
     paymentInfos: PaymentInfo[];
     feeRatePerByte: number;
+    sequence?: number | undefined;
 }) => ICreateRawTxResp;
 /**
 * createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).
@@ -964,4 +969,4 @@ declare const estimateInscribeFee: ({ htmlFileSizeByte, feeRatePerByte, }: {
     totalFee: BigNumber;
 };
 
-export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateRawTxResp, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, InputSize, Inscription, MinSats, NeedPaymentUTXO, Network, NetworkType, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, WalletType, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createInscribeTx, createPSBTToBuy, createPSBTToSell, createRawPSBTToSell, createRawTx, createRawTxDummyUTXOForSale, createRawTxDummyUTXOFromCardinal, createRawTxSendBTC, createRawTxSplitFundFromOrdinalUTXO, createRawTxToPrepareUTXOsToBuyMultiInscs, createTx, createTxFromAnyWallet, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, estimateInscribeFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateP2PKHKeyFromRoot, generateP2PKHKeyPair, generateTaprootAddress, generateTaprootAddressFromPubKey, generateTaprootKeyPair, getBTCBalance, getBitcoinKeySignContent, importBTCPrivateKey, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyInscriptionFromAnyWallet, reqBuyMultiInscriptions, reqBuyMultiInscriptionsFromAnyWallet, reqListForSaleInscFromAnyWallet, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, setBTCNetwork, signByETHPrivKey, signPSBT, signPSBT2, tapTweakHash, toXOnly, tweakSigner };
+export { BNZero, BlockStreamURL, BuyReqFullInfo, BuyReqInfo, DefaultSequence, DefaultSequenceRBF, DummyUTXOValue, ECPair, ERROR_CODE, ERROR_MESSAGE, ICreateRawTxResp, ICreateTxBuyResp, ICreateTxResp, ICreateTxSellResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, InputSize, Inscription, MinSats, NeedPaymentUTXO, Network, NetworkType, OutputSize, PaymentInfo, SDKError, UTXO, Validator, Wallet, WalletType, broadcastTx, convertPrivateKey, convertPrivateKeyFromStr, createDummyUTXOFromCardinal, createInscribeTx, createPSBTToBuy, createPSBTToSell, createRawPSBTToSell, createRawTx, createRawTxDummyUTXOForSale, createRawTxDummyUTXOFromCardinal, createRawTxSendBTC, createRawTxSplitFundFromOrdinalUTXO, createRawTxToPrepareUTXOsToBuyMultiInscs, createTx, createTxFromAnyWallet, createTxSendBTC, createTxSplitFundFromOrdinalUTXO, createTxWithSpecificUTXOs, decryptWallet, deriveETHWallet, derivePasswordWallet, deriveSegwitWallet, encryptWallet, estimateInscribeFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, estimateTxFee, filterAndSortCardinalUTXOs, findExactValueUTXO, fromSat, generateP2PKHKeyFromRoot, generateP2PKHKeyPair, generateTaprootAddress, generateTaprootAddressFromPubKey, generateTaprootKeyPair, getBTCBalance, getBitcoinKeySignContent, importBTCPrivateKey, prepareUTXOsToBuyMultiInscriptions, reqBuyInscription, reqBuyInscriptionFromAnyWallet, reqBuyMultiInscriptions, reqBuyMultiInscriptionsFromAnyWallet, reqListForSaleInscFromAnyWallet, reqListForSaleInscription, selectCardinalUTXOs, selectInscriptionUTXO, selectTheSmallestUTXO, selectUTXOs, selectUTXOsToCreateBuyTx, setBTCNetwork, signByETHPrivKey, signPSBT, signPSBT2, tapTweakHash, toXOnly, tweakSigner };

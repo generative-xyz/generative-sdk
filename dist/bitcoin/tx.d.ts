@@ -106,7 +106,7 @@ declare const createTx: (senderPrivateKey: Buffer, utxos: UTXO[], inscriptions: 
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, }: {
+declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, receiverInsAddress, sendAmount, feeRatePerByte, isUseInscriptionPayFeeParam, sequence, }: {
     pubKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -117,6 +117,7 @@ declare const createRawTx: ({ pubKey, utxos, inscriptions, sendInscriptionID, re
     sendAmount: BigNumber;
     feeRatePerByte: number;
     isUseInscriptionPayFeeParam: boolean;
+    sequence?: number | undefined;
 }) => ICreateRawTxResp;
 /**
 * createTxFromAnyWallet creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
@@ -162,7 +163,7 @@ declare const createTxFromAnyWallet: ({ pubKey, utxos, inscriptions, sendInscrip
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }: {
+declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, paymentInfos, feeRatePerByte, sequence, }: {
     senderPrivateKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -170,6 +171,7 @@ declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, payment
     };
     paymentInfos: PaymentInfo[];
     feeRatePerByte: number;
+    sequence?: number | undefined;
 }) => ICreateTxResp;
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions).
@@ -186,7 +188,7 @@ declare const createTxSendBTC: ({ senderPrivateKey, utxos, inscriptions, payment
 * @returns the hex signed transaction
 * @returns the network fee
 */
-declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, feeRatePerByte, }: {
+declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, feeRatePerByte, sequence, }: {
     pubKey: Buffer;
     utxos: UTXO[];
     inscriptions: {
@@ -194,6 +196,7 @@ declare const createRawTxSendBTC: ({ pubKey, utxos, inscriptions, paymentInfos, 
     };
     paymentInfos: PaymentInfo[];
     feeRatePerByte: number;
+    sequence?: number | undefined;
 }) => ICreateRawTxResp;
 /**
 * createTxWithSpecificUTXOs creates the Bitcoin transaction with specific UTXOs (including sending inscriptions).

@@ -1,4 +1,4 @@
-import { BNZero, BlockStreamURL, DummyUTXOValue, MinSats } from "./constants";
+import { BNZero, BlockStreamURL, DefaultSequenceRBF, DummyUTXOValue, MinSats } from "./constants";
 import { BuyReqFullInfo, ICreateRawTxResp, ICreateTxResp, ICreateTxSplitInscriptionResp, ISignPSBTResp, Inscription, NeedPaymentUTXO, PaymentInfo, UTXO } from "./types";
 import { ECPair, generateTaprootAddressFromPubKey, generateTaprootKeyPair, toXOnly, tweakSigner } from "./wallet";
 import { Psbt, Transaction, payments } from "bitcoinjs-lib";
@@ -249,18 +249,6 @@ const createRawTxDummyUTXOForSale = ({
         indicesToSign = resRawTx.indicesToSign;
         newValueInscriptionRes = newValueInscription;
 
-        // TODO: 0xkraken
-
-        // newInscriptionUTXO = {
-        //     tx_hash: txID,
-        //     tx_output_n: 0,
-        //     value: newValueInscription,
-        // };
-        // dummyUTXORes = {
-        //     tx_hash: txID,
-        //     tx_output_n: 1,
-        //     value: new BigNumber(DummyUTXOValue),
-        // };
     }
 
     return {
@@ -347,6 +335,7 @@ const createRawTx = ({
     sendAmount,
     feeRatePerByte,
     isUseInscriptionPayFeeParam = true, // default is true
+    sequence = DefaultSequenceRBF,
 }: {
     pubKey: Buffer,
     utxos: UTXO[],
@@ -356,6 +345,7 @@ const createRawTx = ({
     sendAmount: BigNumber,
     feeRatePerByte: number,
     isUseInscriptionPayFeeParam: boolean,
+    sequence?: number,
 }): ICreateRawTxResp => {
     // validation
     if (sendAmount.gt(BNZero) && sendAmount.lt(MinSats)) {
@@ -378,6 +368,7 @@ const createRawTx = ({
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: pubKey,
+            sequence,
         });
     }
 
@@ -513,12 +504,14 @@ const createTxSendBTC = (
         inscriptions,
         paymentInfos,
         feeRatePerByte,
+        sequence = DefaultSequenceRBF,
     }: {
         senderPrivateKey: Buffer,
         utxos: UTXO[],
         inscriptions: { [key: string]: Inscription[] },
         paymentInfos: PaymentInfo[],
         feeRatePerByte: number,
+        sequence?: number
     }
 ): ICreateTxResp => {
     // validation
@@ -547,6 +540,7 @@ const createTxSendBTC = (
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keyPair.publicKey),
+            sequence,
         });
     }
 
@@ -606,12 +600,14 @@ const createRawTxSendBTC = (
         inscriptions,
         paymentInfos,
         feeRatePerByte,
+        sequence = DefaultSequenceRBF,
     }: {
         pubKey: Buffer,
         utxos: UTXO[],
         inscriptions: { [key: string]: Inscription[] },
         paymentInfos: PaymentInfo[],
         feeRatePerByte: number,
+        sequence?: number
     }
 ): ICreateRawTxResp => {
     // validation
@@ -641,6 +637,7 @@ const createRawTxSendBTC = (
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: pubKey,
+            sequence,
         });
     }
 
@@ -726,6 +723,7 @@ const createTxWithSpecificUTXOs = (
             index: input.tx_output_n,
             witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output as Buffer },
             tapInternalKey: toXOnly(keypair.publicKey),
+            sequence: DefaultSequenceRBF,
         });
     }
 
@@ -864,6 +862,7 @@ const createRawTxSplitFundFromOrdinalUTXO = ({
         index: inscriptionUTXO.tx_output_n,
         witnessUtxo: { value: inscriptionUTXO.value.toNumber(), script: p2pktr.output as Buffer },
         tapInternalKey: pubKey,
+        sequence: DefaultSequenceRBF,
     });
 
     // add outputs
