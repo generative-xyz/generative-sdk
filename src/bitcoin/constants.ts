@@ -1,7 +1,8 @@
 import BigNumber from "bignumber.js";
 
 const BlockStreamURL = "https://blockstream.info/api";
-const MinSats = 1000;
+const MinSats = 546;
+const MinValueInsc = 1000;
 const DummyUTXOValue = 1000;
 const InputSize = 68;
 const OutputSize = 43;
@@ -16,6 +17,7 @@ const WalletType = {
 export {
     BlockStreamURL,
     MinSats,
+    MinValueInsc,
     DummyUTXOValue,
     InputSize,
     OutputSize,
