@@ -14,6 +14,7 @@ export declare const ERROR_CODE: {
     SIGN_XVERSE_ERROR: string;
     CREATE_COMMIT_TX_ERR: string;
     INVALID_TAPSCRIPT_ADDRESS: string;
+    ERR_SEND_BATCH_INSC: string;
 };
 export declare const ERROR_MESSAGE: {
     [x: string]: {
