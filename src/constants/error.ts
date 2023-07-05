@@ -14,6 +14,7 @@ export const ERROR_CODE = {
     SIGN_XVERSE_ERROR: "-12",
     CREATE_COMMIT_TX_ERR: "-13",
     INVALID_TAPSCRIPT_ADDRESS: "-14",
+    ERR_SEND_BATCH_INSC: "-15",
 };
 
 export const ERROR_MESSAGE = {
@@ -78,8 +79,10 @@ export const ERROR_MESSAGE = {
         message: "Can not generate valid tap script address to inscribe.",
         desc: "Can not generate valid tap script address to inscribe.",
     },
-
-
+    [ERROR_CODE.ERR_SEND_BATCH_INSC]: {
+        message: "There was an issue when sending inscriptions.",
+        desc: "There was an issue when sending inscriptions.",
+    },
 };
 
 class SDKError extends Error {

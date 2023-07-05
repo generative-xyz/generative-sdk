@@ -2931,7 +2931,8 @@ function toFixedPoint(str, e, z) {
 var BigNumber = clone();
 
 const BlockStreamURL = "https://blockstream.info/api";
-const MinSats = 1000;
+const MinSats = 546;
+const MinValueInsc = 1000;
 const DummyUTXOValue = 1000;
 const InputSize = 68;
 const OutputSize = 43;
@@ -2981,6 +2982,7 @@ const ERROR_CODE = {
     SIGN_XVERSE_ERROR: "-12",
     CREATE_COMMIT_TX_ERR: "-13",
     INVALID_TAPSCRIPT_ADDRESS: "-14",
+    ERR_SEND_BATCH_INSC: "-15",
 };
 const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_CODE]: {
@@ -3042,6 +3044,10 @@ const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_TAPSCRIPT_ADDRESS]: {
         message: "Can not generate valid tap script address to inscribe.",
         desc: "Can not generate valid tap script address to inscribe.",
+    },
+    [ERROR_CODE.ERR_SEND_BATCH_INSC]: {
+        message: "There was an issue when sending inscriptions.",
+        desc: "There was an issue when sending inscriptions.",
     },
 };
 class SDKError extends Error {
@@ -3149,7 +3155,7 @@ const selectUTXOs = (utxos, inscriptions, sendInscriptionID, sendAmount, feeRate
         // maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
         maxAmountInsTransfer = inscriptionUTXO.value.
             minus(inscriptionInfo.offset).
-            minus(1).minus(MinSats);
+            minus(1).minus(MinValueInsc);
         console.log("maxAmountInsTransfer: ", maxAmountInsTransfer.toNumber());
     }
     if (sendInscriptionID !== "") {
@@ -3958,6 +3964,101 @@ const createTx = (senderPrivateKey, utxos, inscriptions, sendInscriptionID = "",
     return { txID: msgTxID, txHex: msgTxHex, fee, selectedUTXOs, changeAmount, tx: msgTx };
 };
 /**
+* createTx creates the Bitcoin transaction (including sending inscriptions).
+* NOTE: Currently, the function only supports sending from Taproot address.
+* @param senderPrivateKey buffer private key of the sender
+* @param utxos list of utxos (include non-inscription and inscription utxos)
+* @param inscriptions list of inscription infos of the sender
+* @param sendInscriptionID id of inscription to send
+* @param receiverInsAddress the address of the inscription receiver
+* @param sendAmount satoshi amount need to send
+* @param feeRatePerByte fee rate per byte (in satoshi)
+* @param isUseInscriptionPayFee flag defines using inscription coin to pay fee
+* @returns the transaction id
+* @returns the hex signed transaction
+* @returns the network fee
+*/
+const createTxSendBatchInscriptions = (senderPrivateKey, utxos, inscriptions, sendInscriptionIDs, receiverInsAddress, feeRatePerByte) => {
+    // init key pair and tweakedSigner from senderPrivateKey
+    const { keyPair, p2pktr, senderAddress } = generateTaprootKeyPair(senderPrivateKey);
+    // filter utxos
+    const { cardinalUTXOs, inscriptionUTXOs, totalCardinalAmount } = filterAndSortCardinalUTXOs(utxos, inscriptions);
+    // select inscription UTXOs
+    const selectedInscUTXOs = [];
+    for (const inscID of sendInscriptionIDs) {
+        try {
+            const { inscriptionUTXO, inscriptionInfo } = selectInscriptionUTXO(inscriptionUTXOs, inscriptions, inscID);
+            selectedInscUTXOs.push(inscriptionUTXO);
+        }
+        catch (e) {
+            throw new SDKError(ERROR_CODE.ERR_SEND_BATCH_INSC, inscID);
+        }
+    }
+    // estimate tx fee
+    // 2 inputs for cardinal UTXOs and 1 output for change UTXO
+    const estFee = estimateTxFee(selectedInscUTXOs.length + 2, selectedInscUTXOs.length + 1, feeRatePerByte);
+    console.log("Initial fee: ", estFee);
+    // select cardinal UTXOs for paying fee
+    const { selectedUTXOs, totalInputAmount, remainUTXOs } = selectCardinalUTXOs(cardinalUTXOs, {}, new BigNumber(estFee));
+    let totalSelectedCardinalAmount = totalInputAmount;
+    // re-estimate fee 
+    let finalFee = new BigNumber(estimateTxFee(selectedInscUTXOs.length + selectedUTXOs.length, selectedInscUTXOs.length + 1, feeRatePerByte));
+    console.log("Final fee: ", finalFee);
+    if (finalFee.gt(totalInputAmount)) {
+        // need to select extra UTXOs
+        const { selectedUTXOs: extraUTXOs, totalInputAmount: extraInputAmount } = selectCardinalUTXOs(remainUTXOs, {}, finalFee.minus(totalInputAmount));
+        selectedUTXOs.push(...extraUTXOs);
+        totalSelectedCardinalAmount = totalSelectedCardinalAmount.plus(extraInputAmount);
+    }
+    let changeAmount = totalSelectedCardinalAmount.minus(finalFee);
+    // create tx
+    const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
+    // add inputs and output inscriptions
+    for (const input of selectedInscUTXOs) {
+        psbt.addInput({
+            hash: input.tx_hash,
+            index: input.tx_output_n,
+            witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
+            tapInternalKey: toXOnly(keyPair.publicKey),
+        });
+        psbt.addOutput({
+            address: receiverInsAddress,
+            value: input.value.toNumber(),
+        });
+    }
+    // add cardinal inputs
+    for (const input of selectedUTXOs) {
+        psbt.addInput({
+            hash: input.tx_hash,
+            index: input.tx_output_n,
+            witnessUtxo: { value: input.value.toNumber(), script: p2pktr.output },
+            tapInternalKey: toXOnly(keyPair.publicKey),
+        });
+    }
+    // add change output
+    if (changeAmount.gte(MinSats)) {
+        psbt.addOutput({
+            address: senderAddress,
+            value: changeAmount.toNumber(),
+        });
+    }
+    else {
+        finalFee = finalFee.plus(changeAmount);
+        changeAmount = BNZero;
+    }
+    const indicesToSign = [];
+    for (let i = 0; i < psbt.txInputs.length; i++) {
+        indicesToSign.push(i);
+    }
+    const { signedBase64PSBT, msgTx, msgTxID, msgTxHex } = signPSBT({
+        senderPrivateKey,
+        psbtB64: psbt.toBase64(),
+        indicesToSign,
+        sigHashType: bitcoinjsLib.Transaction.SIGHASH_DEFAULT
+    });
+    return { txID: msgTxID, txHex: msgTxHex, fee: finalFee, selectedUTXOs, changeAmount, tx: msgTx };
+};
+/**
 * createRawTx creates the raw Bitcoin transaction (including sending inscriptions), but don't sign tx.
 * NOTE: Currently, the function only supports sending from Taproot address.
 * @param pubKey buffer public key of the sender (It is the internal pubkey for Taproot address)
@@ -4335,7 +4436,7 @@ const createRawTxSplitFundFromOrdinalUTXO = ({ pubKey, inscriptionUTXO, inscript
         throw new SDKError(ERROR_CODE.INVALID_PARAMS, "sendAmount must not be less than " + fromSat(MinSats) + " BTC.");
     }
     const { address: senderAddress, p2pktr } = generateTaprootAddressFromPubKey(pubKey);
-    const maxAmountInsSpend = inscriptionUTXO.value.minus(inscriptionInfo.offset).minus(1).minus(MinSats);
+    const maxAmountInsSpend = inscriptionUTXO.value.minus(inscriptionInfo.offset).minus(1).minus(MinValueInsc);
     const fee = new BigNumber(estimateTxFee(1, 2, feeRatePerByte));
     const totalAmountSpend = sendAmount.plus(fee);
     if (totalAmountSpend.gt(maxAmountInsSpend)) {
@@ -4570,12 +4671,42 @@ const broadcastTx = async (txHex) => {
     const blockstream = new axios__default["default"].Axios({
         baseURL: BlockStreamURL
     });
-    const response = await blockstream.post("/tx", txHex);
+    const url = BlockStreamURL + "/tx";
+    const response = await blockstream.post(url, txHex);
     const { status, data } = response;
     if (status !== 200) {
+        console.log("Send tx ERR: ", data);
         throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
     }
     return response.data;
+};
+const getUTXOFromBlockStream = async (address) => {
+    console.log("BlockStreamURL: ", BlockStreamURL);
+    const blockstream = new axios__default["default"].Axios({
+    // baseURL: BlockStreamURL
+    });
+    const url = BlockStreamURL + "/address/" + address + "/utxo";
+    console.log("url: ", url);
+    const response = await blockstream.get(url);
+    const { status, data } = response;
+    if (status !== 200) {
+        console.log("getUTXOFromBlockStream Err: ", data);
+        throw new SDKError(ERROR_CODE.ERR_BROADCAST_TX, data);
+    }
+    const resp = JSON.parse(data);
+    // resp = data;
+    // JSON.parse(data, resp);
+    // console.log("Data resp: ", resp);
+    const utxos = [];
+    for (const item of resp) {
+        // console.log("item: ", item);
+        utxos.push({
+            tx_hash: item === null || item === void 0 ? void 0 : item.txid,
+            tx_output_n: item === null || item === void 0 ? void 0 : item.vout,
+            value: new BigNumber(item === null || item === void 0 ? void 0 : item.value),
+        });
+    }
+    return utxos;
 };
 
 const SigHashTypeForSale = bitcoinjsLib.Transaction.SIGHASH_SINGLE | bitcoinjsLib.Transaction.SIGHASH_ANYONECANPAY;
@@ -5975,6 +6106,7 @@ exports.ERROR_CODE = ERROR_CODE;
 exports.ERROR_MESSAGE = ERROR_MESSAGE;
 exports.InputSize = InputSize;
 exports.MinSats = MinSats;
+exports.MinValueInsc = MinValueInsc;
 exports.NetworkType = NetworkType;
 exports.OutputSize = OutputSize;
 exports.SDKError = SDKError;
@@ -5997,6 +6129,7 @@ exports.createRawTxToPrepareUTXOsToBuyMultiInscs = createRawTxToPrepareUTXOsToBu
 exports.createTx = createTx;
 exports.createTxFromAnyWallet = createTxFromAnyWallet;
 exports.createTxSendBTC = createTxSendBTC;
+exports.createTxSendBatchInscriptions = createTxSendBatchInscriptions;
 exports.createTxSplitFundFromOrdinalUTXO = createTxSplitFundFromOrdinalUTXO;
 exports.createTxWithSpecificUTXOs = createTxWithSpecificUTXOs;
 exports.decryptWallet = decryptWallet;
@@ -6018,6 +6151,7 @@ exports.generateTaprootAddressFromPubKey = generateTaprootAddressFromPubKey;
 exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;
 exports.getBitcoinKeySignContent = getBitcoinKeySignContent;
+exports.getUTXOFromBlockStream = getUTXOFromBlockStream;
 exports.importBTCPrivateKey = importBTCPrivateKey;
 exports.prepareUTXOsToBuyMultiInscriptions = prepareUTXOsToBuyMultiInscriptions;
 exports.reqBuyInscription = reqBuyInscription;

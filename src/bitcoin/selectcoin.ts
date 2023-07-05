@@ -1,12 +1,13 @@
+import { BNZero, MinSats, MinValueInsc } from "./constants";
 import { Inscription, UTXO } from "./types";
-import { MinSats, BNZero } from "./constants";
 import SDKError, { ERROR_CODE } from "../constants/error";
-import BigNumber from "bignumber.js";
 import {
-    estimateTxFee,
     estimateNumInOutputs,
-    estimateNumInOutputsForBuyInscription
+    estimateNumInOutputsForBuyInscription,
+    estimateTxFee
 } from "./utils";
+
+import BigNumber from "bignumber.js";
 import {
     Psbt,
 } from "bitcoinjs-lib";
@@ -65,7 +66,7 @@ const selectUTXOs = (
         // maxAmountInsTransfer = (inscriptionUTXO.value - inscriptionInfo.offset - 1) - MinSats;
         maxAmountInsTransfer = inscriptionUTXO.value.
             minus(inscriptionInfo.offset).
-            minus(1).minus(MinSats);
+            minus(1).minus(MinValueInsc);
 
         console.log("maxAmountInsTransfer: ", maxAmountInsTransfer.toNumber());
     }
