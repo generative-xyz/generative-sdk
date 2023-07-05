@@ -382,7 +382,7 @@ const createTxSendBatchInscriptions = (
         totalSelectedCardinalAmount = totalSelectedCardinalAmount.plus(extraInputAmount);
     }
 
-    const changeAmount = totalSelectedCardinalAmount.minus(finalFee);
+    let changeAmount = totalSelectedCardinalAmount.minus(finalFee);
 
     // create tx
     const psbt = new Psbt({ network: Network });
@@ -419,6 +419,7 @@ const createTxSendBatchInscriptions = (
         });
     } else {
         finalFee = finalFee.plus(changeAmount);
+        changeAmount = BNZero;
     }
 
     const indicesToSign: number[] = [];

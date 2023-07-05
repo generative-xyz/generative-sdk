@@ -4010,7 +4010,7 @@ const createTxSendBatchInscriptions = (senderPrivateKey, utxos, inscriptions, se
         selectedUTXOs.push(...extraUTXOs);
         totalSelectedCardinalAmount = totalSelectedCardinalAmount.plus(extraInputAmount);
     }
-    const changeAmount = totalSelectedCardinalAmount.minus(finalFee);
+    let changeAmount = totalSelectedCardinalAmount.minus(finalFee);
     // create tx
     const psbt = new bitcoinjsLib.Psbt({ network: exports.Network });
     // add inputs and output inscriptions
@@ -4044,6 +4044,7 @@ const createTxSendBatchInscriptions = (senderPrivateKey, utxos, inscriptions, se
     }
     else {
         finalFee = finalFee.plus(changeAmount);
+        changeAmount = BNZero;
     }
     const indicesToSign = [];
     for (let i = 0; i < psbt.txInputs.length; i++) {
