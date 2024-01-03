@@ -2940,6 +2940,7 @@ const BNZero = new BigNumber(0);
 const WalletType = {
     Xverse: 1,
     Hiro: 2,
+    Unisat: 3,
 };
 
 // default is bitcoin mainnet
@@ -2982,6 +2983,7 @@ const ERROR_CODE = {
     SIGN_XVERSE_ERROR: "-12",
     CREATE_COMMIT_TX_ERR: "-13",
     INVALID_TAPSCRIPT_ADDRESS: "-14",
+    SIGN_UNISAT_ERROR: "-12",
     ERR_SEND_BATCH_INSC: "-15",
 };
 const ERROR_MESSAGE = {
@@ -3044,6 +3046,10 @@ const ERROR_MESSAGE = {
     [ERROR_CODE.INVALID_TAPSCRIPT_ADDRESS]: {
         message: "Can not generate valid tap script address to inscribe.",
         desc: "Can not generate valid tap script address to inscribe.",
+    },
+    [ERROR_CODE.SIGN_UNISAT_ERROR]: {
+        message: "Can not sign with Unisat.",
+        desc: "Can not sign with Unisat.",
     },
     [ERROR_CODE.ERR_SEND_BATCH_INSC]: {
         message: "There was an issue when sending inscriptions.",
@@ -3111,6 +3117,26 @@ const estimateNumInOutputsForBuyInscription = (estNumInputsFromBuyer, estNumOutp
 };
 const fromSat = (sat) => {
     return sat / 1e8;
+};
+const base64ToHex = (base64) => {
+    const raw = atob(base64);
+    let result = "";
+    for (let i = 0; i < raw.length; i++) {
+        const hex = raw.charCodeAt(i).toString(16);
+        result += (hex.length === 2 ? hex : "0" + hex);
+    }
+    return result.toUpperCase();
+};
+const hexToBase64 = (hexString) => {
+    // Convert hexadecimal string to bytes
+    const bytes = [];
+    for (let i = 0; i < hexString.length; i += 2) {
+        bytes.push(parseInt(hexString.substr(i, 2), 16));
+    }
+    // Convert bytes to Base64
+    const byteArray = new Uint8Array(bytes);
+    const base64Result = btoa(String.fromCharCode.apply(null, byteArray));
+    return base64Result;
 };
 
 /**
@@ -3701,6 +3727,47 @@ const handleSignPsbtWithXverse = async ({ base64Psbt, indicesToSign, address, si
         msgTxID
     };
 };
+const handleSignPsbtWithUnisat = async ({ base64Psbt, indicesToSign, isGetMsgTx = false, toSignInputs }) => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const window = (global === null || global === void 0 ? void 0 : global.window);
+    const unisat = window === null || window === void 0 ? void 0 : window.unisat;
+    if (!unisat) {
+        throw new SDKError(ERROR_CODE.SIGN_UNISAT_ERROR, "Install wallet.");
+    }
+    console.log("handleSignPsbtWithUnisat 000: ", {
+        base64Psbt,
+        hexPsbt: base64ToHex(base64Psbt),
+    });
+    const hexSignedPsbt = await unisat.signPsbt(base64ToHex(base64Psbt), {
+        autoFinalized: isGetMsgTx,
+        toSignInputs: toSignInputs
+    });
+    console.log("handleSignPsbtWithUnisat 111: ");
+    const base64SignedPsbt = hexToBase64(hexSignedPsbt);
+    console.log("handleSignPsbtWithUnisat 222: ", {
+        hexSignedPsbt,
+        base64SignedPsbt,
+    });
+    if (base64SignedPsbt === "") {
+        throw new SDKError(ERROR_CODE.SIGN_UNISAT_ERROR, "Response is empty");
+    }
+    const finalizedPsbt = finalizeSignedPsbt({ signedRawPsbtB64: base64SignedPsbt, indicesToSign });
+    let msgTx;
+    let msgTxID = "";
+    let msgTxHex = "";
+    if (isGetMsgTx) {
+        msgTx = finalizedPsbt.extractTransaction();
+        msgTxHex = msgTx.toHex();
+        msgTxID = msgTx.getId();
+    }
+    return {
+        base64SignedPsbt: finalizedPsbt.toBase64(),
+        msgTx,
+        msgTxHex,
+        msgTxID
+    };
+};
 /**
 * handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt.
 * extract to msgTx (if isGetMsgTx is true)
@@ -3712,15 +3779,36 @@ const handleSignPsbtWithXverse = async ({ base64Psbt, indicesToSign, address, si
 * @param cancelFn callback function for handling cancel signing
 * @returns the base64 encode signed Psbt
 */
-const handleSignPsbtWithSpecificWallet = async ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, walletType = WalletType.Xverse, cancelFn, }) => {
+const handleSignPsbtWithSpecificWallet = async ({ base64Psbt, // convert to psbtHex: decodeBase64 => Byte => hex = psbtHex
+indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT, isGetMsgTx = false, // autoFinalized haft sign
+walletType = WalletType.Xverse, cancelFn, }) => {
     switch (walletType) {
         case WalletType.Xverse: {
             return handleSignPsbtWithXverse({
-                base64Psbt, indicesToSign,
+                base64Psbt,
+                indicesToSign,
                 address,
                 sigHashType,
                 isGetMsgTx,
                 cancelFn,
+            });
+        }
+        case WalletType.Unisat: {
+            const toSignInputs = indicesToSign.map(item => {
+                return {
+                    index: item,
+                    address: address,
+                    sighashTypes: [sigHashType],
+                    disableTweakSigner: false // TODO
+                };
+            });
+            return handleSignPsbtWithUnisat({
+                base64Psbt,
+                indicesToSign,
+                address,
+                sigHashType,
+                isGetMsgTx,
+                toSignInputs
             });
         }
         default: {
@@ -6112,6 +6200,7 @@ exports.OutputSize = OutputSize;
 exports.SDKError = SDKError;
 exports.Validator = Validator;
 exports.WalletType = WalletType;
+exports.base64ToHex = base64ToHex;
 exports.broadcastTx = broadcastTx;
 exports.convertPrivateKey = convertPrivateKey;
 exports.convertPrivateKeyFromStr = convertPrivateKeyFromStr;
@@ -6152,6 +6241,7 @@ exports.generateTaprootKeyPair = generateTaprootKeyPair;
 exports.getBTCBalance = getBTCBalance;
 exports.getBitcoinKeySignContent = getBitcoinKeySignContent;
 exports.getUTXOFromBlockStream = getUTXOFromBlockStream;
+exports.hexToBase64 = hexToBase64;
 exports.importBTCPrivateKey = importBTCPrivateKey;
 exports.prepareUTXOsToBuyMultiInscriptions = prepareUTXOsToBuyMultiInscriptions;
 exports.reqBuyInscription = reqBuyInscription;

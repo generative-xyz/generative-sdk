@@ -31,4 +31,6 @@ declare const estimateNumInOutputsForBuyInscription: (estNumInputsFromBuyer: num
     numOuts: number;
 };
 declare const fromSat: (sat: number) => number;
-export { estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, fromSat, };
+declare const base64ToHex: (base64: string) => string;
+declare const hexToBase64: (hexString: string) => string;
+export { estimateTxFee, estimateNumInOutputs, estimateNumInOutputsForBuyInscription, fromSat, base64ToHex, hexToBase64 };

@@ -60,9 +60,34 @@ const fromSat = (sat: number): number => {
     return sat / 1e8;
 };
 
+const base64ToHex = (base64: string) =>{
+    const raw = atob(base64);
+    let result = "";
+    for (let i = 0; i < raw.length; i++) {
+        const hex = raw.charCodeAt(i).toString(16);
+        result += (hex.length === 2 ? hex : "0" + hex);
+    }
+    return result.toUpperCase();
+};
+
+const hexToBase64 = (hexString: string) =>{
+// Convert hexadecimal string to bytes
+    const bytes = [];
+    for (let i = 0; i < hexString.length; i += 2) {
+        bytes.push(parseInt(hexString.substr(i, 2), 16));
+    }
+
+    // Convert bytes to Base64
+    const byteArray = new Uint8Array(bytes);
+    const base64Result = btoa(String.fromCharCode.apply(null, byteArray as any));
+    return base64Result;
+};
+
 export {
     estimateTxFee,
     estimateNumInOutputs,
     estimateNumInOutputsForBuyInscription,
     fromSat,
+    base64ToHex,
+    hexToBase64
 };

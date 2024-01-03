@@ -9,5 +9,6 @@ declare const BNZero: BigNumber;
 declare const WalletType: {
     Xverse: number;
     Hiro: number;
+    Unisat: number;
 };
 export { BlockStreamURL, MinSats, MinValueInsc, DummyUTXOValue, InputSize, OutputSize, BNZero, WalletType, };

@@ -9,7 +9,7 @@ import { filterAndSortCardinalUTXOs, findExactValueUTXO, selectCardinalUTXOs, se
 
 import BigNumber from "bignumber.js";
 import { Network } from "./network";
-import { handleSignPsbtWithSpecificWallet } from "./xverse";
+import { handleSignPsbtWithSpecificWallet } from "./wallet.external";
 
 /**
 * createTx creates the Bitcoin transaction (including sending inscriptions). 

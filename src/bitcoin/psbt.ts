@@ -39,7 +39,7 @@ import {
 
 import BigNumber from "bignumber.js";
 import { Network } from "./network";
-import { handleSignPsbtWithSpecificWallet } from "./xverse";
+import { handleSignPsbtWithSpecificWallet } from "./wallet.external";
 import { verifySchnorr } from "@bitcoinerlab/secp256k1";
 
 const SigHashTypeForSale = Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY;

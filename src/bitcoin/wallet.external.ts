@@ -8,6 +8,7 @@ import {
 import { ERROR_CODE } from "../constants/error";
 import SDKError from "../constants/error";
 import { WalletType } from "./constants";
+import { base64ToHex, hexToBase64 } from "./utils";
 
 const preparePayloadSignTx = ({
     base64Psbt,
@@ -127,6 +128,75 @@ const handleSignPsbtWithXverse = async ({
     };
 };
 
+
+const handleSignPsbtWithUnisat = async ({
+    base64Psbt,
+    indicesToSign,
+    isGetMsgTx = false,
+    toSignInputs
+}: {
+    base64Psbt: string,
+    indicesToSign: number[],
+    address: string,
+    sigHashType?: number,
+    isGetMsgTx?: boolean,
+    toSignInputs: any[]
+}): Promise<{ base64SignedPsbt: string, msgTx: Transaction, msgTxID: string, msgTxHex: string }> => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const window = (global?.window) as any;
+    const unisat = window?.unisat;
+
+    if (!unisat) {
+        throw new SDKError(ERROR_CODE.SIGN_UNISAT_ERROR, "Install wallet.");
+    }
+
+    console.log("handleSignPsbtWithUnisat 000: ", {
+        base64Psbt,
+        hexPsbt: base64ToHex(base64Psbt),
+    });
+
+    const hexSignedPsbt = await unisat.signPsbt(
+        base64ToHex(base64Psbt),
+        {
+            autoFinalized: isGetMsgTx,
+            toSignInputs: toSignInputs
+        }
+    );
+
+    console.log("handleSignPsbtWithUnisat 111: ");
+
+
+    const base64SignedPsbt = hexToBase64(hexSignedPsbt);
+
+    console.log("handleSignPsbtWithUnisat 222: ", {
+        hexSignedPsbt,
+        base64SignedPsbt,
+    });
+
+    if (base64SignedPsbt === "") {
+        throw new SDKError(ERROR_CODE.SIGN_UNISAT_ERROR, "Response is empty");
+    }
+
+    const finalizedPsbt = finalizeSignedPsbt({ signedRawPsbtB64: base64SignedPsbt, indicesToSign });
+    let msgTx: any;
+    let msgTxID = "";
+    let msgTxHex = "";
+    if (isGetMsgTx) {
+        msgTx = finalizedPsbt.extractTransaction();
+        msgTxHex = msgTx.toHex();
+        msgTxID = msgTx.getId();
+    }
+
+    return {
+        base64SignedPsbt: finalizedPsbt.toBase64(),
+        msgTx,
+        msgTxHex,
+        msgTxID
+    };
+};
+
+
 /**
 * handleSignPsbtWithXverse calls Xverse signTransaction and finalizes signed raw psbt. 
 * extract to msgTx (if isGetMsgTx is true)
@@ -139,11 +209,11 @@ const handleSignPsbtWithXverse = async ({
 * @returns the base64 encode signed Psbt
 */
 const handleSignPsbtWithSpecificWallet = async ({
-    base64Psbt,
+    base64Psbt, // convert to psbtHex: decodeBase64 => Byte => hex = psbtHex
     indicesToSign,
     address,
     sigHashType = Transaction.SIGHASH_DEFAULT,
-    isGetMsgTx = false,
+    isGetMsgTx = false, // autoFinalized haft sign
     walletType = WalletType.Xverse,
     cancelFn,
 }: {
@@ -154,19 +224,37 @@ const handleSignPsbtWithSpecificWallet = async ({
     isGetMsgTx?: boolean,
     walletType?: number,
     cancelFn: () => void,
+    // publicKey: string // pubKey.toString("hex");
 
 }): Promise<{ base64SignedPsbt: string, msgTx: Transaction, msgTxID: string, msgTxHex: string }> => {
-
     switch (walletType) {
         case WalletType.Xverse: {
             return handleSignPsbtWithXverse({
-                base64Psbt, indicesToSign,
+                base64Psbt,
+                indicesToSign,
                 address,
                 sigHashType,
                 isGetMsgTx,
                 cancelFn,
             });
-
+        }
+        case WalletType.Unisat: {
+            const toSignInputs = indicesToSign.map(item => {
+                return {
+                    index: item,
+                    address: address,
+                    sighashTypes: [sigHashType],
+                    disableTweakSigner: false // TODO
+                };
+            });
+            return handleSignPsbtWithUnisat({
+                base64Psbt,
+                indicesToSign,
+                address,
+                sigHashType,
+                isGetMsgTx,
+                toSignInputs
+            });
         }
         default: {
             throw new SDKError(ERROR_CODE.WALLET_NOT_SUPPORT);
