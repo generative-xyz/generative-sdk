@@ -3754,11 +3754,13 @@ const handleSignPsbtWithUnisat = async ({ base64Psbt, indicesToSign, isGetMsgTx 
     }
     // send inscription
     if (isGetMsgTx) {
+        const psbt = bitcoinjsLib.Psbt.fromHex(hexSignedPsbt);
+        const msgTx = psbt.extractTransaction();
         return {
             base64SignedPsbt: base64SignedPsbt,
-            msgTx: undefined,
+            msgTx: msgTx,
             msgTxHex: hexSignedPsbt,
-            msgTxID: ""
+            msgTxID: msgTx.getId()
         };
     }
     const finalizedPsbt = finalizeSignedPsbt({ signedRawPsbtB64: base64SignedPsbt, indicesToSign });

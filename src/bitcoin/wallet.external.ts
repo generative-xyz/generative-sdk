@@ -180,11 +180,13 @@ const handleSignPsbtWithUnisat = async ({
 
     // send inscription
     if (isGetMsgTx) {
+        const psbt = Psbt.fromHex(hexSignedPsbt);
+        const msgTx = psbt.extractTransaction();
         return {
             base64SignedPsbt: base64SignedPsbt,
-            msgTx: undefined as any,
+            msgTx: msgTx,
             msgTxHex: hexSignedPsbt,
-            msgTxID: ""
+            msgTxID: msgTx.getId()
         };
     }
 
