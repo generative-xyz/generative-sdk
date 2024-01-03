@@ -3759,7 +3759,7 @@ const handleSignPsbtWithUnisat = async ({ base64Psbt, indicesToSign, isGetMsgTx 
         return {
             base64SignedPsbt: base64SignedPsbt,
             msgTx: msgTx,
-            msgTxHex: hexSignedPsbt,
+            msgTxHex: msgTx.toHex(),
             msgTxID: msgTx.getId()
         };
     }
