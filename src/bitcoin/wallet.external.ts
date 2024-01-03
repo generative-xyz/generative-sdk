@@ -178,6 +178,16 @@ const handleSignPsbtWithUnisat = async ({
         throw new SDKError(ERROR_CODE.SIGN_UNISAT_ERROR, "Response is empty");
     }
 
+    // send inscription
+    if (isGetMsgTx) {
+        return {
+            base64SignedPsbt: base64SignedPsbt,
+            msgTx: undefined as any,
+            msgTxHex: hexSignedPsbt,
+            msgTxID: ""
+        };
+    }
+
     const finalizedPsbt = finalizeSignedPsbt({ signedRawPsbtB64: base64SignedPsbt, indicesToSign });
     let msgTx: any;
     let msgTxID = "";
