@@ -3,6 +3,7 @@ import {
     SignTransactionOptions,
     SignTransactionPayload,
     signTransaction,
+    BitcoinNetworkType,
 } from "sats-connect";
 
 import { ERROR_CODE } from "../constants/error";
@@ -24,7 +25,7 @@ const preparePayloadSignTx = ({
 
     return {
         network: {
-            type: "Mainnet",
+            type: BitcoinNetworkType.Mainnet,
             address: "", // TODO:
         },
         message: "Sign Transaction",

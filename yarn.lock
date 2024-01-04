@@ -5229,6 +5229,15 @@ sats-connect@^0.1.11:
     process "^0.11.10"
     util "^0.12.4"
 
+sats-connect@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/sats-connect/-/sats-connect-1.1.2.tgz#576524c1f693f3ca5e304793dd4d151377a436f5"
+  integrity sha512-nJmCV69WgMNGH9H2cTTH/HsO9wEYS7g0AvnCNNgY5fezEJmA6jNpRMP4Xidv/c0xWL1uGOUHPLJEEOSG4NoneQ==
+  dependencies:
+    jsontokens "^4.0.1"
+    process "^0.11.10"
+    util "^0.12.4"
+
 scrypt-js@3.0.1, scrypt-js@^3.0.0, scrypt-js@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/scrypt-js/-/scrypt-js-3.0.1.tgz#d314a57c2aef69d1ad98a138a21fe9eafa9ee312"

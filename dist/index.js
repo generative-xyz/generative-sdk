@@ -3651,7 +3651,7 @@ const decryptWallet = (ciphertext, password) => {
 const preparePayloadSignTx = ({ base64Psbt, indicesToSign, address, sigHashType = bitcoinjsLib.Transaction.SIGHASH_DEFAULT }) => {
     return {
         network: {
-            type: "Mainnet",
+            type: satsConnect.BitcoinNetworkType.Mainnet,
             address: "", // TODO:
         },
         message: "Sign Transaction",
